@@ -45,7 +45,7 @@ fn parse_primitive(input: &str) -> ParseResult<'_, Expr<()>> {
 
 fn parse_infix(input: &str) -> ParseResult<'_, Expr<()>> {
     map(
-        tuple((parse_primitive, parse_operation, parse_primitive)),
+        tuple((parse_primitive, parse_operation, parse_expr)),
         |(left, operation, right)| Expr::Infix {
             annotation: (),
             operation,
@@ -139,6 +139,41 @@ mod tests {
                     right: Box::new(Expr::Primitive {
                         annotation: (),
                         value: Primitive::Int(right),
+                    }),
+                })
+            );
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parsing_a_more_complex_operation() {
+        arbtest::builder().run(|u| {
+            let a = u.arbitrary::<Int>()?;
+            let b = u.arbitrary::<Int>()?;
+            let c = u.arbitrary::<Int>()?;
+            let string = format!("{} + {} * {}", a, b, c);
+            let expr = parse(&string);
+            assert_eq!(
+                expr,
+                Ok(Expr::Infix {
+                    annotation: (),
+                    operation: Operation::Add,
+                    left: Box::new(Expr::Primitive {
+                        annotation: (),
+                        value: Primitive::Int(a),
+                    }),
+                    right: Box::new(Expr::Infix {
+                        annotation: (),
+                        operation: Operation::Multiply,
+                        left: Box::new(Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(b),
+                        }),
+                        right: Box::new(Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(c),
+                        }),
                     }),
                 })
             );
