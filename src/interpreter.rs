@@ -66,22 +66,22 @@ mod tests {
 
     #[test]
     fn test_interpreting_addition() {
-        test_interpreting_an_operation(Operation::Add, i64::checked_add)
+        test_interpreting_an_operation(Operation::Add, Int::checked_add)
     }
 
     #[test]
     fn test_interpreting_subraction() {
-        test_interpreting_an_operation(Operation::Subtract, i64::checked_sub)
+        test_interpreting_an_operation(Operation::Subtract, Int::checked_sub)
     }
 
     #[test]
     fn test_interpreting_multiplication() {
-        test_interpreting_an_operation(Operation::Multiply, i64::checked_mul)
+        test_interpreting_an_operation(Operation::Multiply, Int::checked_mul)
     }
 
     fn test_interpreting_an_operation(
         operation: Operation,
-        implementation: impl Fn(i64, i64) -> Option<i64>,
+        implementation: impl Fn(Int, Int) -> Option<Int>,
     ) {
         arbtest::builder().run(|u| {
             let left = u.int_in_range(i32::MIN..=i32::MAX).map(|x| x.into())?;

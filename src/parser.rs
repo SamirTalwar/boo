@@ -33,7 +33,7 @@ fn parse_primitive(input: &str) -> ParseResult<'_> {
                 opt(char('-')),
                 many1(terminated(one_of("0123456789"), many0(char('_')))),
             )),
-            |out: &str| str::replace(out, "_", "").parse::<i64>(),
+            |out: &str| str::replace(out, "_", "").parse::<Int>(),
         ),
         |value| Expr::Primitive {
             annotation: (),
@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_interpreting_an_integer() {
         arbtest::builder().run(|u| {
-            let value = u.arbitrary::<i64>()?;
+            let value = u.arbitrary::<Int>()?;
             let string = value.to_string();
             let expr = parse(&string);
             assert_eq!(
