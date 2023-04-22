@@ -40,13 +40,13 @@ peg::parser! {
     }
 }
 
-pub fn parse(input: String) -> Result<Expr<()>, BooError> {
+pub fn parse(input: String) -> Result<Expr<()>, Error> {
     parser::root(&input).map_err(|inner| {
         let span = miette::SourceSpan::new(
             miette::SourceOffset::from_location(&input, inner.location.line, inner.location.column),
             0.into(),
         );
-        BooError::ParseError { input, span, inner }
+        Error::ParseError { input, span, inner }
     })
 }
 
@@ -81,7 +81,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_an_integer_with_underscores() -> Result<(), BooError> {
+    fn test_parsing_an_integer_with_underscores() -> Result<(), Error> {
         let expr = parse("123_456_789".to_string())?;
         assert_eq!(
             expr,
