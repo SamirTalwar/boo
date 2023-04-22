@@ -1,10 +1,5 @@
 use crate::ast::*;
-
-#[derive(Debug, PartialEq)]
-pub enum ParseError {
-    Remaining(String),
-    Peg(peg::error::ParseError<peg::str::LineCol>),
-}
+use crate::error::*;
 
 peg::parser! {
     grammar parser() for str {
@@ -42,8 +37,8 @@ peg::parser! {
     }
 }
 
-pub fn parse(input: &str) -> Result<Expr<()>, ParseError> {
-    parser::expr(input).map_err(ParseError::Peg)
+pub fn parse(input: &str) -> Result<Expr<()>, BooError> {
+    parser::expr(input).map_err(BooError::ParseError)
 }
 
 fn infix(left: Expr<()>, operation: Operation, right: Expr<()>) -> Expr<()> {
@@ -77,7 +72,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_an_integer_with_underscores() -> Result<(), ParseError> {
+    fn test_parsing_an_integer_with_underscores() -> Result<(), BooError> {
         let expr = parse("123_456_789")?;
         assert_eq!(
             expr,
