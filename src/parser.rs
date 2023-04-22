@@ -8,23 +8,20 @@ pub enum ParseError {
 
 peg::parser! {
     grammar parser() for str {
-        pub rule expr() -> Expr<()> =
-            infix() / primitive()
-
-        rule infix() -> Expr<()> =
-            left:primitive() _ operation:operation() _ right:expr() {
-                Expr::Infix {
-                    annotation: (),
-                    operation,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                }
+        pub rule expr() -> Expr<()> = precedence! {
+            left:(@) _ "+" _ right:@ {
+                infix(left, Operation::Add, right)
             }
-
-        rule operation() -> Operation =
-            "+" { Operation::Add }
-            / "-" { Operation::Subtract }
-            / "*" { Operation::Multiply }
+            left:(@) _ "-" _ right:@ {
+                infix(left, Operation::Subtract, right)
+            }
+            --
+            left:(@) _ "*" _ right:@ {
+                infix(left, Operation::Multiply, right)
+            }
+            --
+            p:primitive() { p }
+        }
 
         rule primitive() -> Expr<()> =
             n:number() {
@@ -47,6 +44,15 @@ peg::parser! {
 
 pub fn parse(input: &str) -> Result<Expr<()>, ParseError> {
     parser::expr(input).map_err(ParseError::Peg)
+}
+
+fn infix(left: Expr<()>, operation: Operation, right: Expr<()>) -> Expr<()> {
+    Expr::Infix {
+        annotation: (),
+        operation,
+        left: Box::new(left),
+        right: Box::new(right),
+    }
 }
 
 #[cfg(test)]
@@ -124,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parsing_a_more_complex_operation() {
+    fn test_parsing_two_operations_with_higher_precedence_to_the_right() {
         arbtest::builder().run(|u| {
             let a = u.arbitrary::<Int>()?;
             let b = u.arbitrary::<Int>()?;
@@ -151,6 +157,41 @@ mod tests {
                             annotation: (),
                             value: Primitive::Int(c),
                         }),
+                    }),
+                })
+            );
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parsing_two_operations_with_higher_precedence_to_the_left() {
+        arbtest::builder().run(|u| {
+            let a = u.arbitrary::<Int>()?;
+            let b = u.arbitrary::<Int>()?;
+            let c = u.arbitrary::<Int>()?;
+            let string = format!("{} * {} - {}", a, b, c);
+            let expr = parse(&string);
+            assert_eq!(
+                expr,
+                Ok(Expr::Infix {
+                    annotation: (),
+                    operation: Operation::Subtract,
+                    left: Box::new(Expr::Infix {
+                        annotation: (),
+                        operation: Operation::Multiply,
+                        left: Box::new(Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(a),
+                        }),
+                        right: Box::new(Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(b),
+                        }),
+                    }),
+                    right: Box::new(Expr::Primitive {
+                        annotation: (),
+                        value: Primitive::Int(c),
                     }),
                 })
             );
