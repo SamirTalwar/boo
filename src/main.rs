@@ -4,6 +4,7 @@ pub mod interpreter;
 pub mod parser;
 mod roundtrip_test;
 
+use miette::Result;
 use reedline::*;
 
 use crate::interpreter::interpret;
@@ -19,9 +20,9 @@ fn main() {
     loop {
         let sig = line_editor.read_line(&prompt);
         match sig {
-            Ok(Signal::Success(buffer)) => match run(&buffer) {
+            Ok(Signal::Success(buffer)) => match run(buffer) {
                 Ok(()) => (),
-                Err(message) => eprintln!("{}", message),
+                Err(report) => eprintln!("{:?}", report),
             },
             Ok(Signal::CtrlD) | Ok(Signal::CtrlC) => {
                 break;
@@ -33,8 +34,8 @@ fn main() {
     }
 }
 
-fn run(buffer: &str) -> Result<(), String> {
-    let expr = parse(buffer).map_err(|err| format!("{}", err))?;
+fn run(buffer: String) -> Result<()> {
+    let expr = parse(buffer)?;
     let result = interpret(expr);
     println!("{}", result);
     Ok(())

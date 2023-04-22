@@ -40,8 +40,14 @@ peg::parser! {
     }
 }
 
-pub fn parse(input: &str) -> Result<Expr<()>, BooError> {
-    parser::root(input).map_err(BooError::ParseError)
+pub fn parse(input: String) -> Result<Expr<()>, BooError> {
+    parser::root(&input).map_err(|inner| {
+        let span = miette::SourceSpan::new(
+            miette::SourceOffset::from_location(&input, inner.location.line, inner.location.column),
+            0.into(),
+        );
+        BooError::ParseError { input, span, inner }
+    })
 }
 
 fn infix(left: Expr<()>, operation: Operation, right: Expr<()>) -> Expr<()> {
@@ -62,7 +68,7 @@ mod tests {
         arbtest::builder().run(|u| {
             let value = u.arbitrary::<Int>()?;
             let string = value.to_string();
-            let expr = parse(&string);
+            let expr = parse(string);
             assert_eq!(
                 expr,
                 Ok(Expr::Primitive {
@@ -76,7 +82,7 @@ mod tests {
 
     #[test]
     fn test_parsing_an_integer_with_underscores() -> Result<(), BooError> {
-        let expr = parse("123_456_789")?;
+        let expr = parse("123_456_789".to_string())?;
         assert_eq!(
             expr,
             Expr::Primitive {
@@ -107,7 +113,7 @@ mod tests {
             let left = u.arbitrary::<Int>()?;
             let right = u.arbitrary::<Int>()?;
             let string = format!("{} {} {}", left, text, right);
-            let expr = parse(&string);
+            let expr = parse(string);
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
@@ -134,7 +140,7 @@ mod tests {
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
             let string = format!("{} + {} * {}", a, b, c);
-            let expr = parse(&string);
+            let expr = parse(string);
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
@@ -169,7 +175,7 @@ mod tests {
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
             let string = format!("{} * {} - {}", a, b, c);
-            let expr = parse(&string);
+            let expr = parse(string);
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
@@ -204,7 +210,7 @@ mod tests {
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
             let string = format!("{} * ({} + {})", a, b, c);
-            let expr = parse(&string);
+            let expr = parse(string);
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
@@ -253,7 +259,7 @@ mod tests {
             let h = (0..h_count).map(|_| ' ').collect::<String>();
 
             let string = format!("{}1{}+{}({}2{}-{}3{}){}", a, b, c, d, e, f, g, h);
-            let expr = parse(&string);
+            let expr = parse(string);
 
             assert_eq!(
                 expr,
