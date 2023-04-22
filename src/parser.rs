@@ -33,7 +33,7 @@ peg::parser! {
 
         rule digit() -> char = ['0'..='9']
 
-        rule _ -> () = " " / "\t"
+        rule _ -> () = quiet!{ (" " / "\t")* { } }
     }
 }
 
@@ -187,6 +187,46 @@ mod tests {
                     right: Box::new(Expr::Primitive {
                         annotation: (),
                         value: Primitive::Int(c),
+                    }),
+                })
+            );
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_whitespace() {
+        arbtest::builder().run(|u| {
+            let a_count = u.int_in_range(0..=3)?;
+            let b_count = u.int_in_range(0..=5)?;
+            let c_count = u.int_in_range(0..=10)?;
+            let d_count = u.int_in_range(0..=2)?;
+            let a = (0..a_count).map(|_| ' ').collect::<String>();
+            let b = (0..b_count).map(|_| ' ').collect::<String>();
+            let c = (0..c_count).map(|_| ' ').collect::<String>();
+            let d = (0..d_count).map(|_| ' ').collect::<String>();
+            let string = format!("1{}+{}2{}-{}3", a, b, c, d);
+            let expr = parse(&string);
+            assert_eq!(
+                expr,
+                Ok(Expr::Infix {
+                    annotation: (),
+                    operation: Operation::Subtract,
+                    left: Box::new(Expr::Infix {
+                        annotation: (),
+                        operation: Operation::Add,
+                        left: Box::new(Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(1),
+                        }),
+                        right: Box::new(Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(2),
+                        }),
+                    }),
+                    right: Box::new(Expr::Primitive {
+                        annotation: (),
+                        value: Primitive::Int(3),
                     }),
                 })
             );
