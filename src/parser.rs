@@ -1,75 +1,52 @@
-use nom::branch::alt;
-use nom::character::complete::{char, multispace0, one_of};
-use nom::combinator::{complete, map, map_res, opt, recognize};
-use nom::multi::{many0, many1};
-use nom::sequence::{delimited, preceded, terminated, tuple};
-use nom::IResult;
-
 use crate::ast::*;
-
-type ParseResult<'a, T> = IResult<&'a str, T>;
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     Remaining(String),
-    Nom(nom::Err<nom::error::Error<String>>),
+    Peg(peg::error::ParseError<peg::str::LineCol>),
 }
 
-pub fn parse(input: &str) -> Result<Expr<()>, ParseError> {
-    match complete(parse_expr)(input) {
-        Ok(("", expr)) => Ok(expr),
-        Ok((remaining, _)) => Err(ParseError::Remaining(remaining.to_string())),
-        Err(err) => Err(ParseError::Nom(err.map_input(|s| s.to_string()))),
+peg::parser! {
+    grammar parser() for str {
+        pub rule expr() -> Expr<()> =
+            infix() / primitive()
+
+        rule infix() -> Expr<()> =
+            left:primitive() _ operation:operation() _ right:expr() {
+                Expr::Infix {
+                    annotation: (),
+                    operation,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                }
+            }
+
+        rule operation() -> Operation =
+            "+" { Operation::Add }
+            / "-" { Operation::Subtract }
+            / "*" { Operation::Multiply }
+
+        rule primitive() -> Expr<()> =
+            n:number() {
+                Expr::Primitive {
+                    annotation: (),
+                    value: Primitive::Int(n),
+                }
+            }
+
+        rule number() -> Int =
+            n:$("-"? digit() (digit() / "_")*) { ?
+                str::replace(n, "_", "").parse::<Int>().or(Err("number"))
+            }
+
+        rule digit() -> char = ['0'..='9']
+
+        rule _ -> () = " " / "\t"
     }
 }
 
-fn parse_expr(input: &str) -> ParseResult<'_, Expr<()>> {
-    alt((parse_infix, parse_primitive))(input)
-}
-
-fn parse_primitive(input: &str) -> ParseResult<'_, Expr<()>> {
-    map(
-        map_res(
-            recognize(preceded(
-                opt(char('-')),
-                many1(terminated(one_of("0123456789"), many0(char('_')))),
-            )),
-            |out: &str| str::replace(out, "_", "").parse::<Int>(),
-        ),
-        |value| Expr::Primitive {
-            annotation: (),
-            value: Primitive::Int(value),
-        },
-    )(input)
-}
-
-fn parse_infix(input: &str) -> ParseResult<'_, Expr<()>> {
-    map(
-        tuple((parse_primitive, parse_operation, parse_expr)),
-        |(left, operation, right)| Expr::Infix {
-            annotation: (),
-            operation,
-            left: Box::new(left),
-            right: Box::new(right),
-        },
-    )(input)
-}
-
-fn parse_operation(input: &str) -> ParseResult<'_, Operation> {
-    ws(alt((
-        map(char('+'), |_| Operation::Add),
-        map(char('-'), |_| Operation::Subtract),
-        map(char('*'), |_| Operation::Multiply),
-    )))(input)
-}
-
-/// A combinator that takes a parser `inner` and produces a parser that also consumes both leading and
-/// trailing whitespace, returning the output of `inner`.
-fn ws<'a, F, T>(inner: F) -> impl FnMut(&'a str) -> ParseResult<T>
-where
-    F: FnMut(&'a str) -> ParseResult<T>,
-{
-    delimited(multispace0, inner, multispace0)
+pub fn parse(input: &str) -> Result<Expr<()>, ParseError> {
+    parser::expr(input).map_err(ParseError::Peg)
 }
 
 #[cfg(test)]
