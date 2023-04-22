@@ -2,10 +2,10 @@ pub mod ast;
 pub mod error;
 pub mod interpreter;
 pub mod parser;
+mod roundtrip_test;
 
 use reedline::*;
 
-use crate::ast::*;
 use crate::interpreter::interpret;
 use crate::parser::parse;
 
@@ -36,15 +36,6 @@ fn main() {
 fn run(buffer: &str) -> Result<(), String> {
     let expr = parse(buffer).map_err(|err| format!("{}", err))?;
     let result = interpret(expr);
-
-    match result {
-        Expr::Primitive {
-            annotation: _,
-            value,
-        } => {
-            println!("{}", value);
-            Ok(())
-        }
-        result => Err(format!("Invalid result: {:?}", result)),
-    }
+    println!("{}", result);
+    Ok(())
 }
