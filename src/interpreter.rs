@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::primitive::*;
 
 pub fn interpret<Annotation>(expr: Expr<Annotation>) -> Expr<Annotation> {
     match expr {

@@ -1,5 +1,6 @@
 use crate::ast::*;
 use crate::error::*;
+use crate::primitive::*;
 
 peg::parser! {
     grammar parser() for str {
