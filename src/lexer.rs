@@ -4,22 +4,22 @@ pub use miette::{SourceOffset, SourceSpan};
 use crate::error::Error;
 use crate::primitive::Int;
 
-#[derive(Debug, PartialEq, Logos)]
+#[derive(Debug, Clone, Copy, PartialEq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
 pub enum Token {
     #[regex(r"-?[0-9](_?[0-9])*", |token|
         str::replace(token.slice(), "_", "").parse::<Int>().ok()
     )]
     Integer(Int),
-    #[regex(r"\+|\-|\*", |token| token.slice().to_string())]
-    Operator(String),
+    #[regex(r"\+|\-|\*", |token| token.slice().chars().next())]
+    Operator(char),
     #[token(r"(")]
     StartGroup,
     #[token(r")")]
     EndGroup,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Positioned<T> {
     pub span: SourceSpan,
     pub value: T,
@@ -131,7 +131,7 @@ mod tests {
                 }),
                 Ok(Positioned {
                     span: (2..3).into(),
-                    value: Token::Operator("+".to_string()),
+                    value: Token::Operator('+'),
                 }),
                 Ok(Positioned {
                     span: (4..5).into(),
@@ -139,7 +139,7 @@ mod tests {
                 }),
                 Ok(Positioned {
                     span: (6..7).into(),
-                    value: Token::Operator("-".to_string()),
+                    value: Token::Operator('-'),
                 }),
                 Ok(Positioned {
                     span: (8..9).into(),
@@ -147,7 +147,7 @@ mod tests {
                 }),
                 Ok(Positioned {
                     span: (10..11).into(),
-                    value: Token::Operator("*".to_string()),
+                    value: Token::Operator('*'),
                 }),
                 Ok(Positioned {
                     span: (12..13).into(),
@@ -171,7 +171,7 @@ mod tests {
                 }),
                 Ok(Positioned {
                     span: (2..3).into(),
-                    value: Token::Operator("*".to_string()),
+                    value: Token::Operator('*'),
                 }),
                 Ok(Positioned {
                     span: (4..5).into(),
@@ -183,7 +183,7 @@ mod tests {
                 }),
                 Ok(Positioned {
                     span: (7..8).into(),
-                    value: Token::Operator("+".to_string()),
+                    value: Token::Operator('+'),
                 }),
                 Ok(Positioned {
                     span: (9..10).into(),
@@ -195,7 +195,7 @@ mod tests {
                 }),
                 Ok(Positioned {
                     span: (12..13).into(),
-                    value: Token::Operator("-".to_string()),
+                    value: Token::Operator('-'),
                 }),
                 Ok(Positioned {
                     span: (14..15).into(),
