@@ -1,4 +1,5 @@
 use logos::Logos;
+pub use miette::{SourceOffset, SourceSpan};
 
 use crate::error::Error;
 use crate::primitive::Int;
@@ -18,14 +19,26 @@ pub enum Token {
     EndGroup,
 }
 
-pub fn lex(input: &str) -> Vec<Result<Token, Error>> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Positioned<T> {
+    pub span: SourceSpan,
+    pub value: T,
+}
+
+pub fn lex(input: &str) -> Vec<Result<Positioned<Token>, Error>> {
     Token::lexer(input)
         .spanned()
         .map(move |(token, span)| {
-            token.map_err(|_| Error::UnexpectedToken {
-                span: span.clone().into(),
-                token: input[span].to_string(),
-            })
+            let source_span: SourceSpan = span.clone().into();
+            token
+                .map(|value| Positioned {
+                    span: source_span,
+                    value,
+                })
+                .map_err(|_| Error::UnexpectedToken {
+                    span: source_span,
+                    token: input[span].to_string(),
+                })
         })
         .collect()
 }
@@ -47,7 +60,13 @@ mod tests {
         let input = "123";
         let tokens = lex(input);
 
-        assert_eq!(tokens, vec![Ok(Token::Integer(123))]);
+        assert_eq!(
+            tokens,
+            vec![Ok(Positioned {
+                span: (0..3).into(),
+                value: Token::Integer(123),
+            })]
+        );
     }
 
     #[test]
@@ -55,7 +74,13 @@ mod tests {
         let input = "-456";
         let tokens = lex(input);
 
-        assert_eq!(tokens, vec![Ok(Token::Integer(-456))]);
+        assert_eq!(
+            tokens,
+            vec![Ok(Positioned {
+                span: (0..4).into(),
+                value: Token::Integer(-456),
+            })]
+        );
     }
 
     #[test]
@@ -63,7 +88,13 @@ mod tests {
         let input = "987_654_321";
         let tokens = lex(input);
 
-        assert_eq!(tokens, vec![Ok(Token::Integer(987_654_321))]);
+        assert_eq!(
+            tokens,
+            vec![Ok(Positioned {
+                span: (0..11).into(),
+                value: Token::Integer(987_654_321),
+            })]
+        );
     }
 
     #[test]
@@ -75,13 +106,13 @@ mod tests {
             tokens,
             vec![
                 Err(Error::UnexpectedToken {
-                    span: miette::SourceSpan::new(
-                        miette::SourceOffset::from_location(input, 1, 1),
-                        1.into(),
-                    ),
+                    span: (0..1).into(),
                     token: "_".to_string(),
                 }),
-                Ok(Token::Integer(2)),
+                Ok(Positioned {
+                    span: (1..2).into(),
+                    value: Token::Integer(2),
+                }),
             ]
         );
     }
@@ -94,13 +125,34 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Ok(Token::Integer(1)),
-                Ok(Token::Operator("+".to_string())),
-                Ok(Token::Integer(2)),
-                Ok(Token::Operator("-".to_string())),
-                Ok(Token::Integer(3)),
-                Ok(Token::Operator("*".to_string())),
-                Ok(Token::Integer(4)),
+                Ok(Positioned {
+                    span: (0..1).into(),
+                    value: Token::Integer(1),
+                }),
+                Ok(Positioned {
+                    span: (2..3).into(),
+                    value: Token::Operator("+".to_string()),
+                }),
+                Ok(Positioned {
+                    span: (4..5).into(),
+                    value: Token::Integer(2),
+                }),
+                Ok(Positioned {
+                    span: (6..7).into(),
+                    value: Token::Operator("-".to_string()),
+                }),
+                Ok(Positioned {
+                    span: (8..9).into(),
+                    value: Token::Integer(3),
+                }),
+                Ok(Positioned {
+                    span: (10..11).into(),
+                    value: Token::Operator("*".to_string()),
+                }),
+                Ok(Positioned {
+                    span: (12..13).into(),
+                    value: Token::Integer(4),
+                }),
             ]
         );
     }
@@ -113,15 +165,42 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Ok(Token::Integer(1)),
-                Ok(Token::Operator("*".to_string())),
-                Ok(Token::StartGroup),
-                Ok(Token::Integer(2)),
-                Ok(Token::Operator("+".to_string())),
-                Ok(Token::Integer(3)),
-                Ok(Token::EndGroup),
-                Ok(Token::Operator("-".to_string())),
-                Ok(Token::Integer(4)),
+                Ok(Positioned {
+                    span: (0..1).into(),
+                    value: Token::Integer(1),
+                }),
+                Ok(Positioned {
+                    span: (2..3).into(),
+                    value: Token::Operator("*".to_string()),
+                }),
+                Ok(Positioned {
+                    span: (4..5).into(),
+                    value: Token::StartGroup,
+                }),
+                Ok(Positioned {
+                    span: (5..6).into(),
+                    value: Token::Integer(2),
+                }),
+                Ok(Positioned {
+                    span: (7..8).into(),
+                    value: Token::Operator("+".to_string()),
+                }),
+                Ok(Positioned {
+                    span: (9..10).into(),
+                    value: Token::Integer(3),
+                }),
+                Ok(Positioned {
+                    span: (10..11).into(),
+                    value: Token::EndGroup,
+                }),
+                Ok(Positioned {
+                    span: (12..13).into(),
+                    value: Token::Operator("-".to_string()),
+                }),
+                Ok(Positioned {
+                    span: (14..15).into(),
+                    value: Token::Integer(4),
+                }),
             ]
         );
     }
@@ -134,15 +213,18 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Ok(Token::Integer(1)),
+                Ok(Positioned {
+                    span: (0..1).into(),
+                    value: Token::Integer(1),
+                }),
                 Err(Error::UnexpectedToken {
-                    span: miette::SourceSpan::new(
-                        miette::SourceOffset::from_location(input, 1, 3),
-                        1.into(),
-                    ),
+                    span: (2..3).into(),
                     token: "/".to_string(),
                 }),
-                Ok(Token::Integer(2)),
+                Ok(Positioned {
+                    span: (4..5).into(),
+                    value: Token::Integer(2),
+                }),
             ]
         );
     }
