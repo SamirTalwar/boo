@@ -10,6 +10,8 @@ pub enum Token {
         str::replace(token.slice(), "_", "").parse::<Int>().ok()
     )]
     Integer(Int),
+    #[regex(r"\+|\-|\*", |token| token.slice().to_string())]
+    Operator(String),
 }
 
 pub fn lex(input: &str) -> impl Iterator<Item = Result<Token, Error>> + '_ {
@@ -71,6 +73,25 @@ mod tests {
                 ),
                 token: "_".to_string(),
             }))
+        );
+    }
+
+    #[test]
+    fn test_lexing_operators() {
+        let input = "1 + 2 - 3 * 4";
+        let tokens = lex(input).collect::<Vec<_>>();
+
+        assert_eq!(
+            tokens,
+            vec![
+                Ok(Token::Integer(1)),
+                Ok(Token::Operator("+".to_string())),
+                Ok(Token::Integer(2)),
+                Ok(Token::Operator("-".to_string())),
+                Ok(Token::Integer(3)),
+                Ok(Token::Operator("*".to_string())),
+                Ok(Token::Integer(4)),
+            ]
         );
     }
 
