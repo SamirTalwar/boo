@@ -8,21 +8,21 @@ peg::parser! {
         pub rule root() -> Expr<()> = e:expr() { e }
 
         pub rule expr() -> Expr<()> = precedence! {
-            left:(@) [Token::Operator('+')] right:@ {
+            left:(@) (quiet! { [Token::Operator('+')] } / expected!("'+'")) right:@ {
                 infix(left, Operation::Add, right)
             }
-            left:(@) [Token::Operator('-')] right:@ {
+            left:(@) (quiet! { [Token::Operator('-')] } / expected!("'-'")) right:@ {
                 infix(left, Operation::Subtract, right)
             }
             --
-            left:(@) [Token::Operator('*')] right:@ {
+            left:(@) (quiet! { [Token::Operator('*')] } / expected!("'*'")) right:@ {
                 infix(left, Operation::Multiply, right)
             }
             --
             p:primitive() { p }
-            (quiet! { [Token::StartGroup] } / expected!("("))
+            (quiet! { [Token::StartGroup] } / expected!("'('"))
             e:expr()
-            (quiet! { [Token::EndGroup] } / expected!(")")) {
+            (quiet! { [Token::EndGroup] } / expected!(")'")) {
                 e
             }
         }
@@ -53,9 +53,11 @@ pub fn parse(input: &[Positioned<Token>]) -> Result<Expr<()>, Error> {
                 .map(|s| (s.span.offset() + s.span.len()).into())
                 .unwrap_or(0.into())
         };
+        let mut expected_tokens: Vec<&str> = inner.expected.tokens().collect();
+        expected_tokens.sort();
         Error::ParseError {
             span,
-            expected_tokens: inner.expected.tokens().collect(),
+            expected_tokens,
         }
     })
 }
@@ -347,7 +349,7 @@ mod tests {
                 expr,
                 Err(Error::ParseError {
                     span: (0..1).into(),
-                    expected_tokens: ["(", "an integer"].into(),
+                    expected_tokens: ["'('", "an integer"].into(),
                 })
             );
             Ok(())
@@ -374,7 +376,7 @@ mod tests {
                 expr,
                 Err(Error::ParseError {
                     span: (3..3).into(),
-                    expected_tokens: ["(", "an integer"].into(),
+                    expected_tokens: ["'('", "an integer"].into(),
                 })
             );
             Ok(())
