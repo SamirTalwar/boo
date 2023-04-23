@@ -1,53 +1,62 @@
 use crate::ast::*;
 use crate::error::*;
+use crate::lexer::{Positioned, SourceSpan, Token};
 use crate::primitive::*;
 
 peg::parser! {
-    grammar parser() for str {
-        pub rule root() -> Expr<()> = _ e:expr() _ { e }
+    grammar parser() for [Token] {
+        pub rule root() -> Expr<()> = e:expr() { e }
 
         pub rule expr() -> Expr<()> = precedence! {
-            left:(@) _ "+" _ right:@ {
+            left:(@) [Token::Operator('+')] right:@ {
                 infix(left, Operation::Add, right)
             }
-            left:(@) _ "-" _ right:@ {
+            left:(@) [Token::Operator('-')] right:@ {
                 infix(left, Operation::Subtract, right)
             }
             --
-            left:(@) _ "*" _ right:@ {
+            left:(@) [Token::Operator('*')] right:@ {
                 infix(left, Operation::Multiply, right)
             }
             --
             p:primitive() { p }
-            "(" _ e:expr() _ ")" { e }
+            (quiet! { [Token::StartGroup] } / expected!("("))
+            e:expr()
+            (quiet! { [Token::EndGroup] } / expected!(")")) {
+                e
+            }
         }
 
         rule primitive() -> Expr<()> =
-            n:number() {
+            quiet! { [Token::Integer(n)] {
                 Expr::Primitive {
                     annotation: (),
                     value: Primitive::Int(n),
                 }
-            }
-
-        rule number() -> Int =
-            n:$("-"? digit() (digit() / "_")*) { ?
-                str::replace(n, "_", "").parse::<Int>().or(Err("number"))
-            }
-
-        rule digit() -> char = ['0'..='9']
-
-        rule _ -> () = quiet!{ (" " / "\t")* { } }
+            } } / expected!("an integer")
     }
 }
 
-pub fn parse(input: &str) -> Result<Expr<()>, Error> {
-    parser::root(input).map_err(|inner| {
-        let span = miette::SourceSpan::new(
-            miette::SourceOffset::from_location(input, inner.location.line, inner.location.column),
-            0.into(),
-        );
-        Error::ParseError { span, inner }
+pub fn parse(input: &[Positioned<Token>]) -> Result<Expr<()>, Error> {
+    parser::root(
+        &(input
+            .iter()
+            .map(|positioned| positioned.value)
+            .collect::<Vec<_>>()),
+    )
+    .map_err(|inner| {
+        let span: SourceSpan = if inner.location < input.len() {
+            input[inner.location].span
+        } else {
+            input
+                .last()
+                .map(|s| (s.span.offset() + s.span.len()).into())
+                .unwrap_or(0.into())
+        };
+        Error::ParseError {
+            span,
+            expected_tokens: inner.expected.tokens().collect(),
+        }
     })
 }
 
@@ -68,8 +77,12 @@ mod tests {
     fn test_parsing_an_integer() {
         arbtest::builder().run(|u| {
             let value = u.arbitrary::<Int>()?;
-            let string = value.to_string();
-            let expr = parse(&string);
+            let tokens = vec![Positioned {
+                span: (0..10).into(),
+                value: Token::Integer(value),
+            }];
+            let expr = parse(&tokens);
+
             assert_eq!(
                 expr,
                 Ok(Expr::Primitive {
@@ -79,19 +92,6 @@ mod tests {
             );
             Ok(())
         })
-    }
-
-    #[test]
-    fn test_parsing_an_integer_with_underscores() -> Result<(), Error> {
-        let expr = parse("123_456_789")?;
-        assert_eq!(
-            expr,
-            Expr::Primitive {
-                annotation: (),
-                value: Primitive::Int(123_456_789),
-            }
-        );
-        Ok(())
     }
 
     #[test]
@@ -113,8 +113,22 @@ mod tests {
         arbtest::builder().run(|u| {
             let left = u.arbitrary::<Int>()?;
             let right = u.arbitrary::<Int>()?;
-            let string = format!("{} {} {}", left, text, right);
-            let expr = parse(&string);
+            let tokens = vec![
+                Positioned {
+                    span: (0..1).into(),
+                    value: Token::Integer(left),
+                },
+                Positioned {
+                    span: (2..3).into(),
+                    value: Token::Operator(text),
+                },
+                Positioned {
+                    span: (4..5).into(),
+                    value: Token::Integer(right),
+                },
+            ];
+            let expr = parse(&tokens);
+
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
@@ -140,8 +154,30 @@ mod tests {
             let a = u.arbitrary::<Int>()?;
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
-            let string = format!("{} + {} * {}", a, b, c);
-            let expr = parse(&string);
+            let tokens = vec![
+                Positioned {
+                    span: (0..1).into(),
+                    value: Token::Integer(a),
+                },
+                Positioned {
+                    span: (2..3).into(),
+                    value: Token::Operator('+'),
+                },
+                Positioned {
+                    span: (4..5).into(),
+                    value: Token::Integer(b),
+                },
+                Positioned {
+                    span: (6..7).into(),
+                    value: Token::Operator('*'),
+                },
+                Positioned {
+                    span: (8..9).into(),
+                    value: Token::Integer(c),
+                },
+            ];
+            let expr = parse(&tokens);
+
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
@@ -175,8 +211,30 @@ mod tests {
             let a = u.arbitrary::<Int>()?;
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
-            let string = format!("{} * {} - {}", a, b, c);
-            let expr = parse(&string);
+            let tokens = vec![
+                Positioned {
+                    span: (0..1).into(),
+                    value: Token::Integer(a),
+                },
+                Positioned {
+                    span: (2..3).into(),
+                    value: Token::Operator('*'),
+                },
+                Positioned {
+                    span: (4..5).into(),
+                    value: Token::Integer(b),
+                },
+                Positioned {
+                    span: (6..7).into(),
+                    value: Token::Operator('-'),
+                },
+                Positioned {
+                    span: (8..9).into(),
+                    value: Token::Integer(c),
+                },
+            ];
+            let expr = parse(&tokens);
+
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
@@ -210,8 +268,38 @@ mod tests {
             let a = u.arbitrary::<Int>()?;
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
-            let string = format!("{} * ({} + {})", a, b, c);
-            let expr = parse(&string);
+            let tokens = vec![
+                Positioned {
+                    span: (0..1).into(),
+                    value: Token::Integer(a),
+                },
+                Positioned {
+                    span: (2..3).into(),
+                    value: Token::Operator('*'),
+                },
+                Positioned {
+                    span: (4..5).into(),
+                    value: Token::StartGroup,
+                },
+                Positioned {
+                    span: (5..6).into(),
+                    value: Token::Integer(b),
+                },
+                Positioned {
+                    span: (7..8).into(),
+                    value: Token::Operator('+'),
+                },
+                Positioned {
+                    span: (9..10).into(),
+                    value: Token::Integer(c),
+                },
+                Positioned {
+                    span: (10..11).into(),
+                    value: Token::EndGroup,
+                },
+            ];
+            let expr = parse(&tokens);
+
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
@@ -240,49 +328,53 @@ mod tests {
     }
 
     #[test]
-    fn test_whitespace() {
+    fn test_fails_to_parse_gracefully() {
         arbtest::builder().run(|u| {
-            let a_count = u.int_in_range(0..=10)?;
-            let b_count = u.int_in_range(0..=10)?;
-            let c_count = u.int_in_range(0..=10)?;
-            let d_count = u.int_in_range(0..=10)?;
-            let e_count = u.int_in_range(0..=10)?;
-            let f_count = u.int_in_range(1..=10)?; // between '-' and '3'
-            let g_count = u.int_in_range(0..=10)?;
-            let h_count = u.int_in_range(0..=10)?;
-            let a = (0..a_count).map(|_| ' ').collect::<String>();
-            let b = (0..b_count).map(|_| ' ').collect::<String>();
-            let c = (0..c_count).map(|_| ' ').collect::<String>();
-            let d = (0..d_count).map(|_| ' ').collect::<String>();
-            let e = (0..e_count).map(|_| ' ').collect::<String>();
-            let f = (0..f_count).map(|_| ' ').collect::<String>();
-            let g = (0..g_count).map(|_| ' ').collect::<String>();
-            let h = (0..h_count).map(|_| ' ').collect::<String>();
-
-            let string = format!("{}1{}+{}({}2{}-{}3{}){}", a, b, c, d, e, f, g, h);
-            let expr = parse(&string);
+            let value = u.arbitrary::<Int>()?;
+            let tokens = vec![
+                Positioned {
+                    span: (0..1).into(),
+                    value: Token::Operator('+'),
+                },
+                Positioned {
+                    span: (2..3).into(),
+                    value: Token::Integer(value),
+                },
+            ];
+            let expr = parse(&tokens);
 
             assert_eq!(
                 expr,
-                Ok(Expr::Infix {
-                    annotation: (),
-                    operation: Operation::Add,
-                    left: Box::new(Expr::Primitive {
-                        annotation: (),
-                        value: Primitive::Int(1),
-                    }),
-                    right: Box::new(Expr::Infix {
-                        annotation: (),
-                        operation: Operation::Subtract,
-                        left: Box::new(Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Int(2),
-                        }),
-                        right: Box::new(Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Int(3),
-                        }),
-                    }),
+                Err(Error::ParseError {
+                    span: (0..1).into(),
+                    expected_tokens: ["(", "an integer"].into(),
+                })
+            );
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_fails_to_parse_at_the_end() {
+        arbtest::builder().run(|u| {
+            let value = u.arbitrary::<Int>()?;
+            let tokens = vec![
+                Positioned {
+                    span: (0..1).into(),
+                    value: Token::Integer(value),
+                },
+                Positioned {
+                    span: (2..3).into(),
+                    value: Token::Operator('+'),
+                },
+            ];
+            let expr = parse(&tokens);
+
+            assert_eq!(
+                expr,
+                Err(Error::ParseError {
+                    span: (3..3).into(),
+                    expected_tokens: ["(", "an integer"].into(),
                 })
             );
             Ok(())

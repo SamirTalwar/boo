@@ -10,6 +10,7 @@ use miette::Result;
 use reedline::*;
 
 use crate::interpreter::interpret;
+use crate::lexer::lex;
 use crate::parser::parse;
 
 fn main() {
@@ -37,7 +38,8 @@ fn main() {
 }
 
 fn run(buffer: &str) -> Result<()> {
-    let expr = parse(buffer)?;
+    let tokens = lex(buffer)?;
+    let expr = parse(&tokens)?;
     let result = interpret(expr);
     println!("{}", result);
     Ok(())
