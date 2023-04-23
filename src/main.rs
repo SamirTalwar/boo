@@ -21,9 +21,9 @@ fn main() {
     loop {
         let sig = line_editor.read_line(&prompt);
         match sig {
-            Ok(Signal::Success(buffer)) => match run(buffer) {
+            Ok(Signal::Success(buffer)) => match run(&buffer) {
                 Ok(()) => (),
-                Err(report) => eprintln!("{:?}", report),
+                Err(report) => eprintln!("{:?}", report.with_source_code(buffer)),
             },
             Ok(Signal::CtrlD) | Ok(Signal::CtrlC) => {
                 break;
@@ -35,7 +35,7 @@ fn main() {
     }
 }
 
-fn run(buffer: String) -> Result<()> {
+fn run(buffer: &str) -> Result<()> {
     let expr = parse(buffer)?;
     let result = interpret(expr);
     println!("{}", result);

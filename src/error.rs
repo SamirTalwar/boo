@@ -3,8 +3,6 @@ pub enum Error {
     #[error("Parse error: {inner}")]
     #[diagnostic(code(boo::parse_error))]
     ParseError {
-        #[source_code]
-        input: String,
         #[label = "error parsing at this location"]
         span: miette::SourceSpan,
         inner: peg::error::ParseError<peg::str::LineCol>,
