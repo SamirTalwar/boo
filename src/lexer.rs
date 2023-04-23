@@ -12,6 +12,10 @@ pub enum Token {
     Integer(Int),
     #[regex(r"\+|\-|\*", |token| token.slice().to_string())]
     Operator(String),
+    #[token(r"(")]
+    StartGroup,
+    #[token(r")")]
+    EndGroup,
 }
 
 pub fn lex(input: &str) -> Vec<Result<Token, Error>> {
@@ -96,6 +100,27 @@ mod tests {
                 Ok(Token::Operator("-".to_string())),
                 Ok(Token::Integer(3)),
                 Ok(Token::Operator("*".to_string())),
+                Ok(Token::Integer(4)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lexing_parentheses() {
+        let input = "1 * (2 + 3) - 4";
+        let tokens = lex(input);
+
+        assert_eq!(
+            tokens,
+            vec![
+                Ok(Token::Integer(1)),
+                Ok(Token::Operator("*".to_string())),
+                Ok(Token::StartGroup),
+                Ok(Token::Integer(2)),
+                Ok(Token::Operator("+".to_string())),
+                Ok(Token::Integer(3)),
+                Ok(Token::EndGroup),
+                Ok(Token::Operator("-".to_string())),
                 Ok(Token::Integer(4)),
             ]
         );
