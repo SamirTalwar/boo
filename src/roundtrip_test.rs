@@ -9,14 +9,8 @@ fn test_rendering_and_parsing_an_expression() {
     arbtest::builder().run(|u| {
         let input = u.arbitrary::<Expr<()>>()?;
         let rendered = format!("{}", input);
-        let lexed = match lex(&rendered) {
-            Ok(lexed) => lexed,
-            Err(err) => panic!("Could not lex: {}", err),
-        };
-        let parsed = match parse(&lexed) {
-            Ok(parsed) => parsed,
-            Err(err) => panic!("Could not parse: {}", err),
-        };
+        let lexed = lex(&rendered).expect("Could not lex");
+        let parsed = parse(&lexed).expect("Could not parse");
         assert_eq!(parsed, input);
         Ok(())
     })
