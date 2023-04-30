@@ -6,14 +6,29 @@ pub mod parser;
 pub mod primitive;
 mod roundtrip_test;
 
-use miette::Result;
+use std::io::Read;
+
+use miette::{IntoDiagnostic, Result};
 use reedline::*;
 
 use crate::interpreter::interpret;
 use crate::lexer::lex;
 use crate::parser::parse;
 
-fn main() {
+fn main() -> Result<()> {
+    if atty::is(atty::Stream::Stdin) {
+        repl();
+        Ok(())
+    } else {
+        let mut buffer = String::new();
+        std::io::stdin()
+            .read_to_string(&mut buffer)
+            .into_diagnostic()?;
+        run(&buffer)
+    }
+}
+
+fn repl() {
     let mut line_editor = Reedline::create();
     let prompt = DefaultPrompt {
         left_prompt: DefaultPromptSegment::Empty,
