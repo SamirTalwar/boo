@@ -17,6 +17,14 @@ pub enum Error {
         span: miette::SourceSpan,
         expected_tokens: Vec<&'static str>,
     },
+
+    #[error("Unknown variable: {name:?}")]
+    #[diagnostic(code(boo::interpret::unknown_variable))]
+    UnknownVariable {
+        #[label("unknown variable")]
+        span: miette::SourceSpan,
+        name: String,
+    },
 }
 
 fn expected_one_of(strings: &[&str]) -> String {

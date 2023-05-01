@@ -21,7 +21,10 @@ pub fn interpret_<'a, Annotation: Clone>(
             name,
         } => match assignments.get(name) {
             Some(value) => interpret_(value.clone(), assignments),
-            None => todo!(),
+            None => Err(Error::UnknownVariable {
+                span: 0.into(), // this is wrong
+                name: name.to_string(),
+            }),
         },
         Expr::Let {
             annotation: _,
@@ -125,6 +128,23 @@ mod tests {
             );
             Ok(())
         })
+    }
+
+    #[test]
+    fn test_interpreting_an_unknown_variable() {
+        let name = "unknown";
+        let expr = Expr::Identifier {
+            annotation: (),
+            name,
+        };
+        let result = interpret(expr.into());
+        assert_eq!(
+            result,
+            Err(Error::UnknownVariable {
+                span: 0.into(), // this is wrong
+                name: name.to_string()
+            })
+        );
     }
 
     #[test]
