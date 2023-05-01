@@ -4,18 +4,18 @@ use crate::lexer::{Positioned, SourceSpan, Token};
 use crate::primitive::*;
 
 peg::parser! {
-    grammar parser() for [Token] {
+    grammar parser<'a>() for [&'a Token<'a>] {
         pub rule root() -> Expr<()> = e:expr() { e }
 
         pub rule expr() -> Expr<()> = precedence! {
-            left:(@) (quiet! { [Token::Operator('+')] } / expected!("'+'")) right:@ {
+            left:(@) (quiet! { [Token::Operator("+")] } / expected!("'+'")) right:@ {
                 infix(left, Operation::Add, right)
             }
-            left:(@) (quiet! { [Token::Operator('-')] } / expected!("'-'")) right:@ {
+            left:(@) (quiet! { [Token::Operator("-")] } / expected!("'-'")) right:@ {
                 infix(left, Operation::Subtract, right)
             }
             --
-            left:(@) (quiet! { [Token::Operator('*')] } / expected!("'*'")) right:@ {
+            left:(@) (quiet! { [Token::Operator("*")] } / expected!("'*'")) right:@ {
                 infix(left, Operation::Multiply, right)
             }
             --
@@ -31,7 +31,7 @@ peg::parser! {
             quiet! { [Token::Integer(n)] {
                 Expr::Primitive {
                     annotation: (),
-                    value: Primitive::Int(n),
+                    value: Primitive::Int(*n),
                 }
             } } / expected!("an integer")
     }
@@ -41,7 +41,7 @@ pub fn parse(input: &[Positioned<Token>]) -> Result<Expr<()>, Error> {
     parser::root(
         &(input
             .iter()
-            .map(|positioned| positioned.value)
+            .map(|positioned| &positioned.value)
             .collect::<Vec<_>>()),
     )
     .map_err(|inner| {
@@ -98,20 +98,20 @@ mod tests {
 
     #[test]
     fn test_parsing_addition() {
-        test_parsing_an_operation('+', Operation::Add)
+        test_parsing_an_operation("+", Operation::Add)
     }
 
     #[test]
     fn test_parsing_subtraction() {
-        test_parsing_an_operation('-', Operation::Subtract)
+        test_parsing_an_operation("-", Operation::Subtract)
     }
 
     #[test]
     fn test_parsing_multiplication() {
-        test_parsing_an_operation('*', Operation::Multiply)
+        test_parsing_an_operation("*", Operation::Multiply)
     }
 
-    fn test_parsing_an_operation(text: char, operation: Operation) {
+    fn test_parsing_an_operation(text: &str, operation: Operation) {
         arbtest::builder().run(|u| {
             let left = u.arbitrary::<Int>()?;
             let right = u.arbitrary::<Int>()?;
@@ -163,7 +163,7 @@ mod tests {
                 },
                 Positioned {
                     span: (2..3).into(),
-                    value: Token::Operator('+'),
+                    value: Token::Operator("+"),
                 },
                 Positioned {
                     span: (4..5).into(),
@@ -171,7 +171,7 @@ mod tests {
                 },
                 Positioned {
                     span: (6..7).into(),
-                    value: Token::Operator('*'),
+                    value: Token::Operator("*"),
                 },
                 Positioned {
                     span: (8..9).into(),
@@ -220,7 +220,7 @@ mod tests {
                 },
                 Positioned {
                     span: (2..3).into(),
-                    value: Token::Operator('*'),
+                    value: Token::Operator("*"),
                 },
                 Positioned {
                     span: (4..5).into(),
@@ -228,7 +228,7 @@ mod tests {
                 },
                 Positioned {
                     span: (6..7).into(),
-                    value: Token::Operator('-'),
+                    value: Token::Operator("-"),
                 },
                 Positioned {
                     span: (8..9).into(),
@@ -277,7 +277,7 @@ mod tests {
                 },
                 Positioned {
                     span: (2..3).into(),
-                    value: Token::Operator('*'),
+                    value: Token::Operator("*"),
                 },
                 Positioned {
                     span: (4..5).into(),
@@ -289,7 +289,7 @@ mod tests {
                 },
                 Positioned {
                     span: (7..8).into(),
-                    value: Token::Operator('+'),
+                    value: Token::Operator("+"),
                 },
                 Positioned {
                     span: (9..10).into(),
@@ -336,7 +336,7 @@ mod tests {
             let tokens = vec![
                 Positioned {
                     span: (0..1).into(),
-                    value: Token::Operator('+'),
+                    value: Token::Operator("+"),
                 },
                 Positioned {
                     span: (2..3).into(),
@@ -367,7 +367,7 @@ mod tests {
                 },
                 Positioned {
                     span: (2..3).into(),
-                    value: Token::Operator('+'),
+                    value: Token::Operator("+"),
                 },
             ];
             let expr = parse(&tokens);

@@ -4,15 +4,15 @@ pub use miette::{SourceOffset, SourceSpan};
 use crate::error::Error;
 use crate::primitive::Int;
 
-#[derive(Debug, Clone, Copy, PartialEq, Logos)]
+#[derive(Debug, Clone, PartialEq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
-pub enum Token {
+pub enum Token<'a> {
     #[regex(r"-?[0-9](_?[0-9])*", |token|
         str::replace(token.slice(), "_", "").parse::<Int>().ok()
     )]
     Integer(Int),
-    #[regex(r"\+|\-|\*", |token| token.slice().chars().next())]
-    Operator(char),
+    #[regex(r"\+|\-|\*")]
+    Operator(&'a str),
     #[token(r"(")]
     StartGroup,
     #[token(r")")]
@@ -125,7 +125,7 @@ mod tests {
                 },
                 Positioned {
                     span: (2..3).into(),
-                    value: Token::Operator('+'),
+                    value: Token::Operator("+"),
                 },
                 Positioned {
                     span: (4..5).into(),
@@ -133,7 +133,7 @@ mod tests {
                 },
                 Positioned {
                     span: (6..7).into(),
-                    value: Token::Operator('-'),
+                    value: Token::Operator("-"),
                 },
                 Positioned {
                     span: (8..9).into(),
@@ -141,7 +141,7 @@ mod tests {
                 },
                 Positioned {
                     span: (10..11).into(),
-                    value: Token::Operator('*'),
+                    value: Token::Operator("*"),
                 },
                 Positioned {
                     span: (12..13).into(),
@@ -165,7 +165,7 @@ mod tests {
                 },
                 Positioned {
                     span: (2..3).into(),
-                    value: Token::Operator('*'),
+                    value: Token::Operator("*"),
                 },
                 Positioned {
                     span: (4..5).into(),
@@ -177,7 +177,7 @@ mod tests {
                 },
                 Positioned {
                     span: (7..8).into(),
-                    value: Token::Operator('+'),
+                    value: Token::Operator("+"),
                 },
                 Positioned {
                     span: (9..10).into(),
@@ -189,7 +189,7 @@ mod tests {
                 },
                 Positioned {
                     span: (12..13).into(),
-                    value: Token::Operator('-'),
+                    value: Token::Operator("-"),
                 },
                 Positioned {
                     span: (14..15).into(),
