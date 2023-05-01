@@ -6,8 +6,6 @@ pub mod parser;
 pub mod primitive;
 mod roundtrip_test;
 
-use std::io::Read;
-
 use miette::{IntoDiagnostic, Result};
 use reedline::*;
 
@@ -15,17 +13,21 @@ use crate::interpreter::interpret;
 use crate::lexer::lex;
 use crate::parser::parse;
 
-fn main() -> Result<()> {
+fn main() {
     if atty::is(atty::Stream::Stdin) {
         repl();
-        Ok(())
     } else {
-        let mut buffer = String::new();
-        std::io::stdin()
-            .read_to_string(&mut buffer)
-            .into_diagnostic()?;
-        run(&buffer)
+        match read_and_run(std::io::stdin()) {
+            Ok(()) => (),
+            Err(report) => eprintln!("{:?}", report),
+        }
     }
+}
+
+fn read_and_run(mut input: impl std::io::Read) -> Result<()> {
+    let mut buffer = String::new();
+    input.read_to_string(&mut buffer).into_diagnostic()?;
+    run(&buffer).map_err(|report| report.with_source_code(buffer))
 }
 
 fn repl() {
