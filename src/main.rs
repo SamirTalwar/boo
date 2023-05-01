@@ -57,7 +57,7 @@ fn repl() {
 fn run(buffer: &str) -> miette::Result<()> {
     let tokens = lex(buffer)?;
     let expr = parse(&tokens)?;
-    let result = interpret(expr.into());
+    let result = interpret(expr.into())?;
     println!("{}", result);
     Ok(())
 }

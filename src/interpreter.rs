@@ -3,18 +3,19 @@ use std::rc::Rc;
 use im::HashMap;
 
 use crate::ast::*;
+use crate::error::*;
 use crate::primitive::*;
 
-pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Rc<Expr<Annotation>> {
+pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Result<Rc<Expr<Annotation>>> {
     interpret_(expr, HashMap::new())
 }
 
 pub fn interpret_<'a, Annotation: Clone>(
     expr: Rc<Expr<'a, Annotation>>,
     assignments: HashMap<&'a str, Rc<Expr<'a, Annotation>>>,
-) -> Rc<Expr<'a, Annotation>> {
+) -> Result<Rc<Expr<'a, Annotation>>> {
     match expr.as_ref() {
-        Expr::Primitive { .. } => expr,
+        Expr::Primitive { .. } => Ok(expr),
         Expr::Identifier {
             annotation: _,
             name,
@@ -43,7 +44,7 @@ pub fn interpret_<'a, Annotation: Clone>(
                     annotation: _,
                     value: Primitive::Int(right),
                 },
-            ) => match *operation {
+            ) => Ok(match *operation {
                 Operation::Add => Expr::Primitive {
                     annotation: annotation.clone(),
                     value: Primitive::Int(left + right),
@@ -57,10 +58,10 @@ pub fn interpret_<'a, Annotation: Clone>(
                     value: Primitive::Int(left * right),
                 },
             }
-            .into(),
+            .into()),
             _ => {
-                let left_result = interpret_(left.clone(), assignments.clone());
-                let right_result = interpret_(right.clone(), assignments.clone());
+                let left_result = interpret_(left.clone(), assignments.clone())?;
+                let right_result = interpret_(right.clone(), assignments.clone())?;
                 interpret_(
                     Expr::Infix {
                         annotation: annotation.clone(),
@@ -89,7 +90,7 @@ mod tests {
                 value,
             });
             let result = interpret(expr.clone());
-            assert_eq!(result, expr);
+            assert_eq!(result, Ok(expr));
             Ok(())
         })
     }
@@ -115,11 +116,12 @@ mod tests {
             };
             let result = interpret(expr.into());
             assert_eq!(
-                *result,
-                Expr::Primitive {
+                result,
+                Ok(Expr::Primitive {
                     annotation: (),
                     value,
                 }
+                .into())
             );
             Ok(())
         })
@@ -166,11 +168,12 @@ mod tests {
                     };
                     let result = interpret(expr.into());
                     assert_eq!(
-                        *result,
-                        Expr::Primitive {
+                        result,
+                        Ok(Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(expected),
                         }
+                        .into())
                     );
                     Ok(())
                 }
@@ -213,11 +216,12 @@ mod tests {
                     });
                     let result = interpret(expr.clone());
                     assert_eq!(
-                        *result,
-                        Expr::Primitive {
+                        result,
+                        Ok(Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(sum),
                         }
+                        .into())
                     );
                     Ok(())
                 }
