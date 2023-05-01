@@ -7,16 +7,24 @@ use crate::primitive::Int;
 #[derive(Debug, Clone, PartialEq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
 pub enum Token<'a> {
+    #[token(r"(")]
+    StartGroup,
+    #[token(r")")]
+    EndGroup,
+    #[token(r"let")]
+    Let,
+    #[token(r"in")]
+    In,
+    #[token(r"=")]
+    Assign,
     #[regex(r"-?[0-9](_?[0-9])*", |token|
         str::replace(token.slice(), "_", "").parse::<Int>().ok()
     )]
     Integer(Int),
     #[regex(r"\+|\-|\*")]
     Operator(&'a str),
-    #[token(r"(")]
-    StartGroup,
-    #[token(r")")]
-    EndGroup,
+    #[regex(r"[a-z]+")]
+    Identifier(&'a str),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -194,6 +202,122 @@ mod tests {
                 Positioned {
                     span: (14..15).into(),
                     value: Token::Integer(4),
+                },
+            ])
+        );
+    }
+
+    #[test]
+    fn test_lexing_variable_assignment() {
+        let input = "let thing = 9";
+        let tokens = lex(input);
+
+        assert_eq!(
+            tokens,
+            Ok(vec![
+                Positioned {
+                    span: (0..3).into(),
+                    value: Token::Let,
+                },
+                Positioned {
+                    span: (4..9).into(),
+                    value: Token::Identifier("thing"),
+                },
+                Positioned {
+                    span: (10..11).into(),
+                    value: Token::Assign,
+                },
+                Positioned {
+                    span: (12..13).into(),
+                    value: Token::Integer(9),
+                },
+            ])
+        );
+    }
+
+    #[test]
+    fn test_lexing_variable_use() {
+        let input = "foo + bar";
+        let tokens = lex(input);
+
+        assert_eq!(
+            tokens,
+            Ok(vec![
+                Positioned {
+                    span: (0..3).into(),
+                    value: Token::Identifier("foo"),
+                },
+                Positioned {
+                    span: (4..5).into(),
+                    value: Token::Operator("+"),
+                },
+                Positioned {
+                    span: (6..9).into(),
+                    value: Token::Identifier("bar"),
+                },
+            ])
+        );
+    }
+
+    #[test]
+    fn test_lexing_variable_assignment_and_use() {
+        let input = "let price = 3 in let quantity = 5 in price * quantity";
+        let tokens = lex(input);
+
+        assert_eq!(
+            tokens,
+            Ok(vec![
+                Positioned {
+                    span: (0..3).into(),
+                    value: Token::Let,
+                },
+                Positioned {
+                    span: (4..9).into(),
+                    value: Token::Identifier("price"),
+                },
+                Positioned {
+                    span: (10..11).into(),
+                    value: Token::Assign,
+                },
+                Positioned {
+                    span: (12..13).into(),
+                    value: Token::Integer(3),
+                },
+                Positioned {
+                    span: (14..16).into(),
+                    value: Token::In,
+                },
+                Positioned {
+                    span: (17..20).into(),
+                    value: Token::Let,
+                },
+                Positioned {
+                    span: (21..29).into(),
+                    value: Token::Identifier("quantity"),
+                },
+                Positioned {
+                    span: (30..31).into(),
+                    value: Token::Assign,
+                },
+                Positioned {
+                    span: (32..33).into(),
+                    value: Token::Integer(5),
+                },
+                Positioned {
+                    span: (34..36).into(),
+                    value: Token::In,
+                },
+                Positioned {
+                    span: (37..42).into(),
+                    value: Token::Identifier("price"),
+                },
+                Positioned {
+                    span: (43..44).into(),
+                    value: Token::Operator("*"),
+                },
+                Positioned {
+                    span: (45..53).into(),
+                    value: Token::Identifier("quantity"),
                 },
             ])
         );

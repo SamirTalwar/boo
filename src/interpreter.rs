@@ -1,11 +1,33 @@
 use std::rc::Rc;
 
+use im::HashMap;
+
 use crate::ast::*;
 use crate::primitive::*;
 
 pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Rc<Expr<Annotation>> {
+    interpret_(expr, HashMap::new())
+}
+
+pub fn interpret_<'a, Annotation: Clone>(
+    expr: Rc<Expr<'a, Annotation>>,
+    assignments: HashMap<&'a str, Rc<Expr<'a, Annotation>>>,
+) -> Rc<Expr<'a, Annotation>> {
     match expr.as_ref() {
         Expr::Primitive { .. } => expr,
+        Expr::Identifier {
+            annotation: _,
+            name,
+        } => match assignments.get(name) {
+            Some(value) => interpret_(value.clone(), assignments),
+            None => todo!(),
+        },
+        Expr::Let {
+            annotation: _,
+            name,
+            value,
+            inner,
+        } => interpret_(inner.clone(), assignments.update(*name, value.clone())),
         Expr::Infix {
             annotation,
             operation,
@@ -37,9 +59,9 @@ pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Rc<Expr<Annot
             }
             .into(),
             _ => {
-                let left_result = interpret(left.clone());
-                let right_result = interpret(right.clone());
-                interpret(
+                let left_result = interpret_(left.clone(), assignments.clone());
+                let right_result = interpret_(right.clone(), assignments.clone());
+                interpret_(
                     Expr::Infix {
                         annotation: annotation.clone(),
                         operation: *operation,
@@ -47,6 +69,7 @@ pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Rc<Expr<Annot
                         right: right_result,
                     }
                     .into(),
+                    assignments.clone(),
                 )
             }
         },
@@ -67,6 +90,37 @@ mod tests {
             });
             let result = interpret(expr.clone());
             assert_eq!(result, expr);
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_interpreting_assignment() {
+        arbtest::builder().run(|u| {
+            let name = "variable";
+            let value = u.arbitrary::<Primitive>()?;
+            let expr = Expr::Let {
+                annotation: (),
+                name,
+                value: Expr::Primitive {
+                    annotation: (),
+                    value,
+                }
+                .into(),
+                inner: Expr::Identifier {
+                    annotation: (),
+                    name,
+                }
+                .into(),
+            };
+            let result = interpret(expr.into());
+            assert_eq!(
+                *result,
+                Expr::Primitive {
+                    annotation: (),
+                    value,
+                }
+            );
             Ok(())
         })
     }
@@ -116,6 +170,53 @@ mod tests {
                         Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(expected),
+                        }
+                    );
+                    Ok(())
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn test_interpreting_variable_use() {
+        arbtest::builder().run(|u| {
+            let name = "variable";
+            let variable = u.arbitrary::<Int>()?;
+            let constant = u.arbitrary::<Int>()?;
+            match variable.checked_add(constant) {
+                None => Ok(()), // overflow or underflow
+                Some(sum) => {
+                    let expr = Rc::new(Expr::Let {
+                        annotation: (),
+                        name,
+                        value: Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(variable),
+                        }
+                        .into(),
+                        inner: Expr::Infix {
+                            annotation: (),
+                            operation: Operation::Add,
+                            left: Expr::Identifier {
+                                annotation: (),
+                                name,
+                            }
+                            .into(),
+                            right: Expr::Primitive {
+                                annotation: (),
+                                value: Primitive::Int(constant),
+                            }
+                            .into(),
+                        }
+                        .into(),
+                    });
+                    let result = interpret(expr.clone());
+                    assert_eq!(
+                        *result,
+                        Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(sum),
                         }
                     );
                     Ok(())

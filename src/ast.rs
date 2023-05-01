@@ -3,26 +3,46 @@ use std::rc::Rc;
 use crate::primitive::Primitive;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Expr<Annotation> {
+pub enum Expr<'a, Annotation> {
     Primitive {
         annotation: Annotation,
         value: Primitive,
     },
+    Identifier {
+        annotation: Annotation,
+        name: &'a str,
+    },
+    Let {
+        annotation: Annotation,
+        name: &'a str,
+        value: Rc<Expr<'a, Annotation>>,
+        inner: Rc<Expr<'a, Annotation>>,
+    },
     Infix {
         annotation: Annotation,
         operation: Operation,
-        left: Rc<Expr<Annotation>>,
-        right: Rc<Expr<Annotation>>,
+        left: Rc<Expr<'a, Annotation>>,
+        right: Rc<Expr<'a, Annotation>>,
     },
 }
 
-impl<Annotation> std::fmt::Display for Expr<Annotation> {
+impl<'a, Annotation> std::fmt::Display for Expr<'a, Annotation> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::Primitive {
                 annotation: _,
                 value,
             } => value.fmt(f),
+            Expr::Identifier {
+                annotation: _,
+                name,
+            } => name.fmt(f),
+            Expr::Let {
+                annotation: _,
+                name,
+                value,
+                inner,
+            } => write!(f, "let {} = ({}) in ({})", name, value, inner),
             Expr::Infix {
                 annotation: _,
                 operation,
@@ -55,7 +75,7 @@ impl std::fmt::Display for Operation {
 mod tests {
     use super::*;
 
-    impl<'a> arbitrary::Arbitrary<'a> for Expr<()> {
+    impl<'a> arbitrary::Arbitrary<'a> for Expr<'a, ()> {
         fn arbitrary(
             unstructured: &mut arbitrary::Unstructured<'a>,
         ) -> std::result::Result<Self, arbitrary::Error> {
@@ -65,7 +85,7 @@ mod tests {
         }
     }
 
-    impl<'a> Expr<()> {
+    impl<'a> Expr<'a, ()> {
         fn arbitrary_of_depth(
             depth: u32,
             unstructured: &mut arbitrary::Unstructured<'a>,

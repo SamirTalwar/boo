@@ -5,9 +5,27 @@ use crate::primitive::*;
 
 peg::parser! {
     grammar parser<'a>() for [&'a Token<'a>] {
-        pub rule root() -> Expr<()> = e:expr() { e }
+        pub rule root() -> Expr<'a, ()> = e:expr() { e }
 
-        pub rule expr() -> Expr<()> = precedence! {
+        pub rule expr() -> Expr<'a, ()> = precedence! {
+            (quiet! { [Token::Let] } / expected!("let"))
+            name:(quiet! { [Token::Identifier(name)] } / expected!("an identifier"))
+            (quiet! { [Token::Assign] } / expected!("="))
+            value:expr()
+            (quiet! { [Token::In] } / expected!("in"))
+            inner:expr() {
+                let n = match name {
+                    Token::Identifier(name) => *name,
+                    _ => unreachable!(),
+                };
+                Expr::Let {
+                    annotation: (),
+                    name: n,
+                    value: value.into(),
+                    inner: inner.into(),
+                }
+            }
+            --
             left:(@) (quiet! { [Token::Operator("+")] } / expected!("'+'")) right:@ {
                 infix(left, Operation::Add, right)
             }
@@ -20,6 +38,8 @@ peg::parser! {
             }
             --
             p:primitive() { p }
+            i:identifier() { i }
+            --
             (quiet! { [Token::StartGroup] } / expected!("'('"))
             e:expr()
             (quiet! { [Token::EndGroup] } / expected!(")'")) {
@@ -27,17 +47,25 @@ peg::parser! {
             }
         }
 
-        rule primitive() -> Expr<()> =
+        rule primitive() -> Expr<'a, ()> =
             quiet! { [Token::Integer(n)] {
                 Expr::Primitive {
                     annotation: (),
                     value: Primitive::Int(*n),
                 }
             } } / expected!("an integer")
+
+        rule identifier() -> Expr<'a, ()> =
+            quiet! { [Token::Identifier(name)] {
+                Expr::Identifier {
+                    annotation: (),
+                    name,
+                }
+            } } / expected!("an identifier")
     }
 }
 
-pub fn parse(input: &[Positioned<Token>]) -> Result<Expr<()>, Error> {
+pub fn parse<'a>(input: &'a [Positioned<Token>]) -> Result<Expr<'a, ()>, Error> {
     parser::root(
         &(input
             .iter()
@@ -62,7 +90,7 @@ pub fn parse(input: &[Positioned<Token>]) -> Result<Expr<()>, Error> {
     })
 }
 
-fn infix(left: Expr<()>, operation: Operation, right: Expr<()>) -> Expr<()> {
+fn infix<'a>(left: Expr<'a, ()>, operation: Operation, right: Expr<'a, ()>) -> Expr<'a, ()> {
     Expr::Infix {
         annotation: (),
         operation,
@@ -275,6 +303,78 @@ mod tests {
     }
 
     #[test]
+    fn test_variables() {
+        arbtest::builder().run(|u| {
+            let variable = u.arbitrary::<Int>()?;
+            let constant = u.arbitrary::<Int>()?;
+            let tokens = vec![
+                Positioned {
+                    span: (0..1).into(),
+                    value: Token::Let,
+                },
+                Positioned {
+                    span: (2..3).into(),
+                    value: Token::Identifier("number"),
+                },
+                Positioned {
+                    span: (4..5).into(),
+                    value: Token::Assign,
+                },
+                Positioned {
+                    span: (6..7).into(),
+                    value: Token::Integer(variable),
+                },
+                Positioned {
+                    span: (8..9).into(),
+                    value: Token::In,
+                },
+                Positioned {
+                    span: (10..11).into(),
+                    value: Token::Identifier("number"),
+                },
+                Positioned {
+                    span: (12..13).into(),
+                    value: Token::Operator("*"),
+                },
+                Positioned {
+                    span: (14..15).into(),
+                    value: Token::Integer(constant),
+                },
+            ];
+            let expr = parse(&tokens);
+
+            assert_eq!(
+                expr,
+                Ok(Expr::Let {
+                    annotation: (),
+                    name: "number",
+                    value: Expr::Primitive {
+                        annotation: (),
+                        value: Primitive::Int(variable),
+                    }
+                    .into(),
+                    inner: Expr::Infix {
+                        annotation: (),
+                        operation: Operation::Multiply,
+                        left: Expr::Identifier {
+                            annotation: (),
+                            name: "number",
+                        }
+                        .into(),
+                        right: Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Int(constant),
+                        }
+                        .into(),
+                    }
+                    .into(),
+                })
+            );
+            Ok(())
+        })
+    }
+
+    #[test]
     fn test_parentheses() {
         arbtest::builder().run(|u| {
             let a = u.arbitrary::<Int>()?;
@@ -363,7 +463,7 @@ mod tests {
                 expr,
                 Err(Error::ParseError {
                     span: (0..1).into(),
-                    expected_tokens: ["'('", "an integer"].into(),
+                    expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
                 })
             );
             Ok(())
@@ -390,7 +490,7 @@ mod tests {
                 expr,
                 Err(Error::ParseError {
                     span: (3..3).into(),
-                    expected_tokens: ["'('", "an integer"].into(),
+                    expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
                 })
             );
             Ok(())
