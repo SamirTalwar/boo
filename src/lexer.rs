@@ -1,7 +1,7 @@
 use logos::Logos;
 pub use miette::{SourceOffset, SourceSpan};
 
-use crate::error::Error;
+use crate::error::{Error, Result};
 use crate::primitive::Int;
 
 #[derive(Debug, Clone, PartialEq, Logos)]
@@ -33,7 +33,7 @@ pub struct Positioned<T> {
     pub value: T,
 }
 
-pub fn lex(input: &str) -> Result<Vec<Positioned<Token>>, Error> {
+pub fn lex(input: &str) -> Result<Vec<Positioned<Token>>> {
     Token::lexer(input)
         .spanned()
         .map(move |(token, span)| {

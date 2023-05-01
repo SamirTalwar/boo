@@ -1,3 +1,5 @@
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[derive(Debug, Clone, PartialEq, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("Unexpected token: {token}")]

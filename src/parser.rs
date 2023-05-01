@@ -65,7 +65,7 @@ peg::parser! {
     }
 }
 
-pub fn parse<'a>(input: &'a [Positioned<Token>]) -> Result<Expr<'a, ()>, Error> {
+pub fn parse<'a>(input: &'a [Positioned<Token>]) -> Result<Expr<'a, ()>> {
     parser::root(
         &(input
             .iter()

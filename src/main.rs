@@ -6,7 +6,7 @@ pub mod parser;
 pub mod primitive;
 mod roundtrip_test;
 
-use miette::{IntoDiagnostic, Result};
+use miette::IntoDiagnostic;
 use reedline::*;
 
 use crate::interpreter::interpret;
@@ -24,7 +24,7 @@ fn main() {
     }
 }
 
-fn read_and_run(mut input: impl std::io::Read) -> Result<()> {
+fn read_and_run(mut input: impl std::io::Read) -> miette::Result<()> {
     let mut buffer = String::new();
     input.read_to_string(&mut buffer).into_diagnostic()?;
     run(&buffer).map_err(|report| report.with_source_code(buffer))
@@ -54,7 +54,7 @@ fn repl() {
     }
 }
 
-fn run(buffer: &str) -> Result<()> {
+fn run(buffer: &str) -> miette::Result<()> {
     let tokens = lex(buffer)?;
     let expr = parse(&tokens)?;
     let result = interpret(expr.into());
