@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::primitive::Primitive;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,8 +11,8 @@ pub enum Expr<Annotation> {
     Infix {
         annotation: Annotation,
         operation: Operation,
-        left: Box<Expr<Annotation>>,
-        right: Box<Expr<Annotation>>,
+        left: Rc<Expr<Annotation>>,
+        right: Rc<Expr<Annotation>>,
     },
 }
 
@@ -81,8 +83,8 @@ mod tests {
                 Ok(Expr::Infix {
                     annotation: (),
                     operation,
-                    left: Box::new(left),
-                    right: Box::new(right),
+                    left: left.into(),
+                    right: right.into(),
                 })
             }
         }

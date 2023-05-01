@@ -57,7 +57,7 @@ fn repl() {
 fn run(buffer: &str) -> Result<()> {
     let tokens = lex(buffer)?;
     let expr = parse(&tokens)?;
-    let result = interpret(expr);
+    let result = interpret(expr.into());
     println!("{}", result);
     Ok(())
 }

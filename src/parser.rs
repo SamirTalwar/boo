@@ -66,8 +66,8 @@ fn infix(left: Expr<()>, operation: Operation, right: Expr<()>) -> Expr<()> {
     Expr::Infix {
         annotation: (),
         operation,
-        left: Box::new(left),
-        right: Box::new(right),
+        left: left.into(),
+        right: right.into(),
     }
 }
 
@@ -136,14 +136,16 @@ mod tests {
                 Ok(Expr::Infix {
                     annotation: (),
                     operation,
-                    left: Box::new(Expr::Primitive {
+                    left: Expr::Primitive {
                         annotation: (),
                         value: Primitive::Int(left),
-                    }),
-                    right: Box::new(Expr::Primitive {
+                    }
+                    .into(),
+                    right: Expr::Primitive {
                         annotation: (),
                         value: Primitive::Int(right),
-                    }),
+                    }
+                    .into(),
                 })
             );
             Ok(())
@@ -185,22 +187,26 @@ mod tests {
                 Ok(Expr::Infix {
                     annotation: (),
                     operation: Operation::Add,
-                    left: Box::new(Expr::Primitive {
+                    left: Expr::Primitive {
                         annotation: (),
                         value: Primitive::Int(a),
-                    }),
-                    right: Box::new(Expr::Infix {
+                    }
+                    .into(),
+                    right: Expr::Infix {
                         annotation: (),
                         operation: Operation::Multiply,
-                        left: Box::new(Expr::Primitive {
+                        left: Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(b),
-                        }),
-                        right: Box::new(Expr::Primitive {
+                        }
+                        .into(),
+                        right: Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(c),
-                        }),
-                    }),
+                        }
+                        .into(),
+                    }
+                    .into(),
                 })
             );
             Ok(())
@@ -242,22 +248,26 @@ mod tests {
                 Ok(Expr::Infix {
                     annotation: (),
                     operation: Operation::Subtract,
-                    left: Box::new(Expr::Infix {
+                    left: Expr::Infix {
                         annotation: (),
                         operation: Operation::Multiply,
-                        left: Box::new(Expr::Primitive {
+                        left: Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(a),
-                        }),
-                        right: Box::new(Expr::Primitive {
+                        }
+                        .into(),
+                        right: Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(b),
-                        }),
-                    }),
-                    right: Box::new(Expr::Primitive {
+                        }
+                        .into(),
+                    }
+                    .into(),
+                    right: Expr::Primitive {
                         annotation: (),
                         value: Primitive::Int(c),
-                    }),
+                    }
+                    .into(),
                 })
             );
             Ok(())
@@ -307,22 +317,26 @@ mod tests {
                 Ok(Expr::Infix {
                     annotation: (),
                     operation: Operation::Multiply,
-                    left: Box::new(Expr::Primitive {
+                    left: Expr::Primitive {
                         annotation: (),
                         value: Primitive::Int(a),
-                    }),
-                    right: Box::new(Expr::Infix {
+                    }
+                    .into(),
+                    right: Expr::Infix {
                         annotation: (),
                         operation: Operation::Add,
-                        left: Box::new(Expr::Primitive {
+                        left: Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(b),
-                        }),
-                        right: Box::new(Expr::Primitive {
+                        }
+                        .into(),
+                        right: Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(c),
-                        }),
-                    }),
+                        }
+                        .into(),
+                    }
+                    .into(),
                 })
             );
             Ok(())

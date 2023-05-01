@@ -1,15 +1,17 @@
+use std::rc::Rc;
+
 use crate::ast::*;
 use crate::primitive::*;
 
-pub fn interpret<Annotation>(expr: Expr<Annotation>) -> Expr<Annotation> {
-    match expr {
-        expr @ Expr::Primitive { .. } => expr,
+pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Rc<Expr<Annotation>> {
+    match expr.as_ref() {
+        Expr::Primitive { .. } => expr,
         Expr::Infix {
             annotation,
             operation,
             left,
             right,
-        } => match (*left, *right) {
+        } => match (left.as_ref(), right.as_ref()) {
             (
                 Expr::Primitive {
                     annotation: _,
@@ -19,29 +21,33 @@ pub fn interpret<Annotation>(expr: Expr<Annotation>) -> Expr<Annotation> {
                     annotation: _,
                     value: Primitive::Int(right),
                 },
-            ) => match operation {
+            ) => match *operation {
                 Operation::Add => Expr::Primitive {
-                    annotation,
+                    annotation: annotation.clone(),
                     value: Primitive::Int(left + right),
                 },
                 Operation::Subtract => Expr::Primitive {
-                    annotation,
+                    annotation: annotation.clone(),
                     value: Primitive::Int(left - right),
                 },
                 Operation::Multiply => Expr::Primitive {
-                    annotation,
+                    annotation: annotation.clone(),
                     value: Primitive::Int(left * right),
                 },
-            },
-            (left, right) => {
-                let left_result = interpret(left);
-                let right_result = interpret(right);
-                interpret(Expr::Infix {
-                    annotation,
-                    operation,
-                    left: Box::new(left_result),
-                    right: Box::new(right_result),
-                })
+            }
+            .into(),
+            _ => {
+                let left_result = interpret(left.clone());
+                let right_result = interpret(right.clone());
+                interpret(
+                    Expr::Infix {
+                        annotation: annotation.clone(),
+                        operation: *operation,
+                        left: left_result,
+                        right: right_result,
+                    }
+                    .into(),
+                )
             }
         },
     }
@@ -55,10 +61,10 @@ mod tests {
     fn test_interpreting_a_primitive() {
         arbtest::builder().run(|u| {
             let value = u.arbitrary::<Primitive>()?;
-            let expr = Expr::Primitive {
+            let expr = Rc::new(Expr::Primitive {
                 annotation: (),
                 value,
-            };
+            });
             let result = interpret(expr.clone());
             assert_eq!(result, expr);
             Ok(())
@@ -93,18 +99,20 @@ mod tests {
                     let expr = Expr::Infix {
                         annotation: (),
                         operation,
-                        left: Box::new(Expr::Primitive {
+                        left: Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(left),
-                        }),
-                        right: Box::new(Expr::Primitive {
+                        }
+                        .into(),
+                        right: Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(right),
-                        }),
+                        }
+                        .into(),
                     };
-                    let result = interpret(expr);
+                    let result = interpret(expr.into());
                     assert_eq!(
-                        result,
+                        *result,
                         Expr::Primitive {
                             annotation: (),
                             value: Primitive::Int(expected),
