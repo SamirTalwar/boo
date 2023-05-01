@@ -4,7 +4,7 @@ pub use miette::{SourceOffset, SourceSpan};
 use crate::error::{Error, Result};
 use crate::primitive::Int;
 
-#[derive(Debug, Clone, PartialEq, Logos)]
+#[derive(Debug, Clone, PartialEq, Eq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
 pub enum Token<'a> {
     #[token(r"(")]
@@ -27,21 +27,21 @@ pub enum Token<'a> {
     Identifier(&'a str),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Positioned<T> {
-    pub span: SourceSpan,
-    pub value: T,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnnotatedToken<'a, Annotation> {
+    pub annotation: Annotation,
+    pub token: Token<'a>,
 }
 
-pub fn lex(input: &str) -> Result<Vec<Positioned<Token>>> {
+pub fn lex(input: &str) -> Result<Vec<AnnotatedToken<SourceSpan>>> {
     Token::lexer(input)
         .spanned()
         .map(move |(token, span)| {
             let source_span: SourceSpan = span.clone().into();
             token
-                .map(|value| Positioned {
-                    span: source_span,
-                    value,
+                .map(|value| AnnotatedToken {
+                    annotation: source_span,
+                    token: value,
                 })
                 .map_err(|_| Error::UnexpectedToken {
                     span: source_span,
@@ -70,9 +70,9 @@ mod tests {
 
         assert_eq!(
             tokens,
-            Ok(vec![Positioned {
-                span: (0..3).into(),
-                value: Token::Integer(123),
+            Ok(vec![AnnotatedToken {
+                annotation: (0..3).into(),
+                token: Token::Integer(123),
             }])
         );
     }
@@ -84,9 +84,9 @@ mod tests {
 
         assert_eq!(
             tokens,
-            Ok(vec![Positioned {
-                span: (0..4).into(),
-                value: Token::Integer(-456),
+            Ok(vec![AnnotatedToken {
+                annotation: (0..4).into(),
+                token: Token::Integer(-456),
             }])
         );
     }
@@ -98,9 +98,9 @@ mod tests {
 
         assert_eq!(
             tokens,
-            Ok(vec![Positioned {
-                span: (0..11).into(),
-                value: Token::Integer(987_654_321),
+            Ok(vec![AnnotatedToken {
+                annotation: (0..11).into(),
+                token: Token::Integer(987_654_321),
             }])
         );
     }
@@ -127,33 +127,33 @@ mod tests {
         assert_eq!(
             tokens,
             Ok(vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Integer(1),
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Integer(1),
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Operator("+"),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Operator("+"),
                 },
-                Positioned {
-                    span: (4..5).into(),
-                    value: Token::Integer(2),
+                AnnotatedToken {
+                    annotation: (4..5).into(),
+                    token: Token::Integer(2),
                 },
-                Positioned {
-                    span: (6..7).into(),
-                    value: Token::Operator("-"),
+                AnnotatedToken {
+                    annotation: (6..7).into(),
+                    token: Token::Operator("-"),
                 },
-                Positioned {
-                    span: (8..9).into(),
-                    value: Token::Integer(3),
+                AnnotatedToken {
+                    annotation: (8..9).into(),
+                    token: Token::Integer(3),
                 },
-                Positioned {
-                    span: (10..11).into(),
-                    value: Token::Operator("*"),
+                AnnotatedToken {
+                    annotation: (10..11).into(),
+                    token: Token::Operator("*"),
                 },
-                Positioned {
-                    span: (12..13).into(),
-                    value: Token::Integer(4),
+                AnnotatedToken {
+                    annotation: (12..13).into(),
+                    token: Token::Integer(4),
                 },
             ])
         );
@@ -167,41 +167,41 @@ mod tests {
         assert_eq!(
             tokens,
             Ok(vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Integer(1),
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Integer(1),
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Operator("*"),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Operator("*"),
                 },
-                Positioned {
-                    span: (4..5).into(),
-                    value: Token::StartGroup,
+                AnnotatedToken {
+                    annotation: (4..5).into(),
+                    token: Token::StartGroup,
                 },
-                Positioned {
-                    span: (5..6).into(),
-                    value: Token::Integer(2),
+                AnnotatedToken {
+                    annotation: (5..6).into(),
+                    token: Token::Integer(2),
                 },
-                Positioned {
-                    span: (7..8).into(),
-                    value: Token::Operator("+"),
+                AnnotatedToken {
+                    annotation: (7..8).into(),
+                    token: Token::Operator("+"),
                 },
-                Positioned {
-                    span: (9..10).into(),
-                    value: Token::Integer(3),
+                AnnotatedToken {
+                    annotation: (9..10).into(),
+                    token: Token::Integer(3),
                 },
-                Positioned {
-                    span: (10..11).into(),
-                    value: Token::EndGroup,
+                AnnotatedToken {
+                    annotation: (10..11).into(),
+                    token: Token::EndGroup,
                 },
-                Positioned {
-                    span: (12..13).into(),
-                    value: Token::Operator("-"),
+                AnnotatedToken {
+                    annotation: (12..13).into(),
+                    token: Token::Operator("-"),
                 },
-                Positioned {
-                    span: (14..15).into(),
-                    value: Token::Integer(4),
+                AnnotatedToken {
+                    annotation: (14..15).into(),
+                    token: Token::Integer(4),
                 },
             ])
         );
@@ -215,21 +215,21 @@ mod tests {
         assert_eq!(
             tokens,
             Ok(vec![
-                Positioned {
-                    span: (0..3).into(),
-                    value: Token::Let,
+                AnnotatedToken {
+                    annotation: (0..3).into(),
+                    token: Token::Let,
                 },
-                Positioned {
-                    span: (4..9).into(),
-                    value: Token::Identifier("thing"),
+                AnnotatedToken {
+                    annotation: (4..9).into(),
+                    token: Token::Identifier("thing"),
                 },
-                Positioned {
-                    span: (10..11).into(),
-                    value: Token::Assign,
+                AnnotatedToken {
+                    annotation: (10..11).into(),
+                    token: Token::Assign,
                 },
-                Positioned {
-                    span: (12..13).into(),
-                    value: Token::Integer(9),
+                AnnotatedToken {
+                    annotation: (12..13).into(),
+                    token: Token::Integer(9),
                 },
             ])
         );
@@ -243,17 +243,17 @@ mod tests {
         assert_eq!(
             tokens,
             Ok(vec![
-                Positioned {
-                    span: (0..3).into(),
-                    value: Token::Identifier("foo"),
+                AnnotatedToken {
+                    annotation: (0..3).into(),
+                    token: Token::Identifier("foo"),
                 },
-                Positioned {
-                    span: (4..5).into(),
-                    value: Token::Operator("+"),
+                AnnotatedToken {
+                    annotation: (4..5).into(),
+                    token: Token::Operator("+"),
                 },
-                Positioned {
-                    span: (6..9).into(),
-                    value: Token::Identifier("bar"),
+                AnnotatedToken {
+                    annotation: (6..9).into(),
+                    token: Token::Identifier("bar"),
                 },
             ])
         );
@@ -267,57 +267,57 @@ mod tests {
         assert_eq!(
             tokens,
             Ok(vec![
-                Positioned {
-                    span: (0..3).into(),
-                    value: Token::Let,
+                AnnotatedToken {
+                    annotation: (0..3).into(),
+                    token: Token::Let,
                 },
-                Positioned {
-                    span: (4..9).into(),
-                    value: Token::Identifier("price"),
+                AnnotatedToken {
+                    annotation: (4..9).into(),
+                    token: Token::Identifier("price"),
                 },
-                Positioned {
-                    span: (10..11).into(),
-                    value: Token::Assign,
+                AnnotatedToken {
+                    annotation: (10..11).into(),
+                    token: Token::Assign,
                 },
-                Positioned {
-                    span: (12..13).into(),
-                    value: Token::Integer(3),
+                AnnotatedToken {
+                    annotation: (12..13).into(),
+                    token: Token::Integer(3),
                 },
-                Positioned {
-                    span: (14..16).into(),
-                    value: Token::In,
+                AnnotatedToken {
+                    annotation: (14..16).into(),
+                    token: Token::In,
                 },
-                Positioned {
-                    span: (17..20).into(),
-                    value: Token::Let,
+                AnnotatedToken {
+                    annotation: (17..20).into(),
+                    token: Token::Let,
                 },
-                Positioned {
-                    span: (21..29).into(),
-                    value: Token::Identifier("quantity"),
+                AnnotatedToken {
+                    annotation: (21..29).into(),
+                    token: Token::Identifier("quantity"),
                 },
-                Positioned {
-                    span: (30..31).into(),
-                    value: Token::Assign,
+                AnnotatedToken {
+                    annotation: (30..31).into(),
+                    token: Token::Assign,
                 },
-                Positioned {
-                    span: (32..33).into(),
-                    value: Token::Integer(5),
+                AnnotatedToken {
+                    annotation: (32..33).into(),
+                    token: Token::Integer(5),
                 },
-                Positioned {
-                    span: (34..36).into(),
-                    value: Token::In,
+                AnnotatedToken {
+                    annotation: (34..36).into(),
+                    token: Token::In,
                 },
-                Positioned {
-                    span: (37..42).into(),
-                    value: Token::Identifier("price"),
+                AnnotatedToken {
+                    annotation: (37..42).into(),
+                    token: Token::Identifier("price"),
                 },
-                Positioned {
-                    span: (43..44).into(),
-                    value: Token::Operator("*"),
+                AnnotatedToken {
+                    annotation: (43..44).into(),
+                    token: Token::Operator("*"),
                 },
-                Positioned {
-                    span: (45..53).into(),
-                    value: Token::Identifier("quantity"),
+                AnnotatedToken {
+                    annotation: (45..53).into(),
+                    token: Token::Identifier("quantity"),
                 },
             ])
         );

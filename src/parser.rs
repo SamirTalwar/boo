@@ -1,6 +1,6 @@
 use crate::ast::*;
 use crate::error::*;
-use crate::lexer::{Positioned, SourceSpan, Token};
+use crate::lexer::{AnnotatedToken, SourceSpan, Token};
 use crate::primitive::*;
 
 peg::parser! {
@@ -65,20 +65,14 @@ peg::parser! {
     }
 }
 
-pub fn parse<'a>(input: &'a [Positioned<Token>]) -> Result<Expr<'a, ()>> {
-    parser::root(
-        &(input
-            .iter()
-            .map(|positioned| &positioned.value)
-            .collect::<Vec<_>>()),
-    )
-    .map_err(|inner| {
+pub fn parse<'a>(input: &'a [AnnotatedToken<SourceSpan>]) -> Result<Expr<'a, ()>> {
+    parser::root(&(input.iter().map(|token| &token.token).collect::<Vec<_>>())).map_err(|inner| {
         let span: SourceSpan = if inner.location < input.len() {
-            input[inner.location].span
+            input[inner.location].annotation
         } else {
             input
                 .last()
-                .map(|s| (s.span.offset() + s.span.len()).into())
+                .map(|s| (s.annotation.offset() + s.annotation.len()).into())
                 .unwrap_or(0.into())
         };
         let mut expected_tokens: Vec<&str> = inner.expected.tokens().collect();
@@ -107,9 +101,9 @@ mod tests {
     fn test_parsing_an_integer() {
         arbtest::builder().run(|u| {
             let value = u.arbitrary::<Int>()?;
-            let tokens = vec![Positioned {
-                span: (0..10).into(),
-                value: Token::Integer(value),
+            let tokens = vec![AnnotatedToken {
+                annotation: (0..10).into(),
+                token: Token::Integer(value),
             }];
             let expr = parse(&tokens);
 
@@ -144,17 +138,17 @@ mod tests {
             let left = u.arbitrary::<Int>()?;
             let right = u.arbitrary::<Int>()?;
             let tokens = vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Integer(left),
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Integer(left),
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Operator(text),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Operator(text),
                 },
-                Positioned {
-                    span: (4..5).into(),
-                    value: Token::Integer(right),
+                AnnotatedToken {
+                    annotation: (4..5).into(),
+                    token: Token::Integer(right),
                 },
             ];
             let expr = parse(&tokens);
@@ -187,25 +181,25 @@ mod tests {
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
             let tokens = vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Integer(a),
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Integer(a),
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Operator("+"),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Operator("+"),
                 },
-                Positioned {
-                    span: (4..5).into(),
-                    value: Token::Integer(b),
+                AnnotatedToken {
+                    annotation: (4..5).into(),
+                    token: Token::Integer(b),
                 },
-                Positioned {
-                    span: (6..7).into(),
-                    value: Token::Operator("*"),
+                AnnotatedToken {
+                    annotation: (6..7).into(),
+                    token: Token::Operator("*"),
                 },
-                Positioned {
-                    span: (8..9).into(),
-                    value: Token::Integer(c),
+                AnnotatedToken {
+                    annotation: (8..9).into(),
+                    token: Token::Integer(c),
                 },
             ];
             let expr = parse(&tokens);
@@ -248,25 +242,25 @@ mod tests {
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
             let tokens = vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Integer(a),
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Integer(a),
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Operator("*"),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Operator("*"),
                 },
-                Positioned {
-                    span: (4..5).into(),
-                    value: Token::Integer(b),
+                AnnotatedToken {
+                    annotation: (4..5).into(),
+                    token: Token::Integer(b),
                 },
-                Positioned {
-                    span: (6..7).into(),
-                    value: Token::Operator("-"),
+                AnnotatedToken {
+                    annotation: (6..7).into(),
+                    token: Token::Operator("-"),
                 },
-                Positioned {
-                    span: (8..9).into(),
-                    value: Token::Integer(c),
+                AnnotatedToken {
+                    annotation: (8..9).into(),
+                    token: Token::Integer(c),
                 },
             ];
             let expr = parse(&tokens);
@@ -308,37 +302,37 @@ mod tests {
             let variable = u.arbitrary::<Int>()?;
             let constant = u.arbitrary::<Int>()?;
             let tokens = vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Let,
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Let,
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Identifier("number"),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Identifier("number"),
                 },
-                Positioned {
-                    span: (4..5).into(),
-                    value: Token::Assign,
+                AnnotatedToken {
+                    annotation: (4..5).into(),
+                    token: Token::Assign,
                 },
-                Positioned {
-                    span: (6..7).into(),
-                    value: Token::Integer(variable),
+                AnnotatedToken {
+                    annotation: (6..7).into(),
+                    token: Token::Integer(variable),
                 },
-                Positioned {
-                    span: (8..9).into(),
-                    value: Token::In,
+                AnnotatedToken {
+                    annotation: (8..9).into(),
+                    token: Token::In,
                 },
-                Positioned {
-                    span: (10..11).into(),
-                    value: Token::Identifier("number"),
+                AnnotatedToken {
+                    annotation: (10..11).into(),
+                    token: Token::Identifier("number"),
                 },
-                Positioned {
-                    span: (12..13).into(),
-                    value: Token::Operator("*"),
+                AnnotatedToken {
+                    annotation: (12..13).into(),
+                    token: Token::Operator("*"),
                 },
-                Positioned {
-                    span: (14..15).into(),
-                    value: Token::Integer(constant),
+                AnnotatedToken {
+                    annotation: (14..15).into(),
+                    token: Token::Integer(constant),
                 },
             ];
             let expr = parse(&tokens);
@@ -381,33 +375,33 @@ mod tests {
             let b = u.arbitrary::<Int>()?;
             let c = u.arbitrary::<Int>()?;
             let tokens = vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Integer(a),
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Integer(a),
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Operator("*"),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Operator("*"),
                 },
-                Positioned {
-                    span: (4..5).into(),
-                    value: Token::StartGroup,
+                AnnotatedToken {
+                    annotation: (4..5).into(),
+                    token: Token::StartGroup,
                 },
-                Positioned {
-                    span: (5..6).into(),
-                    value: Token::Integer(b),
+                AnnotatedToken {
+                    annotation: (5..6).into(),
+                    token: Token::Integer(b),
                 },
-                Positioned {
-                    span: (7..8).into(),
-                    value: Token::Operator("+"),
+                AnnotatedToken {
+                    annotation: (7..8).into(),
+                    token: Token::Operator("+"),
                 },
-                Positioned {
-                    span: (9..10).into(),
-                    value: Token::Integer(c),
+                AnnotatedToken {
+                    annotation: (9..10).into(),
+                    token: Token::Integer(c),
                 },
-                Positioned {
-                    span: (10..11).into(),
-                    value: Token::EndGroup,
+                AnnotatedToken {
+                    annotation: (10..11).into(),
+                    token: Token::EndGroup,
                 },
             ];
             let expr = parse(&tokens);
@@ -448,13 +442,13 @@ mod tests {
         arbtest::builder().run(|u| {
             let value = u.arbitrary::<Int>()?;
             let tokens = vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Operator("+"),
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Operator("+"),
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Integer(value),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Integer(value),
                 },
             ];
             let expr = parse(&tokens);
@@ -475,13 +469,13 @@ mod tests {
         arbtest::builder().run(|u| {
             let value = u.arbitrary::<Int>()?;
             let tokens = vec![
-                Positioned {
-                    span: (0..1).into(),
-                    value: Token::Integer(value),
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Integer(value),
                 },
-                Positioned {
-                    span: (2..3).into(),
-                    value: Token::Operator("+"),
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Operator("+"),
                 },
             ];
             let expr = parse(&tokens);
