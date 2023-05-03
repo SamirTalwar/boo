@@ -302,6 +302,7 @@ mod tests {
     #[test]
     fn test_variables() {
         arbtest::builder().run(|u| {
+            let name = u.arbitrary::<Identifier>()?;
             let variable = u.arbitrary::<Int>()?;
             let constant = u.arbitrary::<Int>()?;
             let tokens = vec![
@@ -311,7 +312,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
-                    token: Token::Identifier(Identifier::new("number")),
+                    token: Token::Identifier(name),
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
@@ -327,7 +328,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
-                    token: Token::Identifier(Identifier::new("number")),
+                    token: Token::Identifier(name),
                 },
                 AnnotatedToken {
                     annotation: (12..13).into(),
@@ -344,7 +345,7 @@ mod tests {
                 expr,
                 Ok(Expr::Let {
                     annotation: (0..15).into(),
-                    name: Identifier::new("number"),
+                    name,
                     value: Expr::Primitive {
                         annotation: (6..7).into(),
                         value: Primitive::Int(variable),
@@ -355,7 +356,7 @@ mod tests {
                         operation: Operation::Multiply,
                         left: Expr::Identifier {
                             annotation: (10..11).into(),
-                            name: Identifier::new("number"),
+                            name,
                         }
                         .into(),
                         right: Expr::Primitive {

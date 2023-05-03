@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn test_interpreting_assignment() {
         arbtest::builder().run(|u| {
-            let name = Identifier::new("variable");
+            let name = u.arbitrary::<Identifier>()?;
             let value = u.arbitrary::<Primitive>()?;
             let expr = Expr::Let {
                 annotation: (),
@@ -133,19 +133,22 @@ mod tests {
 
     #[test]
     fn test_interpreting_an_unknown_variable() {
-        let name = Identifier::new("unknown");
-        let expr = Expr::Identifier {
-            annotation: (),
-            name,
-        };
-        let result = interpret(expr.into());
-        assert_eq!(
-            result,
-            Err(Error::UnknownVariable {
-                span: 0.into(), // this is wrong
-                name: name.to_string()
-            })
-        );
+        arbtest::builder().run(|u| {
+            let name = u.arbitrary::<Identifier>()?;
+            let expr = Expr::Identifier {
+                annotation: (),
+                name,
+            };
+            let result = interpret(expr.into());
+            assert_eq!(
+                result,
+                Err(Error::UnknownVariable {
+                    span: 0.into(), // this is wrong
+                    name: name.to_string()
+                })
+            );
+            Ok(())
+        })
     }
 
     #[test]
@@ -205,7 +208,7 @@ mod tests {
     #[test]
     fn test_interpreting_variable_use() {
         arbtest::builder().run(|u| {
-            let name = Identifier::new("variable");
+            let name = u.arbitrary::<Identifier>()?;
             let variable = u.arbitrary::<Int>()?;
             let constant = u.arbitrary::<Int>()?;
             match variable.checked_add(constant) {

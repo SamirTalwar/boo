@@ -25,7 +25,7 @@ pub enum Token<'a> {
     #[regex(r"\+|\-|\*")]
     Operator(&'a str),
     #[regex(r"[a-z]+", |token|
-        Identifier::new(token.slice())
+        Identifier::new(token.slice()).map_err(|_| ())
     )]
     Identifier(Identifier<'a>),
 }
@@ -224,7 +224,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..9).into(),
-                    token: Token::Identifier(Identifier::new("thing")),
+                    token: Token::Identifier(Identifier::new("thing").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
@@ -248,7 +248,7 @@ mod tests {
             Ok(vec![
                 AnnotatedToken {
                     annotation: (0..3).into(),
-                    token: Token::Identifier(Identifier::new("foo")),
+                    token: Token::Identifier(Identifier::new("foo").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
@@ -256,7 +256,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (6..9).into(),
-                    token: Token::Identifier(Identifier::new("bar")),
+                    token: Token::Identifier(Identifier::new("bar").unwrap()),
                 },
             ])
         );
@@ -276,7 +276,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..9).into(),
-                    token: Token::Identifier(Identifier::new("price")),
+                    token: Token::Identifier(Identifier::new("price").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
@@ -296,7 +296,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (21..29).into(),
-                    token: Token::Identifier(Identifier::new("quantity")),
+                    token: Token::Identifier(Identifier::new("quantity").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (30..31).into(),
@@ -312,7 +312,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (37..42).into(),
-                    token: Token::Identifier(Identifier::new("price")),
+                    token: Token::Identifier(Identifier::new("price").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (43..44).into(),
@@ -320,7 +320,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (45..53).into(),
-                    token: Token::Identifier(Identifier::new("quantity")),
+                    token: Token::Identifier(Identifier::new("quantity").unwrap()),
                 },
             ])
         );
