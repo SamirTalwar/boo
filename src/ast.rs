@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use crate::identifier::Identifier;
 use crate::primitive::Primitive;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,11 +11,11 @@ pub enum Expr<'a, Annotation> {
     },
     Identifier {
         annotation: Annotation,
-        name: &'a str,
+        name: Identifier<'a>,
     },
     Let {
         annotation: Annotation,
-        name: &'a str,
+        name: Identifier<'a>,
         value: Rc<Expr<'a, Annotation>>,
         inner: Rc<Expr<'a, Annotation>>,
     },

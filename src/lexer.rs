@@ -1,8 +1,9 @@
 use logos::Logos;
 
-use crate::error::{Error, Result};
-use crate::primitive::Int;
-use crate::span::Span;
+use crate::error::*;
+use crate::identifier::*;
+use crate::primitive::*;
+use crate::span::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
@@ -23,8 +24,10 @@ pub enum Token<'a> {
     Integer(Int),
     #[regex(r"\+|\-|\*")]
     Operator(&'a str),
-    #[regex(r"[a-z]+")]
-    Identifier(&'a str),
+    #[regex(r"[a-z]+", |token|
+        Identifier::new(token.slice())
+    )]
+    Identifier(Identifier<'a>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -221,7 +224,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..9).into(),
-                    token: Token::Identifier("thing"),
+                    token: Token::Identifier(Identifier::new("thing")),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
@@ -245,7 +248,7 @@ mod tests {
             Ok(vec![
                 AnnotatedToken {
                     annotation: (0..3).into(),
-                    token: Token::Identifier("foo"),
+                    token: Token::Identifier(Identifier::new("foo")),
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
@@ -253,7 +256,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (6..9).into(),
-                    token: Token::Identifier("bar"),
+                    token: Token::Identifier(Identifier::new("bar")),
                 },
             ])
         );
@@ -273,7 +276,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..9).into(),
-                    token: Token::Identifier("price"),
+                    token: Token::Identifier(Identifier::new("price")),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
@@ -293,7 +296,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (21..29).into(),
-                    token: Token::Identifier("quantity"),
+                    token: Token::Identifier(Identifier::new("quantity")),
                 },
                 AnnotatedToken {
                     annotation: (30..31).into(),
@@ -309,7 +312,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (37..42).into(),
-                    token: Token::Identifier("price"),
+                    token: Token::Identifier(Identifier::new("price")),
                 },
                 AnnotatedToken {
                     annotation: (43..44).into(),
@@ -317,7 +320,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (45..53).into(),
-                    token: Token::Identifier("quantity"),
+                    token: Token::Identifier(Identifier::new("quantity")),
                 },
             ])
         );

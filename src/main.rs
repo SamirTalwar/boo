@@ -6,6 +6,7 @@ pub mod parser;
 pub mod primitive;
 pub mod span;
 
+pub mod identifier;
 mod roundtrip_test;
 
 use miette::IntoDiagnostic;

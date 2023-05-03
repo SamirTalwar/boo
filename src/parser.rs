@@ -1,8 +1,8 @@
 use crate::ast::*;
 use crate::error::*;
-use crate::lexer::{AnnotatedToken, Token};
+use crate::lexer::*;
 use crate::primitive::*;
-use crate::span::Span;
+use crate::span::*;
 
 peg::parser! {
     grammar parser<'a>() for [&'a AnnotatedToken<'a, Span>] {
@@ -60,7 +60,7 @@ peg::parser! {
             quiet! { [AnnotatedToken { annotation, token: Token::Identifier(name) }] {
                 Expr::Identifier {
                     annotation: *annotation,
-                    name,
+                    name: *name,
                 }
             } } / expected!("an identifier")
     }
@@ -96,6 +96,8 @@ fn infix<'a>(left: Expr<'a, Span>, operation: Operation, right: Expr<'a, Span>) 
 
 #[cfg(test)]
 mod tests {
+    use crate::identifier::*;
+
     use super::*;
 
     #[test]
@@ -309,7 +311,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
-                    token: Token::Identifier("number"),
+                    token: Token::Identifier(Identifier::new("number")),
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
@@ -325,7 +327,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
-                    token: Token::Identifier("number"),
+                    token: Token::Identifier(Identifier::new("number")),
                 },
                 AnnotatedToken {
                     annotation: (12..13).into(),
@@ -342,7 +344,7 @@ mod tests {
                 expr,
                 Ok(Expr::Let {
                     annotation: (0..15).into(),
-                    name: "number",
+                    name: Identifier::new("number"),
                     value: Expr::Primitive {
                         annotation: (6..7).into(),
                         value: Primitive::Int(variable),
@@ -353,7 +355,7 @@ mod tests {
                         operation: Operation::Multiply,
                         left: Expr::Identifier {
                             annotation: (10..11).into(),
-                            name: "number",
+                            name: Identifier::new("number"),
                         }
                         .into(),
                         right: Expr::Primitive {

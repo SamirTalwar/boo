@@ -4,6 +4,7 @@ use im::HashMap;
 
 use crate::ast::*;
 use crate::error::*;
+use crate::identifier::*;
 use crate::primitive::*;
 
 pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Result<Rc<Expr<Annotation>>> {
@@ -12,7 +13,7 @@ pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Result<Rc<Exp
 
 pub fn interpret_<'a, Annotation: Clone>(
     expr: Rc<Expr<'a, Annotation>>,
-    assignments: HashMap<&'a str, Rc<Expr<'a, Annotation>>>,
+    assignments: HashMap<Identifier<'a>, Rc<Expr<'a, Annotation>>>,
 ) -> Result<Rc<Expr<'a, Annotation>>> {
     match expr.as_ref() {
         Expr::Primitive { .. } => Ok(expr),
@@ -101,7 +102,7 @@ mod tests {
     #[test]
     fn test_interpreting_assignment() {
         arbtest::builder().run(|u| {
-            let name = "variable";
+            let name = Identifier::new("variable");
             let value = u.arbitrary::<Primitive>()?;
             let expr = Expr::Let {
                 annotation: (),
@@ -132,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_interpreting_an_unknown_variable() {
-        let name = "unknown";
+        let name = Identifier::new("unknown");
         let expr = Expr::Identifier {
             annotation: (),
             name,
@@ -204,7 +205,7 @@ mod tests {
     #[test]
     fn test_interpreting_variable_use() {
         arbtest::builder().run(|u| {
-            let name = "variable";
+            let name = Identifier::new("variable");
             let variable = u.arbitrary::<Int>()?;
             let constant = u.arbitrary::<Int>()?;
             match variable.checked_add(constant) {
