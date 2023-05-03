@@ -1,7 +1,8 @@
 use crate::ast::*;
 use crate::error::*;
-use crate::lexer::{AnnotatedToken, SourceSpan, Token};
+use crate::lexer::{AnnotatedToken, Token};
 use crate::primitive::*;
+use crate::span::Span;
 
 peg::parser! {
     grammar parser<'a>() for [&'a Token<'a>] {
@@ -65,14 +66,14 @@ peg::parser! {
     }
 }
 
-pub fn parse<'a>(input: &'a [AnnotatedToken<SourceSpan>]) -> Result<Expr<'a, ()>> {
+pub fn parse<'a>(input: &'a [AnnotatedToken<Span>]) -> Result<Expr<'a, ()>> {
     parser::root(&(input.iter().map(|token| &token.token).collect::<Vec<_>>())).map_err(|inner| {
-        let span: SourceSpan = if inner.location < input.len() {
+        let span: Span = if inner.location < input.len() {
             input[inner.location].annotation
         } else {
             input
                 .last()
-                .map(|s| (s.annotation.offset() + s.annotation.len()).into())
+                .map(|s| s.annotation.end.into())
                 .unwrap_or(0.into())
         };
         let mut expected_tokens: Vec<&str> = inner.expected.tokens().collect();

@@ -1,8 +1,8 @@
 use logos::Logos;
-pub use miette::{SourceOffset, SourceSpan};
 
 use crate::error::{Error, Result};
 use crate::primitive::Int;
+use crate::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]
@@ -33,19 +33,19 @@ pub struct AnnotatedToken<'a, Annotation> {
     pub token: Token<'a>,
 }
 
-pub fn lex(input: &str) -> Result<Vec<AnnotatedToken<SourceSpan>>> {
+pub fn lex(input: &str) -> Result<Vec<AnnotatedToken<Span>>> {
     Token::lexer(input)
         .spanned()
         .map(move |(token, span)| {
-            let source_span: SourceSpan = span.clone().into();
+            let span: Span = span.into();
             token
                 .map(|value| AnnotatedToken {
-                    annotation: source_span,
+                    annotation: span,
                     token: value,
                 })
                 .map_err(|_| Error::UnexpectedToken {
-                    span: source_span,
-                    token: input[span].to_string(),
+                    span,
+                    token: input[span.range()].to_string(),
                 })
         })
         .collect()

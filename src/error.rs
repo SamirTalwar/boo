@@ -1,3 +1,5 @@
+use crate::span::Span;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error, miette::Diagnostic)]
@@ -6,7 +8,7 @@ pub enum Error {
     #[diagnostic(code(boo::lex::unexpected_token))]
     UnexpectedToken {
         #[label("unexpected token")]
-        span: miette::SourceSpan,
+        span: Span,
         token: String,
     },
 
@@ -14,7 +16,7 @@ pub enum Error {
     #[diagnostic(code(boo::parse::error))]
     ParseError {
         #[label("{}", expected_one_of(expected_tokens))]
-        span: miette::SourceSpan,
+        span: Span,
         expected_tokens: Vec<&'static str>,
     },
 
@@ -22,7 +24,7 @@ pub enum Error {
     #[diagnostic(code(boo::interpret::unknown_variable))]
     UnknownVariable {
         #[label("unknown variable")]
-        span: miette::SourceSpan,
+        span: Span,
         name: String,
     },
 }
