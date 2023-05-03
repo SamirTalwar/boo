@@ -5,69 +5,69 @@ use crate::primitive::*;
 use crate::span::Span;
 
 peg::parser! {
-    grammar parser<'a>() for [&'a Token<'a>] {
-        pub rule root() -> Expr<'a, ()> = e:expr() { e }
+    grammar parser<'a>() for [&'a AnnotatedToken<'a, Span>] {
+        pub rule root() -> Expr<'a, Span> = e:expr() { e }
 
-        pub rule expr() -> Expr<'a, ()> = precedence! {
-            (quiet! { [Token::Let] } / expected!("let"))
-            name:(quiet! { [Token::Identifier(name)] } / expected!("an identifier"))
-            (quiet! { [Token::Assign] } / expected!("="))
+        pub rule expr() -> Expr<'a, Span> = precedence! {
+            let_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Let }] } / expected!("let"))
+            name:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] } / expected!("an identifier"))
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::Assign }] } / expected!("="))
             value:expr()
-            (quiet! { [Token::In] } / expected!("in"))
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::In }] } / expected!("in"))
             inner:expr() {
-                let n = match name {
-                    Token::Identifier(name) => *name,
+                let n = match name.token {
+                    Token::Identifier(name) => name,
                     _ => unreachable!(),
                 };
                 Expr::Let {
-                    annotation: (),
+                    annotation: let_.annotation | *inner.annotation(),
                     name: n,
                     value: value.into(),
                     inner: inner.into(),
                 }
             }
             --
-            left:(@) (quiet! { [Token::Operator("+")] } / expected!("'+'")) right:@ {
+            left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("+") }] } / expected!("'+'")) right:@ {
                 infix(left, Operation::Add, right)
             }
-            left:(@) (quiet! { [Token::Operator("-")] } / expected!("'-'")) right:@ {
+            left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("-") }] } / expected!("'-'")) right:@ {
                 infix(left, Operation::Subtract, right)
             }
             --
-            left:(@) (quiet! { [Token::Operator("*")] } / expected!("'*'")) right:@ {
+            left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("*") }] } / expected!("'*'")) right:@ {
                 infix(left, Operation::Multiply, right)
             }
             --
             p:primitive() { p }
             i:identifier() { i }
             --
-            (quiet! { [Token::StartGroup] } / expected!("'('"))
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::StartGroup }] } / expected!("'('"))
             e:expr()
-            (quiet! { [Token::EndGroup] } / expected!(")'")) {
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::EndGroup }] } / expected!(")'")) {
                 e
             }
         }
 
-        rule primitive() -> Expr<'a, ()> =
-            quiet! { [Token::Integer(n)] {
+        rule primitive() -> Expr<'a, Span> =
+            quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
                 Expr::Primitive {
-                    annotation: (),
+                    annotation: *annotation,
                     value: Primitive::Int(*n),
                 }
             } } / expected!("an integer")
 
-        rule identifier() -> Expr<'a, ()> =
-            quiet! { [Token::Identifier(name)] {
+        rule identifier() -> Expr<'a, Span> =
+            quiet! { [AnnotatedToken { annotation, token: Token::Identifier(name) }] {
                 Expr::Identifier {
-                    annotation: (),
+                    annotation: *annotation,
                     name,
                 }
             } } / expected!("an identifier")
     }
 }
 
-pub fn parse<'a>(input: &'a [AnnotatedToken<Span>]) -> Result<Expr<'a, ()>> {
-    parser::root(&(input.iter().map(|token| &token.token).collect::<Vec<_>>())).map_err(|inner| {
+pub fn parse<'a>(input: &'a [AnnotatedToken<Span>]) -> Result<Expr<'a, Span>> {
+    parser::root(&(input.iter().collect::<Vec<_>>())).map_err(|inner| {
         let span: Span = if inner.location < input.len() {
             input[inner.location].annotation
         } else {
@@ -85,9 +85,9 @@ pub fn parse<'a>(input: &'a [AnnotatedToken<Span>]) -> Result<Expr<'a, ()>> {
     })
 }
 
-fn infix<'a>(left: Expr<'a, ()>, operation: Operation, right: Expr<'a, ()>) -> Expr<'a, ()> {
+fn infix<'a>(left: Expr<'a, Span>, operation: Operation, right: Expr<'a, Span>) -> Expr<'a, Span> {
     Expr::Infix {
-        annotation: (),
+        annotation: *left.annotation() | *right.annotation(),
         operation,
         left: left.into(),
         right: right.into(),
@@ -111,7 +111,7 @@ mod tests {
             assert_eq!(
                 expr,
                 Ok(Expr::Primitive {
-                    annotation: (),
+                    annotation: (0..10).into(),
                     value: Primitive::Int(value),
                 })
             );
@@ -157,15 +157,15 @@ mod tests {
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
-                    annotation: (),
+                    annotation: (0..5).into(),
                     operation,
                     left: Expr::Primitive {
-                        annotation: (),
+                        annotation: (0..1).into(),
                         value: Primitive::Int(left),
                     }
                     .into(),
                     right: Expr::Primitive {
-                        annotation: (),
+                        annotation: (4..5).into(),
                         value: Primitive::Int(right),
                     }
                     .into(),
@@ -208,23 +208,23 @@ mod tests {
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
-                    annotation: (),
+                    annotation: (0..9).into(),
                     operation: Operation::Add,
                     left: Expr::Primitive {
-                        annotation: (),
+                        annotation: (0..1).into(),
                         value: Primitive::Int(a),
                     }
                     .into(),
                     right: Expr::Infix {
-                        annotation: (),
+                        annotation: (4..9).into(),
                         operation: Operation::Multiply,
                         left: Expr::Primitive {
-                            annotation: (),
+                            annotation: (4..5).into(),
                             value: Primitive::Int(b),
                         }
                         .into(),
                         right: Expr::Primitive {
-                            annotation: (),
+                            annotation: (8..9).into(),
                             value: Primitive::Int(c),
                         }
                         .into(),
@@ -269,25 +269,25 @@ mod tests {
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
-                    annotation: (),
+                    annotation: (0..9).into(),
                     operation: Operation::Subtract,
                     left: Expr::Infix {
-                        annotation: (),
+                        annotation: (0..5).into(),
                         operation: Operation::Multiply,
                         left: Expr::Primitive {
-                            annotation: (),
+                            annotation: (0..1).into(),
                             value: Primitive::Int(a),
                         }
                         .into(),
                         right: Expr::Primitive {
-                            annotation: (),
+                            annotation: (4..5).into(),
                             value: Primitive::Int(b),
                         }
                         .into(),
                     }
                     .into(),
                     right: Expr::Primitive {
-                        annotation: (),
+                        annotation: (8..9).into(),
                         value: Primitive::Int(c),
                     }
                     .into(),
@@ -341,23 +341,23 @@ mod tests {
             assert_eq!(
                 expr,
                 Ok(Expr::Let {
-                    annotation: (),
+                    annotation: (0..15).into(),
                     name: "number",
                     value: Expr::Primitive {
-                        annotation: (),
+                        annotation: (6..7).into(),
                         value: Primitive::Int(variable),
                     }
                     .into(),
                     inner: Expr::Infix {
-                        annotation: (),
+                        annotation: (10..15).into(),
                         operation: Operation::Multiply,
                         left: Expr::Identifier {
-                            annotation: (),
+                            annotation: (10..11).into(),
                             name: "number",
                         }
                         .into(),
                         right: Expr::Primitive {
-                            annotation: (),
+                            annotation: (14..15).into(),
                             value: Primitive::Int(constant),
                         }
                         .into(),
@@ -410,23 +410,23 @@ mod tests {
             assert_eq!(
                 expr,
                 Ok(Expr::Infix {
-                    annotation: (),
+                    annotation: (0..10).into(),
                     operation: Operation::Multiply,
                     left: Expr::Primitive {
-                        annotation: (),
+                        annotation: (0..1).into(),
                         value: Primitive::Int(a),
                     }
                     .into(),
                     right: Expr::Infix {
-                        annotation: (),
+                        annotation: (5..10).into(),
                         operation: Operation::Add,
                         left: Expr::Primitive {
-                            annotation: (),
+                            annotation: (5..6).into(),
                             value: Primitive::Int(b),
                         }
                         .into(),
                         right: Expr::Primitive {
-                            annotation: (),
+                            annotation: (9..10).into(),
                             value: Primitive::Int(c),
                         }
                         .into(),

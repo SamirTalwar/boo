@@ -26,6 +26,17 @@ pub enum Expr<'a, Annotation> {
     },
 }
 
+impl<'a, Annotation> Expr<'a, Annotation> {
+    pub fn annotation(&self) -> &Annotation {
+        match self {
+            Expr::Primitive { annotation, .. } => annotation,
+            Expr::Identifier { annotation, .. } => annotation,
+            Expr::Let { annotation, .. } => annotation,
+            Expr::Infix { annotation, .. } => annotation,
+        }
+    }
+}
+
 impl<'a, Annotation> std::fmt::Display for Expr<'a, Annotation> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

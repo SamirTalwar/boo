@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::ops::{BitOr, Range};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
@@ -9,6 +9,17 @@ pub struct Span {
 impl Span {
     pub fn range(&self) -> Range<usize> {
         self.start..self.end
+    }
+}
+
+impl BitOr for Span {
+    type Output = Span;
+
+    fn bitor(self, rhs: Span) -> Self::Output {
+        Self::Output {
+            start: self.start.min(rhs.start),
+            end: self.end.max(rhs.end),
+        }
     }
 }
 
