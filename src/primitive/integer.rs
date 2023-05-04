@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
 
-type Small = i64;
+type Small = i32;
 type Large = BigInt;
 
 #[derive(Debug, Clone)]
@@ -11,13 +11,16 @@ pub enum Integer {
 
 impl From<i32> for Integer {
     fn from(value: i32) -> Self {
-        Integer::Small(value as Small)
+        Integer::Small(value)
     }
 }
 
 impl From<i64> for Integer {
     fn from(value: i64) -> Self {
-        Integer::Small(value)
+        match Small::try_from(value) {
+            Ok(value) => Integer::Small(value),
+            Err(_) => Integer::Large(value.into()),
+        }
     }
 }
 
@@ -139,12 +142,14 @@ impl std::ops::Mul for Integer {
 mod tests {
     use super::*;
 
+    const SMALL_BYTES: usize = Small::BITS as usize / 8;
+
     impl<'a> arbitrary::Arbitrary<'a> for Integer {
         fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
             let size = u.int_in_range(1..=(i128::BITS as usize / 8))?;
             let bytes = u.bytes(size)?;
             if size <= (Small::BITS as usize) / 8 {
-                let mut small_bytes: [u8; 8] = [0; 8];
+                let mut small_bytes: [u8; SMALL_BYTES] = [0; SMALL_BYTES];
                 small_bytes[0..bytes.len()].copy_from_slice(bytes);
                 Ok(Self::Small(Small::from_le_bytes(small_bytes)))
             } else {
