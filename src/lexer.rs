@@ -76,7 +76,7 @@ mod tests {
             tokens,
             Ok(vec![AnnotatedToken {
                 annotation: (0..3).into(),
-                token: Token::Integer(123),
+                token: Token::Integer(123.into()),
             }])
         );
     }
@@ -90,7 +90,7 @@ mod tests {
             tokens,
             Ok(vec![AnnotatedToken {
                 annotation: (0..4).into(),
-                token: Token::Integer(-456),
+                token: Token::Integer((-456).into()),
             }])
         );
     }
@@ -104,7 +104,7 @@ mod tests {
             tokens,
             Ok(vec![AnnotatedToken {
                 annotation: (0..11).into(),
-                token: Token::Integer(987_654_321),
+                token: Token::Integer(987_654_321.into()),
             }])
         );
     }
@@ -119,7 +119,7 @@ mod tests {
             Ok(vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
-                    token: Token::Integer(1),
+                    token: Token::Integer(1.into()),
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
@@ -127,7 +127,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
-                    token: Token::Integer(2),
+                    token: Token::Integer(2.into()),
                 },
                 AnnotatedToken {
                     annotation: (6..7).into(),
@@ -135,7 +135,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (8..9).into(),
-                    token: Token::Integer(3),
+                    token: Token::Integer(3.into()),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
@@ -143,7 +143,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (12..13).into(),
-                    token: Token::Integer(4),
+                    token: Token::Integer(4.into()),
                 },
             ])
         );
@@ -159,7 +159,7 @@ mod tests {
             Ok(vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
-                    token: Token::Integer(1),
+                    token: Token::Integer(1.into()),
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
@@ -171,7 +171,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (5..6).into(),
-                    token: Token::Integer(2),
+                    token: Token::Integer(2.into()),
                 },
                 AnnotatedToken {
                     annotation: (7..8).into(),
@@ -179,7 +179,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (9..10).into(),
-                    token: Token::Integer(3),
+                    token: Token::Integer(3.into()),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
@@ -191,7 +191,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (14..15).into(),
-                    token: Token::Integer(4),
+                    token: Token::Integer(4.into()),
                 },
             ])
         );
@@ -237,7 +237,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (12..13).into(),
-                    token: Token::Integer(9),
+                    token: Token::Integer(9.into()),
                 },
             ])
         );
@@ -289,7 +289,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (12..13).into(),
-                    token: Token::Integer(3),
+                    token: Token::Integer(3.into()),
                 },
                 AnnotatedToken {
                     annotation: (14..16).into(),
@@ -309,7 +309,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (32..33).into(),
-                    token: Token::Integer(5),
+                    token: Token::Integer(5.into()),
                 },
                 AnnotatedToken {
                     annotation: (34..36).into(),
