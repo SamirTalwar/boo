@@ -2,7 +2,7 @@ pub mod integer;
 
 pub use integer::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(arbitrary::Arbitrary))]
 pub enum Primitive {
     Integer(Integer),

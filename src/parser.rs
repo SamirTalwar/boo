@@ -52,7 +52,7 @@ peg::parser! {
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
                 Expr::Primitive {
                     annotation: *annotation,
-                    value: Primitive::Integer(*n),
+                    value: Primitive::Integer(n.clone()),
                 }
             } } / expected!("an integer")
 
@@ -106,7 +106,7 @@ mod tests {
             let value = u.arbitrary::<Integer>()?;
             let tokens = vec![AnnotatedToken {
                 annotation: (0..10).into(),
-                token: Token::Integer(value),
+                token: Token::Integer(value.clone()),
             }];
             let expr = parse(&tokens);
 
@@ -143,7 +143,7 @@ mod tests {
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
-                    token: Token::Integer(left),
+                    token: Token::Integer(left.clone()),
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
@@ -151,7 +151,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
-                    token: Token::Integer(right),
+                    token: Token::Integer(right.clone()),
                 },
             ];
             let expr = parse(&tokens);
@@ -186,7 +186,7 @@ mod tests {
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
-                    token: Token::Integer(a),
+                    token: Token::Integer(a.clone()),
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
@@ -194,7 +194,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
-                    token: Token::Integer(b),
+                    token: Token::Integer(b.clone()),
                 },
                 AnnotatedToken {
                     annotation: (6..7).into(),
@@ -202,7 +202,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (8..9).into(),
-                    token: Token::Integer(c),
+                    token: Token::Integer(c.clone()),
                 },
             ];
             let expr = parse(&tokens);
@@ -247,7 +247,7 @@ mod tests {
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
-                    token: Token::Integer(a),
+                    token: Token::Integer(a.clone()),
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
@@ -255,7 +255,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
-                    token: Token::Integer(b),
+                    token: Token::Integer(b.clone()),
                 },
                 AnnotatedToken {
                     annotation: (6..7).into(),
@@ -263,7 +263,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (8..9).into(),
-                    token: Token::Integer(c),
+                    token: Token::Integer(c.clone()),
                 },
             ];
             let expr = parse(&tokens);
@@ -320,7 +320,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (6..7).into(),
-                    token: Token::Integer(variable),
+                    token: Token::Integer(variable.clone()),
                 },
                 AnnotatedToken {
                     annotation: (8..9).into(),
@@ -336,7 +336,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (14..15).into(),
-                    token: Token::Integer(constant),
+                    token: Token::Integer(constant.clone()),
                 },
             ];
             let expr = parse(&tokens);
@@ -381,7 +381,7 @@ mod tests {
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
-                    token: Token::Integer(a),
+                    token: Token::Integer(a.clone()),
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
@@ -393,7 +393,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (5..6).into(),
-                    token: Token::Integer(b),
+                    token: Token::Integer(b.clone()),
                 },
                 AnnotatedToken {
                     annotation: (7..8).into(),
@@ -401,7 +401,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (9..10).into(),
-                    token: Token::Integer(c),
+                    token: Token::Integer(c.clone()),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),

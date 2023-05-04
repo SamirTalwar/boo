@@ -51,15 +51,15 @@ pub fn interpret_<'a, Annotation: Clone>(
             ) => Ok(match *operation {
                 Operation::Add => Expr::Primitive {
                     annotation: annotation.clone(),
-                    value: Primitive::Integer(*left + *right),
+                    value: Primitive::Integer(left + right),
                 },
                 Operation::Subtract => Expr::Primitive {
                     annotation: annotation.clone(),
-                    value: Primitive::Integer(*left - *right),
+                    value: Primitive::Integer(left - right),
                 },
                 Operation::Multiply => Expr::Primitive {
                     annotation: annotation.clone(),
-                    value: Primitive::Integer(*left * *right),
+                    value: Primitive::Integer(left * right),
                 },
             }
             .into()),
@@ -109,7 +109,7 @@ mod tests {
                 name,
                 value: Expr::Primitive {
                     annotation: (),
-                    value,
+                    value: value.clone(),
                 }
                 .into(),
                 inner: Expr::Identifier {

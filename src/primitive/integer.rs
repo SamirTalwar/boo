@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(arbitrary::Arbitrary))]
 pub enum Integer {
     Small(i64),
@@ -34,12 +34,30 @@ impl std::fmt::Display for Integer {
     }
 }
 
-impl std::ops::Add for Integer {
+impl std::ops::Add for &Integer {
     type Output = Integer;
 
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Self::Small(l), Self::Small(r)) => Self::Small(l + r),
+            (Integer::Small(l), Integer::Small(r)) => Integer::Small(l + r),
+        }
+    }
+}
+
+impl std::ops::Add for Integer {
+    type Output = Integer;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        &self + &rhs
+    }
+}
+
+impl std::ops::Sub for &Integer {
+    type Output = Integer;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Integer::Small(l), Integer::Small(r)) => Integer::Small(l - r),
         }
     }
 }
@@ -48,8 +66,16 @@ impl std::ops::Sub for Integer {
     type Output = Integer;
 
     fn sub(self, rhs: Self) -> Self::Output {
+        &self - &rhs
+    }
+}
+
+impl std::ops::Mul for &Integer {
+    type Output = Integer;
+
+    fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Self::Small(l), Self::Small(r)) => Self::Small(l - r),
+            (Integer::Small(l), Integer::Small(r)) => Integer::Small(l * r),
         }
     }
 }
@@ -58,9 +84,7 @@ impl std::ops::Mul for Integer {
     type Output = Integer;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
-            (Self::Small(l), Self::Small(r)) => Self::Small(l * r),
-        }
+        &self * &rhs
     }
 }
 
