@@ -42,24 +42,24 @@ pub fn interpret_<'a, Annotation: Clone>(
             (
                 Expr::Primitive {
                     annotation: _,
-                    value: Primitive::Int(left),
+                    value: Primitive::Integer(left),
                 },
                 Expr::Primitive {
                     annotation: _,
-                    value: Primitive::Int(right),
+                    value: Primitive::Integer(right),
                 },
             ) => Ok(match *operation {
                 Operation::Add => Expr::Primitive {
                     annotation: annotation.clone(),
-                    value: Primitive::Int(left + right),
+                    value: Primitive::Integer(left + right),
                 },
                 Operation::Subtract => Expr::Primitive {
                     annotation: annotation.clone(),
-                    value: Primitive::Int(left - right),
+                    value: Primitive::Integer(left - right),
                 },
                 Operation::Multiply => Expr::Primitive {
                     annotation: annotation.clone(),
-                    value: Primitive::Int(left * right),
+                    value: Primitive::Integer(left * right),
                 },
             }
             .into()),
@@ -153,22 +153,22 @@ mod tests {
 
     #[test]
     fn test_interpreting_addition() {
-        test_interpreting_an_operation(Operation::Add, Int::checked_add)
+        test_interpreting_an_operation(Operation::Add, Integer::checked_add)
     }
 
     #[test]
     fn test_interpreting_subtraction() {
-        test_interpreting_an_operation(Operation::Subtract, Int::checked_sub)
+        test_interpreting_an_operation(Operation::Subtract, Integer::checked_sub)
     }
 
     #[test]
     fn test_interpreting_multiplication() {
-        test_interpreting_an_operation(Operation::Multiply, Int::checked_mul)
+        test_interpreting_an_operation(Operation::Multiply, Integer::checked_mul)
     }
 
     fn test_interpreting_an_operation(
         operation: Operation,
-        implementation: impl Fn(Int, Int) -> Option<Int>,
+        implementation: impl Fn(Integer, Integer) -> Option<Integer>,
     ) {
         arbtest::builder().run(|u| {
             let left = u.int_in_range(i32::MIN..=i32::MAX).map(|x| x.into())?;
@@ -181,12 +181,12 @@ mod tests {
                         operation,
                         left: Expr::Primitive {
                             annotation: (),
-                            value: Primitive::Int(left),
+                            value: Primitive::Integer(left),
                         }
                         .into(),
                         right: Expr::Primitive {
                             annotation: (),
-                            value: Primitive::Int(right),
+                            value: Primitive::Integer(right),
                         }
                         .into(),
                     };
@@ -195,7 +195,7 @@ mod tests {
                         result,
                         Ok(Expr::Primitive {
                             annotation: (),
-                            value: Primitive::Int(expected),
+                            value: Primitive::Integer(expected),
                         }
                         .into())
                     );
@@ -209,8 +209,8 @@ mod tests {
     fn test_interpreting_variable_use() {
         arbtest::builder().run(|u| {
             let name = u.arbitrary::<Identifier>()?;
-            let variable = u.arbitrary::<Int>()?;
-            let constant = u.arbitrary::<Int>()?;
+            let variable = u.arbitrary::<Integer>()?;
+            let constant = u.arbitrary::<Integer>()?;
             match variable.checked_add(constant) {
                 None => Ok(()), // overflow or underflow
                 Some(sum) => {
@@ -219,7 +219,7 @@ mod tests {
                         name,
                         value: Expr::Primitive {
                             annotation: (),
-                            value: Primitive::Int(variable),
+                            value: Primitive::Integer(variable),
                         }
                         .into(),
                         inner: Expr::Infix {
@@ -232,7 +232,7 @@ mod tests {
                             .into(),
                             right: Expr::Primitive {
                                 annotation: (),
-                                value: Primitive::Int(constant),
+                                value: Primitive::Integer(constant),
                             }
                             .into(),
                         }
@@ -243,7 +243,7 @@ mod tests {
                         result,
                         Ok(Expr::Primitive {
                             annotation: (),
-                            value: Primitive::Int(sum),
+                            value: Primitive::Integer(sum),
                         }
                         .into())
                     );

@@ -52,7 +52,7 @@ peg::parser! {
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
                 Expr::Primitive {
                     annotation: *annotation,
-                    value: Primitive::Int(*n),
+                    value: Primitive::Integer(*n),
                 }
             } } / expected!("an integer")
 
@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn test_parsing_an_integer() {
         arbtest::builder().run(|u| {
-            let value = u.arbitrary::<Int>()?;
+            let value = u.arbitrary::<Integer>()?;
             let tokens = vec![AnnotatedToken {
                 annotation: (0..10).into(),
                 token: Token::Integer(value),
@@ -114,7 +114,7 @@ mod tests {
                 expr,
                 Ok(Expr::Primitive {
                     annotation: (0..10).into(),
-                    value: Primitive::Int(value),
+                    value: Primitive::Integer(value),
                 })
             );
             Ok(())
@@ -138,8 +138,8 @@ mod tests {
 
     fn test_parsing_an_operation(text: &str, operation: Operation) {
         arbtest::builder().run(|u| {
-            let left = u.arbitrary::<Int>()?;
-            let right = u.arbitrary::<Int>()?;
+            let left = u.arbitrary::<Integer>()?;
+            let right = u.arbitrary::<Integer>()?;
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
@@ -163,12 +163,12 @@ mod tests {
                     operation,
                     left: Expr::Primitive {
                         annotation: (0..1).into(),
-                        value: Primitive::Int(left),
+                        value: Primitive::Integer(left),
                     }
                     .into(),
                     right: Expr::Primitive {
                         annotation: (4..5).into(),
-                        value: Primitive::Int(right),
+                        value: Primitive::Integer(right),
                     }
                     .into(),
                 })
@@ -180,9 +180,9 @@ mod tests {
     #[test]
     fn test_parsing_two_operations_with_higher_precedence_to_the_right() {
         arbtest::builder().run(|u| {
-            let a = u.arbitrary::<Int>()?;
-            let b = u.arbitrary::<Int>()?;
-            let c = u.arbitrary::<Int>()?;
+            let a = u.arbitrary::<Integer>()?;
+            let b = u.arbitrary::<Integer>()?;
+            let c = u.arbitrary::<Integer>()?;
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
@@ -214,7 +214,7 @@ mod tests {
                     operation: Operation::Add,
                     left: Expr::Primitive {
                         annotation: (0..1).into(),
-                        value: Primitive::Int(a),
+                        value: Primitive::Integer(a),
                     }
                     .into(),
                     right: Expr::Infix {
@@ -222,12 +222,12 @@ mod tests {
                         operation: Operation::Multiply,
                         left: Expr::Primitive {
                             annotation: (4..5).into(),
-                            value: Primitive::Int(b),
+                            value: Primitive::Integer(b),
                         }
                         .into(),
                         right: Expr::Primitive {
                             annotation: (8..9).into(),
-                            value: Primitive::Int(c),
+                            value: Primitive::Integer(c),
                         }
                         .into(),
                     }
@@ -241,9 +241,9 @@ mod tests {
     #[test]
     fn test_parsing_two_operations_with_higher_precedence_to_the_left() {
         arbtest::builder().run(|u| {
-            let a = u.arbitrary::<Int>()?;
-            let b = u.arbitrary::<Int>()?;
-            let c = u.arbitrary::<Int>()?;
+            let a = u.arbitrary::<Integer>()?;
+            let b = u.arbitrary::<Integer>()?;
+            let c = u.arbitrary::<Integer>()?;
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
@@ -278,19 +278,19 @@ mod tests {
                         operation: Operation::Multiply,
                         left: Expr::Primitive {
                             annotation: (0..1).into(),
-                            value: Primitive::Int(a),
+                            value: Primitive::Integer(a),
                         }
                         .into(),
                         right: Expr::Primitive {
                             annotation: (4..5).into(),
-                            value: Primitive::Int(b),
+                            value: Primitive::Integer(b),
                         }
                         .into(),
                     }
                     .into(),
                     right: Expr::Primitive {
                         annotation: (8..9).into(),
-                        value: Primitive::Int(c),
+                        value: Primitive::Integer(c),
                     }
                     .into(),
                 })
@@ -303,8 +303,8 @@ mod tests {
     fn test_variables() {
         arbtest::builder().run(|u| {
             let name = u.arbitrary::<Identifier>()?;
-            let variable = u.arbitrary::<Int>()?;
-            let constant = u.arbitrary::<Int>()?;
+            let variable = u.arbitrary::<Integer>()?;
+            let constant = u.arbitrary::<Integer>()?;
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
@@ -348,7 +348,7 @@ mod tests {
                     name,
                     value: Expr::Primitive {
                         annotation: (6..7).into(),
-                        value: Primitive::Int(variable),
+                        value: Primitive::Integer(variable),
                     }
                     .into(),
                     inner: Expr::Infix {
@@ -361,7 +361,7 @@ mod tests {
                         .into(),
                         right: Expr::Primitive {
                             annotation: (14..15).into(),
-                            value: Primitive::Int(constant),
+                            value: Primitive::Integer(constant),
                         }
                         .into(),
                     }
@@ -375,9 +375,9 @@ mod tests {
     #[test]
     fn test_parentheses() {
         arbtest::builder().run(|u| {
-            let a = u.arbitrary::<Int>()?;
-            let b = u.arbitrary::<Int>()?;
-            let c = u.arbitrary::<Int>()?;
+            let a = u.arbitrary::<Integer>()?;
+            let b = u.arbitrary::<Integer>()?;
+            let c = u.arbitrary::<Integer>()?;
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
@@ -417,7 +417,7 @@ mod tests {
                     operation: Operation::Multiply,
                     left: Expr::Primitive {
                         annotation: (0..1).into(),
-                        value: Primitive::Int(a),
+                        value: Primitive::Integer(a),
                     }
                     .into(),
                     right: Expr::Infix {
@@ -425,12 +425,12 @@ mod tests {
                         operation: Operation::Add,
                         left: Expr::Primitive {
                             annotation: (5..6).into(),
-                            value: Primitive::Int(b),
+                            value: Primitive::Integer(b),
                         }
                         .into(),
                         right: Expr::Primitive {
                             annotation: (9..10).into(),
-                            value: Primitive::Int(c),
+                            value: Primitive::Integer(c),
                         }
                         .into(),
                     }
@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn test_fails_to_parse_gracefully() {
         arbtest::builder().run(|u| {
-            let value = u.arbitrary::<Int>()?;
+            let value = u.arbitrary::<Integer>()?;
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),
@@ -471,7 +471,7 @@ mod tests {
     #[test]
     fn test_fails_to_parse_at_the_end() {
         arbtest::builder().run(|u| {
-            let value = u.arbitrary::<Int>()?;
+            let value = u.arbitrary::<Integer>()?;
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..1).into(),

@@ -19,9 +19,9 @@ pub enum Token<'a> {
     #[token(r"=")]
     Assign,
     #[regex(r"-?[0-9](_?[0-9])*", |token|
-        str::replace(token.slice(), "_", "").parse::<Int>().ok()
+        str::replace(token.slice(), "_", "").parse::<Integer>().ok()
     )]
-    Integer(Int),
+    Integer(Integer),
     #[regex(r"\+|\-|\*")]
     Operator(&'a str),
     // note that the following regex is duplicated from identifier.rs
