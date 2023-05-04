@@ -40,31 +40,35 @@ impl<'a> std::fmt::Display for Identifier<'a> {
     }
 }
 
+impl<'a> arbitrary::Arbitrary<'a> for Identifier<'a> {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        lazy_static! {
+            static ref FALLBACK: Identifier<'static> = Identifier::new("fallback").unwrap();
+        }
+        let generated = u.arbitrary::<&'a str>()?;
+        if generated.is_empty() {
+            return Ok(*FALLBACK);
+        }
+        let indices = generated
+            .char_indices()
+            .map(|(i, _)| i)
+            .collect::<Vec<usize>>();
+        // drop characters until it works out
+        for start in 0..indices.len() - 1 {
+            for end in (start + 1..indices.len()).rev() {
+                let attempt = &generated[indices[start]..indices[end]];
+                if Self::is_valid(attempt) {
+                    return Identifier::new(attempt).map_err(|_| arbitrary::Error::IncorrectFormat);
+                }
+            }
+        }
+        Ok(*FALLBACK)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    impl<'a> arbitrary::Arbitrary<'a> for Identifier<'a> {
-        fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-            let mut attempt = u.arbitrary::<&'a str>()?;
-            // drop characters until it works out
-            while !Self::is_valid(attempt) {
-                let mut indices = attempt.char_indices();
-                indices.next();
-                match indices.next() {
-                    None => {
-                        // if we run out of characters, do something
-                        return Identifier::new("fallback")
-                            .map_err(|_| arbitrary::Error::IncorrectFormat);
-                    }
-                    Some(index) => {
-                        attempt = &attempt[index.0..];
-                    }
-                };
-            }
-            Identifier::new(attempt).map_err(|_| arbitrary::Error::IncorrectFormat)
-        }
-    }
 
     #[test]
     fn test_alphabetic_names_are_allowed() {

@@ -65,8 +65,7 @@ impl<'a, Annotation> std::fmt::Display for Expr<'a, Annotation> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(test, derive(arbitrary::Arbitrary))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, arbitrary::Arbitrary)]
 pub enum Operation {
     Add,
     Subtract,
@@ -83,58 +82,57 @@ impl std::fmt::Display for Operation {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    impl<'a> arbitrary::Arbitrary<'a> for Expr<'a, ()> {
-        fn arbitrary(
-            unstructured: &mut arbitrary::Unstructured<'a>,
-        ) -> std::result::Result<Self, arbitrary::Error> {
-            let length = unstructured.arbitrary_len::<Expr<()>>()?;
-            let depth = if length == 0 { 1 } else { usize::ilog2(length) };
-            Self::arbitrary_of_depth(depth, unstructured)
-        }
+impl<'a> arbitrary::Arbitrary<'a> for Expr<'a, ()> {
+    fn arbitrary(
+        unstructured: &mut arbitrary::Unstructured<'a>,
+    ) -> std::result::Result<Self, arbitrary::Error> {
+        let length = unstructured.arbitrary_len::<Expr<()>>()?;
+        let depth = if length <= 1 {
+            0
+        } else {
+            (usize::ilog2(length) - 1) / 4
+        };
+        Self::arbitrary_of_depth(depth, unstructured)
     }
+}
 
-    impl<'a> Expr<'a, ()> {
-        fn arbitrary_of_depth(
-            depth: u32,
-            unstructured: &mut arbitrary::Unstructured<'a>,
-        ) -> std::result::Result<Self, arbitrary::Error> {
-            if depth == 0 {
-                let primitive = unstructured.arbitrary::<Primitive>()?;
-                Ok(Expr::Primitive {
-                    annotation: (),
-                    value: primitive,
-                })
-            } else {
-                let choice = unstructured.int_in_range(0..=1)?;
-                match choice {
-                    0 => {
-                        let operation = unstructured.arbitrary::<Operation>()?;
-                        let left = Self::arbitrary_of_depth(depth - 1, unstructured)?;
-                        let right = Self::arbitrary_of_depth(depth - 1, unstructured)?;
-                        Ok(Expr::Infix {
-                            annotation: (),
-                            operation,
-                            left: left.into(),
-                            right: right.into(),
-                        })
-                    }
-                    1 => {
-                        let name = unstructured.arbitrary::<Identifier>()?;
-                        let value = Self::arbitrary_of_depth(depth - 1, unstructured)?;
-                        let inner = Self::arbitrary_of_depth(depth - 1, unstructured)?;
-                        Ok(Expr::Let {
-                            annotation: (),
-                            name,
-                            value: value.into(),
-                            inner: inner.into(),
-                        })
-                    }
-                    _ => unreachable!(),
+impl<'a> Expr<'a, ()> {
+    fn arbitrary_of_depth(
+        depth: u32,
+        unstructured: &mut arbitrary::Unstructured<'a>,
+    ) -> std::result::Result<Self, arbitrary::Error> {
+        if depth == 0 {
+            let primitive = unstructured.arbitrary::<Primitive>()?;
+            Ok(Expr::Primitive {
+                annotation: (),
+                value: primitive,
+            })
+        } else {
+            let choice = unstructured.int_in_range(0..=1)?;
+            match choice {
+                0 => {
+                    let operation = unstructured.arbitrary::<Operation>()?;
+                    let left = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                    let right = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                    Ok(Expr::Infix {
+                        annotation: (),
+                        operation,
+                        left: left.into(),
+                        right: right.into(),
+                    })
                 }
+                1 => {
+                    let name = unstructured.arbitrary::<Identifier>()?;
+                    let value = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                    let inner = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                    Ok(Expr::Let {
+                        annotation: (),
+                        name,
+                        value: value.into(),
+                        inner: inner.into(),
+                    })
+                }
+                _ => unreachable!(),
             }
         }
     }

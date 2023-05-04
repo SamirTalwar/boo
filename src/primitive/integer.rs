@@ -138,26 +138,26 @@ impl std::ops::Mul for Integer {
     }
 }
 
+const SMALL_BYTES: usize = Small::BITS as usize / 8;
+
+impl<'a> arbitrary::Arbitrary<'a> for Integer {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let size = u.int_in_range(1..=(i128::BITS as usize / 8))?;
+        let bytes = u.bytes(size)?;
+        if size <= (Small::BITS as usize) / 8 {
+            let mut small_bytes: [u8; SMALL_BYTES] = [0; SMALL_BYTES];
+            small_bytes[0..bytes.len()].copy_from_slice(bytes);
+            Ok(Self::Small(Small::from_le_bytes(small_bytes)))
+        } else {
+            let sign = u.choose(&[num_bigint::Sign::NoSign, num_bigint::Sign::Minus])?;
+            Ok(Self::Large(Large::from_bytes_be(*sign, bytes)))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const SMALL_BYTES: usize = Small::BITS as usize / 8;
-
-    impl<'a> arbitrary::Arbitrary<'a> for Integer {
-        fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-            let size = u.int_in_range(1..=(i128::BITS as usize / 8))?;
-            let bytes = u.bytes(size)?;
-            if size <= (Small::BITS as usize) / 8 {
-                let mut small_bytes: [u8; SMALL_BYTES] = [0; SMALL_BYTES];
-                small_bytes[0..bytes.len()].copy_from_slice(bytes);
-                Ok(Self::Small(Small::from_le_bytes(small_bytes)))
-            } else {
-                let sign = u.choose(&[num_bigint::Sign::NoSign, num_bigint::Sign::Minus])?;
-                Ok(Self::Large(Large::from_bytes_be(*sign, bytes)))
-            }
-        }
-    }
 
     #[test]
     fn test_from_string() {
