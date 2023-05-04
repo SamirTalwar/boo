@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -14,6 +16,8 @@ pub enum IdentifierError {
 lazy_static! {
     static ref VALID_IDENTIFIER_REGEX: Regex =
         Regex::new(r"^[_\p{Letter}][_\p{Number}\p{Letter}]*$").unwrap();
+    // ensure that the set of keywords matches the keywords defined in lexer.rs
+    static ref KEYWORDS: HashSet<&'static str> = ["in", "let"].into();
 }
 
 impl<'a> Identifier<'a> {
@@ -26,7 +30,7 @@ impl<'a> Identifier<'a> {
     }
 
     fn is_valid(name: &str) -> bool {
-        VALID_IDENTIFIER_REGEX.is_match(name)
+        !KEYWORDS.contains(name) && VALID_IDENTIFIER_REGEX.is_match(name)
     }
 }
 
