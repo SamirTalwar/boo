@@ -11,6 +11,7 @@ im = { version = "15.1.0", features = ["arbitrary"] }
 lazy_static = "1.4.0"
 logos = "0.13.0"
 miette = { version = "5.8.0", features = ["fancy"] }
+num-bigint = "0.4.0"
 peg = "0.8.1"
 reedline = "0.18.0"
 regex = "1.8.1"

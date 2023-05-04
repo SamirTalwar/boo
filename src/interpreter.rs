@@ -153,55 +153,51 @@ mod tests {
 
     #[test]
     fn test_interpreting_addition() {
-        test_interpreting_an_operation(Operation::Add, i64::checked_add)
+        test_interpreting_an_operation(Operation::Add, |x, y| x + y)
     }
 
     #[test]
     fn test_interpreting_subtraction() {
-        test_interpreting_an_operation(Operation::Subtract, i64::checked_sub)
+        test_interpreting_an_operation(Operation::Subtract, |x, y| x - y)
     }
 
     #[test]
     fn test_interpreting_multiplication() {
-        test_interpreting_an_operation(Operation::Multiply, i64::checked_mul)
+        test_interpreting_an_operation(Operation::Multiply, |x, y| x * y)
     }
 
     fn test_interpreting_an_operation(
         operation: Operation,
-        implementation: impl Fn(i64, i64) -> Option<i64>,
+        implementation: impl Fn(&Integer, &Integer) -> Integer,
     ) {
         arbtest::builder().run(|u| {
-            let left = u.int_in_range(i32::MIN..=i32::MAX).map(|x| x.into())?;
-            let right = u.int_in_range(i32::MAX..=i32::MAX).map(|x| x.into())?;
-            match implementation(left, right) {
-                None => Ok(()), // overflow or underflow
-                Some(expected) => {
-                    let expr = Expr::Infix {
-                        annotation: (),
-                        operation,
-                        left: Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(left.into()),
-                        }
-                        .into(),
-                        right: Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(right.into()),
-                        }
-                        .into(),
-                    };
-                    let result = interpret(expr.into());
-                    assert_eq!(
-                        result,
-                        Ok(Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(expected.into()),
-                        }
-                        .into())
-                    );
-                    Ok(())
+            let left = u.arbitrary::<Integer>()?;
+            let right = u.arbitrary::<Integer>()?;
+            let expected = implementation(&left, &right);
+            let expr = Expr::Infix {
+                annotation: (),
+                operation,
+                left: Expr::Primitive {
+                    annotation: (),
+                    value: Primitive::Integer(left),
                 }
-            }
+                .into(),
+                right: Expr::Primitive {
+                    annotation: (),
+                    value: Primitive::Integer(right),
+                }
+                .into(),
+            };
+            let result = interpret(expr.into());
+            assert_eq!(
+                result,
+                Ok(Expr::Primitive {
+                    annotation: (),
+                    value: Primitive::Integer(expected),
+                }
+                .into())
+            );
+            Ok(())
         })
     }
 
@@ -209,47 +205,43 @@ mod tests {
     fn test_interpreting_variable_use() {
         arbtest::builder().run(|u| {
             let name = u.arbitrary::<Identifier>()?;
-            let variable = u.arbitrary::<i64>()?;
-            let constant = u.arbitrary::<i64>()?;
-            match variable.checked_add(constant) {
-                None => Ok(()), // overflow or underflow
-                Some(sum) => {
-                    let expr = Rc::new(Expr::Let {
+            let variable = u.arbitrary::<Integer>()?;
+            let constant = u.arbitrary::<Integer>()?;
+            let sum = &variable + &constant;
+            let expr = Rc::new(Expr::Let {
+                annotation: (),
+                name,
+                value: Expr::Primitive {
+                    annotation: (),
+                    value: Primitive::Integer(variable),
+                }
+                .into(),
+                inner: Expr::Infix {
+                    annotation: (),
+                    operation: Operation::Add,
+                    left: Expr::Identifier {
                         annotation: (),
                         name,
-                        value: Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(variable.into()),
-                        }
-                        .into(),
-                        inner: Expr::Infix {
-                            annotation: (),
-                            operation: Operation::Add,
-                            left: Expr::Identifier {
-                                annotation: (),
-                                name,
-                            }
-                            .into(),
-                            right: Expr::Primitive {
-                                annotation: (),
-                                value: Primitive::Integer(constant.into()),
-                            }
-                            .into(),
-                        }
-                        .into(),
-                    });
-                    let result = interpret(expr.clone());
-                    assert_eq!(
-                        result,
-                        Ok(Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(sum.into()),
-                        }
-                        .into())
-                    );
-                    Ok(())
+                    }
+                    .into(),
+                    right: Expr::Primitive {
+                        annotation: (),
+                        value: Primitive::Integer(constant),
+                    }
+                    .into(),
                 }
-            }
+                .into(),
+            });
+            let result = interpret(expr.clone());
+            assert_eq!(
+                result,
+                Ok(Expr::Primitive {
+                    annotation: (),
+                    value: Primitive::Integer(sum),
+                }
+                .into())
+            );
+            Ok(())
         })
     }
 }

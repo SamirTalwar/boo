@@ -143,6 +143,7 @@ dependencies = [
  "lazy_static",
  "logos",
  "miette",
+ "num-bigint",
  "peg",
  "reedline",
  "regex",
@@ -600,6 +601,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1df031e117bca634c262e9bd3173776844b6c17a90b3741c9163663b4385af76"
 dependencies = [
  "windows-sys 0.45.0",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f93ab6289c7b344a8a9f60f88d80aa20032336fe78da341afc91c8a2341fc75f"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
 ]
 
 [[package]]

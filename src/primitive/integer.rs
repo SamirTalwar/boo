@@ -1,10 +1,13 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(test, derive(arbitrary::Arbitrary))]
-pub enum Integer {
-    Small(i64),
-}
+use num_bigint::BigInt;
 
 type Small = i64;
+type Large = BigInt;
+
+#[derive(Debug, Clone)]
+pub enum Integer {
+    Small(Small),
+    Large(Large),
+}
 
 impl From<i32> for Integer {
     fn from(value: i32) -> Self {
@@ -18,28 +21,60 @@ impl From<i64> for Integer {
     }
 }
 
+impl From<i128> for Integer {
+    fn from(value: i128) -> Self {
+        match Small::try_from(value) {
+            Ok(value) => Integer::Small(value),
+            Err(_) => Integer::Large(value.into()),
+        }
+    }
+}
+
 impl std::str::FromStr for Integer {
-    type Err = std::num::ParseIntError;
+    type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Small::from_str(s).map(Integer::Small)
+        Small::from_str(s)
+            .map(Integer::Small)
+            .map_err(|_| ())
+            .or_else(|_| Large::from_str(s).map(Integer::Large).map_err(|_| ()))
     }
 }
 
 impl std::fmt::Display for Integer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Integer::Small(value) => write!(f, "{}", value),
+            Integer::Small(value) => value.fmt(f),
+            Integer::Large(value) => value.fmt(f),
         }
     }
 }
+
+impl PartialEq for Integer {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Integer::Small(l), Integer::Small(r)) => l == r,
+            (Integer::Small(l), Integer::Large(r)) => Large::from(*l) == *r,
+            (Integer::Large(l), Integer::Small(r)) => *l == Large::from(*r),
+            (Integer::Large(l), Integer::Large(r)) => l == r,
+        }
+    }
+}
+
+impl Eq for Integer {}
 
 impl std::ops::Add for &Integer {
     type Output = Integer;
 
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Integer::Small(l), Integer::Small(r)) => Integer::Small(l + r),
+            (Integer::Small(l), Integer::Small(r)) => match (*l).checked_add(*r) {
+                Some(result) => Integer::Small(result),
+                None => Integer::Large(Large::from(*l) + Large::from(*r)),
+            },
+            (Integer::Small(l), Integer::Large(r)) => Integer::Large(Large::from(*l) + r),
+            (Integer::Large(l), Integer::Small(r)) => Integer::Large(l + Large::from(*r)),
+            (Integer::Large(l), Integer::Large(r)) => Integer::Large(l + r),
         }
     }
 }
@@ -57,7 +92,13 @@ impl std::ops::Sub for &Integer {
 
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Integer::Small(l), Integer::Small(r)) => Integer::Small(l - r),
+            (Integer::Small(l), Integer::Small(r)) => match (*l).checked_sub(*r) {
+                Some(result) => Integer::Small(result),
+                None => Integer::Large(Large::from(*l) - Large::from(*r)),
+            },
+            (Integer::Small(l), Integer::Large(r)) => Integer::Large(Large::from(*l) - r),
+            (Integer::Large(l), Integer::Small(r)) => Integer::Large(l - Large::from(*r)),
+            (Integer::Large(l), Integer::Large(r)) => Integer::Large(l - r),
         }
     }
 }
@@ -75,7 +116,13 @@ impl std::ops::Mul for &Integer {
 
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Integer::Small(l), Integer::Small(r)) => Integer::Small(l * r),
+            (Integer::Small(l), Integer::Small(r)) => match (*l).checked_mul(*r) {
+                Some(result) => Integer::Small(result),
+                None => Integer::Large(Large::from(*l) * Large::from(*r)),
+            },
+            (Integer::Small(l), Integer::Large(r)) => Integer::Large(Large::from(*l) * r),
+            (Integer::Large(l), Integer::Small(r)) => Integer::Large(l * Large::from(*r)),
+            (Integer::Large(l), Integer::Large(r)) => Integer::Large(l * r),
         }
     }
 }
@@ -92,14 +139,39 @@ impl std::ops::Mul for Integer {
 mod tests {
     use super::*;
 
+    impl<'a> arbitrary::Arbitrary<'a> for Integer {
+        fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+            let size = u.int_in_range(1..=(i128::BITS as usize / 8))?;
+            let bytes = u.bytes(size)?;
+            if size <= (Small::BITS as usize) / 8 {
+                let mut small_bytes: [u8; 8] = [0; 8];
+                small_bytes[0..bytes.len()].copy_from_slice(bytes);
+                Ok(Self::Small(Small::from_le_bytes(small_bytes)))
+            } else {
+                let sign = u.choose(&[num_bigint::Sign::NoSign, num_bigint::Sign::Minus])?;
+                Ok(Self::Large(Large::from_bytes_be(*sign, bytes)))
+            }
+        }
+    }
+
+    #[test]
+    fn test_from_string() {
+        arbtest::builder().run(|u| {
+            let value = u.arbitrary::<Integer>()?;
+            let input = format!("{}", value);
+            assert_eq!(input.parse::<Integer>(), Ok(value));
+            Ok(())
+        });
+    }
+
     #[test]
     fn test_addition() {
         arbtest::builder().run(|u| {
-            let left = u.arbitrary::<i16>()? as Small;
-            let right = u.arbitrary::<i16>()? as Small;
+            let left = u.arbitrary::<i128>()?;
+            let right = u.arbitrary::<i128>()?;
             assert_eq!(
-                Integer::Small(left) + Integer::Small(right),
-                Integer::Small(left + right)
+                Integer::from(left) + Integer::from(right),
+                Integer::Large(Large::from(left) + Large::from(right)),
             );
             Ok(())
         });
@@ -108,11 +180,11 @@ mod tests {
     #[test]
     fn test_subtraction() {
         arbtest::builder().run(|u| {
-            let left = u.arbitrary::<i16>()? as Small;
-            let right = u.arbitrary::<i16>()? as Small;
+            let left = u.arbitrary::<i128>()?;
+            let right = u.arbitrary::<i128>()?;
             assert_eq!(
-                Integer::Small(left) - Integer::Small(right),
-                Integer::Small(left - right)
+                Integer::from(left) - Integer::from(right),
+                Integer::Large(Large::from(left) - Large::from(right)),
             );
             Ok(())
         });
@@ -121,11 +193,11 @@ mod tests {
     #[test]
     fn test_multiplication() {
         arbtest::builder().run(|u| {
-            let left = u.arbitrary::<i16>()? as Small;
-            let right = u.arbitrary::<i16>()? as Small;
+            let left = u.arbitrary::<i128>()?;
+            let right = u.arbitrary::<i128>()?;
             assert_eq!(
-                Integer::Small(left) * Integer::Small(right),
-                Integer::Small(left * right)
+                Integer::from(left) * Integer::from(right),
+                Integer::Large(Large::from(left) * Large::from(right)),
             );
             Ok(())
         });
