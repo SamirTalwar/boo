@@ -60,7 +60,7 @@ impl<'a, Annotation> std::fmt::Display for Expr<'a, Annotation> {
                 operation,
                 left,
                 right,
-            } => write!(f, "({} {} {})", left, operation, right),
+            } => write!(f, "({}) {} ({})", left, operation, right),
         }
     }
 }
@@ -109,15 +109,32 @@ mod tests {
                     value: primitive,
                 })
             } else {
-                let operation = unstructured.arbitrary::<Operation>()?;
-                let left = Self::arbitrary_of_depth(depth - 1, unstructured)?;
-                let right = Self::arbitrary_of_depth(depth - 1, unstructured)?;
-                Ok(Expr::Infix {
-                    annotation: (),
-                    operation,
-                    left: left.into(),
-                    right: right.into(),
-                })
+                let choice = unstructured.int_in_range(0..=1)?;
+                match choice {
+                    0 => {
+                        let operation = unstructured.arbitrary::<Operation>()?;
+                        let left = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                        let right = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                        Ok(Expr::Infix {
+                            annotation: (),
+                            operation,
+                            left: left.into(),
+                            right: right.into(),
+                        })
+                    }
+                    1 => {
+                        let name = unstructured.arbitrary::<Identifier>()?;
+                        let value = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                        let inner = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                        Ok(Expr::Let {
+                            annotation: (),
+                            name,
+                            value: value.into(),
+                            inner: inner.into(),
+                        })
+                    }
+                    _ => unreachable!(),
+                }
             }
         }
     }

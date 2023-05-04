@@ -157,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interpreting_subraction() {
+    fn test_interpreting_subtraction() {
         test_interpreting_an_operation(Operation::Subtract, Int::checked_sub)
     }
 

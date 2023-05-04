@@ -1,3 +1,6 @@
+use lazy_static::lazy_static;
+use regex::Regex;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Identifier<'a> {
     name: &'a str,
@@ -6,6 +9,11 @@ pub struct Identifier<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IdentifierError {
     InvalidIdentifier,
+}
+
+lazy_static! {
+    static ref VALID_IDENTIFIER_REGEX: Regex =
+        Regex::new(r"^[_\p{Letter}][_\p{Number}\p{Letter}]*$").unwrap();
 }
 
 impl<'a> Identifier<'a> {
@@ -18,21 +26,7 @@ impl<'a> Identifier<'a> {
     }
 
     fn is_valid(name: &str) -> bool {
-        let mut chars = name.chars();
-        match chars.next() {
-            None => false,
-            Some(initial_char) => {
-                Self::is_valid_initial_char(initial_char) && chars.all(Self::is_valid_char)
-            }
-        }
-    }
-
-    fn is_valid_char(c: char) -> bool {
-        c == '_' || c.is_alphanumeric()
-    }
-
-    fn is_valid_initial_char(c: char) -> bool {
-        c == '_' || c.is_alphabetic()
+        VALID_IDENTIFIER_REGEX.is_match(name)
     }
 }
 

@@ -24,7 +24,8 @@ pub enum Token<'a> {
     Integer(Int),
     #[regex(r"\+|\-|\*")]
     Operator(&'a str),
-    #[regex(r"[a-z]+", |token|
+    // note that the following regex is duplicated from identifier.rs
+    #[regex(r"[_\p{Letter}][_\p{Number}\p{Letter}]*", |token|
         Identifier::new(token.slice()).map_err(|_| ())
     )]
     Identifier(Identifier<'a>),
@@ -105,20 +106,6 @@ mod tests {
                 annotation: (0..11).into(),
                 token: Token::Integer(987_654_321),
             }])
-        );
-    }
-
-    #[test]
-    fn test_lexing_rejects_an_integer_starting_with_an_underscore() {
-        let input = "_2";
-        let tokens = lex(input);
-
-        assert_eq!(
-            tokens,
-            Err(Error::UnexpectedToken {
-                span: (0..1).into(),
-                token: "_".to_string(),
-            })
         );
     }
 
@@ -208,6 +195,24 @@ mod tests {
                 },
             ])
         );
+    }
+
+    #[test]
+    fn test_lexing_identifier() {
+        arbtest::builder().run(|u| {
+            let identifier = u.arbitrary::<Identifier>()?;
+            let input = format!("{}", identifier);
+            let tokens = lex(&input);
+
+            assert_eq!(
+                tokens,
+                Ok(vec![AnnotatedToken {
+                    annotation: (0..input.len()).into(),
+                    token: Token::Identifier(identifier),
+                },])
+            );
+            Ok(())
+        });
     }
 
     #[test]

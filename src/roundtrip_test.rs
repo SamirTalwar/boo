@@ -9,13 +9,16 @@ fn test_rendering_and_parsing_an_expression() {
     arbtest::builder().run(|u| {
         let input = u.arbitrary::<Expr<()>>()?;
         let rendered = format!("{}", input);
-        let lexed = lex(&rendered).expect("Could not lex");
-        let parsed = parse(&lexed).expect("Could not parse");
+        let lexed =
+            lex(&rendered).unwrap_or_else(|err| panic!("Could not lex {:?}:\n{}", rendered, err));
+        let parsed =
+            parse(&lexed).unwrap_or_else(|err| panic!("Could not parse {:?}:\n{}", lexed, err));
         assert!(
             eq_ignoring_annotations(&parsed, &input),
-            "{} and {} were not equal",
+            "{} and {} were not equal\nLexed: {:?}",
             &parsed,
             &input,
+            &lexed,
         );
         Ok(())
     })
