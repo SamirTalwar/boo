@@ -1,20 +1,7 @@
-pub mod ast;
-pub mod error;
-pub mod interpreter;
-pub mod lexer;
-pub mod parser;
-pub mod primitive;
-pub mod span;
-
-pub mod identifier;
-mod roundtrip_test;
-
 use miette::IntoDiagnostic;
 use reedline::*;
 
-use crate::interpreter::interpret;
-use crate::lexer::lex;
-use crate::parser::parse;
+use boo::*;
 
 fn main() {
     if atty::is(atty::Stream::Stdin) {
