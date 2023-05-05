@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use im::HashSet;
+
 use crate::identifier::Identifier;
 use crate::primitive::Primitive;
 
@@ -92,28 +94,50 @@ impl<'a> arbitrary::Arbitrary<'a> for Expr<()> {
         } else {
             (usize::ilog2(length) - 1) / 4
         };
-        Self::arbitrary_of_depth(depth, unstructured)
+        Self::arbitrary_of_depth(depth, HashSet::new(), unstructured)
     }
 }
 
 impl<'a> Expr<()> {
     fn arbitrary_of_depth(
         depth: u32,
+        bound_identifiers: HashSet<Identifier>,
         unstructured: &mut arbitrary::Unstructured<'a>,
     ) -> std::result::Result<Self, arbitrary::Error> {
         if depth == 0 {
-            let primitive = unstructured.arbitrary::<Primitive>()?;
-            Ok(Expr::Primitive {
-                annotation: (),
-                value: primitive,
-            })
+            match (
+                bound_identifiers.is_empty(),
+                unstructured.int_in_range(0..=1)?,
+            ) {
+                (_, 0) | (true, _) => {
+                    let primitive = unstructured.arbitrary::<Primitive>()?;
+                    Ok(Expr::Primitive {
+                        annotation: (),
+                        value: primitive,
+                    })
+                }
+                (false, 1) => {
+                    let index = unstructured.choose_index(bound_identifiers.len())?;
+                    let name = bound_identifiers.iter().nth(index).unwrap().clone();
+                    Ok(Expr::Identifier {
+                        annotation: (),
+                        name,
+                    })
+                }
+                _ => unreachable!(),
+            }
         } else {
             let choice = unstructured.int_in_range(0..=1)?;
             match choice {
                 0 => {
                     let operation = unstructured.arbitrary::<Operation>()?;
-                    let left = Self::arbitrary_of_depth(depth - 1, unstructured)?;
-                    let right = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                    let left = Self::arbitrary_of_depth(
+                        depth - 1,
+                        bound_identifiers.clone(),
+                        unstructured,
+                    )?;
+                    let right =
+                        Self::arbitrary_of_depth(depth - 1, bound_identifiers, unstructured)?;
                     Ok(Expr::Infix {
                         annotation: (),
                         operation,
@@ -122,9 +146,20 @@ impl<'a> Expr<()> {
                     })
                 }
                 1 => {
-                    let name = unstructured.arbitrary::<Identifier>()?;
-                    let value = Self::arbitrary_of_depth(depth - 1, unstructured)?;
-                    let inner = Self::arbitrary_of_depth(depth - 1, unstructured)?;
+                    let mut name = unstructured.arbitrary::<Identifier>()?;
+                    while bound_identifiers.contains(&name) {
+                        name = unstructured.arbitrary::<Identifier>()?;
+                    }
+                    let value = Self::arbitrary_of_depth(
+                        depth - 1,
+                        bound_identifiers.clone(),
+                        unstructured,
+                    )?;
+                    let inner = Self::arbitrary_of_depth(
+                        depth - 1,
+                        bound_identifiers.update(name.clone()),
+                        unstructured,
+                    )?;
                     Ok(Expr::Let {
                         annotation: (),
                         name,

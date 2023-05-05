@@ -16,7 +16,16 @@ pub enum IdentifierError {
 
 lazy_static! {
     static ref VALID_IDENTIFIER_REGEX: Regex =
-        Regex::new(r"^[_\p{Letter}][_\p{Number}\p{Letter}]*$").unwrap();
+        Regex::new(&(
+            r"^".to_string()
+            + &VALID_IDENTIFIER_INITIAL_CHARACTER_REGEX
+            + &VALID_IDENTIFIER_CHARACTER_REGEX + "*"
+            + "$"
+    )).unwrap();
+    static ref VALID_IDENTIFIER_INITIAL_CHARACTER_REGEX: &'static str =
+        r"[_\p{Letter}]";
+    static ref VALID_IDENTIFIER_CHARACTER_REGEX: &'static str =
+        r"[_\p{Letter}\p{Number}]";
     // ensure that the set of keywords matches the keywords defined in lexer.rs
     static ref KEYWORDS: HashSet<&'static str> = ["in", "let"].into();
 }
@@ -51,27 +60,32 @@ impl std::fmt::Display for Identifier {
 
 impl<'a> arbitrary::Arbitrary<'a> for Identifier {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        lazy_static! {
-            static ref FALLBACK: Identifier = Identifier::from_str("fallback").unwrap();
-        }
-        let generated = u.arbitrary::<&'a str>()?;
-        if generated.is_empty() {
-            return Ok(FALLBACK.clone());
-        }
-        let indices = generated
-            .char_indices()
-            .map(|(i, _)| i)
-            .collect::<Vec<usize>>();
-        // drop characters until it works out
-        for start in 0..indices.len() - 1 {
-            for end in (start + 1..indices.len()).rev() {
-                let attempt = generated[indices[start]..indices[end]].to_string();
-                if Self::is_valid(&attempt) {
-                    return Identifier::new(attempt).map_err(|_| arbitrary::Error::IncorrectFormat);
+        let length = u.int_in_range(1..=16)?;
+        let mut name = "".to_string();
+        while !Identifier::is_valid(&name) {
+            let first = loop {
+                if u.is_empty() {
+                    break Err(arbitrary::Error::NotEnoughData);
                 }
-            }
+                let c = u.arbitrary::<char>()?;
+                if c == '_' || c.is_alphabetic() {
+                    break Ok(c);
+                }
+            }?;
+            let rest = (1..length)
+                .map(|_| loop {
+                    if u.is_empty() {
+                        return Err(arbitrary::Error::NotEnoughData);
+                    }
+                    let c = u.arbitrary::<char>()?;
+                    if c == '_' || c.is_alphabetic() || c.is_numeric() {
+                        return Ok(c);
+                    }
+                })
+                .collect::<Result<String, arbitrary::Error>>()?;
+            name = first.to_string() + &rest;
         }
-        Ok(FALLBACK.clone())
+        Identifier::new(name).map_err(|_| arbitrary::Error::IncorrectFormat)
     }
 }
 
