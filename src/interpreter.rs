@@ -11,10 +11,10 @@ pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Result<Rc<Exp
     interpret_(expr, HashMap::new())
 }
 
-pub fn interpret_<'a, Annotation: Clone>(
-    expr: Rc<Expr<'a, Annotation>>,
-    assignments: HashMap<Identifier<'a>, Rc<Expr<'a, Annotation>>>,
-) -> Result<Rc<Expr<'a, Annotation>>> {
+pub fn interpret_<Annotation: Clone>(
+    expr: Rc<Expr<Annotation>>,
+    assignments: HashMap<Identifier, Rc<Expr<Annotation>>>,
+) -> Result<Rc<Expr<Annotation>>> {
     match expr.as_ref() {
         Expr::Primitive { .. } => Ok(expr),
         Expr::Identifier {
@@ -32,7 +32,10 @@ pub fn interpret_<'a, Annotation: Clone>(
             name,
             value,
             inner,
-        } => interpret_(inner.clone(), assignments.update(*name, value.clone())),
+        } => interpret_(
+            inner.clone(),
+            assignments.update(name.clone(), value.clone()),
+        ),
         Expr::Infix {
             annotation,
             operation,
@@ -74,7 +77,7 @@ pub fn interpret_<'a, Annotation: Clone>(
                         right: right_result,
                     }
                     .into(),
-                    assignments.clone(),
+                    assignments,
                 )
             }
         },
@@ -106,7 +109,7 @@ mod tests {
             let value = u.arbitrary::<Primitive>()?;
             let expr = Expr::Let {
                 annotation: (),
-                name,
+                name: name.clone(),
                 value: Expr::Primitive {
                     annotation: (),
                     value: value.clone(),
@@ -137,7 +140,7 @@ mod tests {
             let name = u.arbitrary::<Identifier>()?;
             let expr = Expr::Identifier {
                 annotation: (),
-                name,
+                name: name.clone(),
             };
             let result = interpret(expr.into());
             assert_eq!(
@@ -210,7 +213,7 @@ mod tests {
             let sum = &variable + &constant;
             let expr = Rc::new(Expr::Let {
                 annotation: (),
-                name,
+                name: name.clone(),
                 value: Expr::Primitive {
                     annotation: (),
                     value: Primitive::Integer(variable),
@@ -232,7 +235,7 @@ mod tests {
                 }
                 .into(),
             });
-            let result = interpret(expr.clone());
+            let result = interpret(expr);
             assert_eq!(
                 result,
                 Ok(Expr::Primitive {

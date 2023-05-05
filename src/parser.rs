@@ -6,22 +6,22 @@ use crate::span::*;
 
 peg::parser! {
     grammar parser<'a>() for [&'a AnnotatedToken<'a, Span>] {
-        pub rule root() -> Expr<'a, Span> = e:expr() { e }
+        pub rule root() -> Expr<Span> = e:expr() { e }
 
-        pub rule expr() -> Expr<'a, Span> = precedence! {
+        pub rule expr() -> Expr<Span> = precedence! {
             let_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Let }] } / expected!("let"))
             name:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] } / expected!("an identifier"))
             (quiet! { [AnnotatedToken { annotation: _, token: Token::Assign }] } / expected!("="))
             value:expr()
             (quiet! { [AnnotatedToken { annotation: _, token: Token::In }] } / expected!("in"))
             inner:expr() {
-                let n = match name.token {
+                let n = match &name.token {
                     Token::Identifier(name) => name,
                     _ => unreachable!(),
                 };
                 Expr::Let {
                     annotation: let_.annotation | *inner.annotation(),
-                    name: n,
+                    name: n.clone(),
                     value: value.into(),
                     inner: inner.into(),
                 }
@@ -48,7 +48,7 @@ peg::parser! {
             }
         }
 
-        rule primitive() -> Expr<'a, Span> =
+        rule primitive() -> Expr<Span> =
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
                 Expr::Primitive {
                     annotation: *annotation,
@@ -56,17 +56,17 @@ peg::parser! {
                 }
             } } / expected!("an integer")
 
-        rule identifier() -> Expr<'a, Span> =
+        rule identifier() -> Expr<Span> =
             quiet! { [AnnotatedToken { annotation, token: Token::Identifier(name) }] {
                 Expr::Identifier {
                     annotation: *annotation,
-                    name: *name,
+                    name: name.clone(),
                 }
             } } / expected!("an identifier")
     }
 }
 
-pub fn parse<'a>(input: &'a [AnnotatedToken<Span>]) -> Result<Expr<'a, Span>> {
+pub fn parse(input: &[AnnotatedToken<Span>]) -> Result<Expr<Span>> {
     parser::root(&(input.iter().collect::<Vec<_>>())).map_err(|inner| {
         let span: Span = if inner.location < input.len() {
             input[inner.location].annotation
@@ -85,7 +85,7 @@ pub fn parse<'a>(input: &'a [AnnotatedToken<Span>]) -> Result<Expr<'a, Span>> {
     })
 }
 
-fn infix<'a>(left: Expr<'a, Span>, operation: Operation, right: Expr<'a, Span>) -> Expr<'a, Span> {
+fn infix(left: Expr<Span>, operation: Operation, right: Expr<Span>) -> Expr<Span> {
     Expr::Infix {
         annotation: *left.annotation() | *right.annotation(),
         operation,
@@ -312,7 +312,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (2..3).into(),
-                    token: Token::Identifier(name),
+                    token: Token::Identifier(name.clone()),
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
@@ -328,7 +328,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
-                    token: Token::Identifier(name),
+                    token: Token::Identifier(name.clone()),
                 },
                 AnnotatedToken {
                     annotation: (12..13).into(),
@@ -345,7 +345,7 @@ mod tests {
                 expr,
                 Ok(Expr::Let {
                     annotation: (0..15).into(),
-                    name,
+                    name: name.clone(),
                     value: Expr::Primitive {
                         annotation: (6..7).into(),
                         value: Primitive::Integer(variable),

@@ -4,30 +4,30 @@ use crate::identifier::Identifier;
 use crate::primitive::Primitive;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Expr<'a, Annotation> {
+pub enum Expr<Annotation> {
     Primitive {
         annotation: Annotation,
         value: Primitive,
     },
     Identifier {
         annotation: Annotation,
-        name: Identifier<'a>,
+        name: Identifier,
     },
     Let {
         annotation: Annotation,
-        name: Identifier<'a>,
-        value: Rc<Expr<'a, Annotation>>,
-        inner: Rc<Expr<'a, Annotation>>,
+        name: Identifier,
+        value: Rc<Expr<Annotation>>,
+        inner: Rc<Expr<Annotation>>,
     },
     Infix {
         annotation: Annotation,
         operation: Operation,
-        left: Rc<Expr<'a, Annotation>>,
-        right: Rc<Expr<'a, Annotation>>,
+        left: Rc<Expr<Annotation>>,
+        right: Rc<Expr<Annotation>>,
     },
 }
 
-impl<'a, Annotation> Expr<'a, Annotation> {
+impl<Annotation> Expr<Annotation> {
     pub fn annotation(&self) -> &Annotation {
         match self {
             Expr::Primitive { annotation, .. } => annotation,
@@ -38,7 +38,7 @@ impl<'a, Annotation> Expr<'a, Annotation> {
     }
 }
 
-impl<'a, Annotation> std::fmt::Display for Expr<'a, Annotation> {
+impl<Annotation> std::fmt::Display for Expr<Annotation> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::Primitive {
@@ -82,7 +82,7 @@ impl std::fmt::Display for Operation {
     }
 }
 
-impl<'a> arbitrary::Arbitrary<'a> for Expr<'a, ()> {
+impl<'a> arbitrary::Arbitrary<'a> for Expr<()> {
     fn arbitrary(
         unstructured: &mut arbitrary::Unstructured<'a>,
     ) -> std::result::Result<Self, arbitrary::Error> {
@@ -96,7 +96,7 @@ impl<'a> arbitrary::Arbitrary<'a> for Expr<'a, ()> {
     }
 }
 
-impl<'a> Expr<'a, ()> {
+impl<'a> Expr<()> {
     fn arbitrary_of_depth(
         depth: u32,
         unstructured: &mut arbitrary::Unstructured<'a>,
