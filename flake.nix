@@ -51,6 +51,9 @@
 
           # runtime
           pkgs.libiconv
+
+          # testing
+          pkgs.nushell
         ];
       };
     });
