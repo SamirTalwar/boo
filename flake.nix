@@ -25,18 +25,32 @@
     {
       packages.um = craneLib.buildPackage {
         src = craneLib.cleanCargoSource (craneLib.path ./.);
+
+        buildInputs = [
+          pkgs.iconv
+        ];
       };
 
       packages.default = self.packages.${system}.um;
 
       devShells.default = pkgs.mkShell {
         buildInputs = [
+          # build
           pkgs.clippy
           pkgs.rust-analyzer
           pkgs.rustPlatform.rust.cargo
           pkgs.rustPlatform.rust.rustc
           pkgs.rustPlatform.rustcSrc
-          pkgs.rustfmt
+          (if pkgs.stdenv.isDarwin
+            then
+              pkgs.writeShellScriptBin "rustfmt" ''
+                export DYLD_LIBRARY_PATH="${pkgs.rustPlatform.rust.rustc}/lib/rustlib/aarch64-apple-darwin/lib:$DYLD_LIBRARY_PATH"
+                ${pkgs.rustfmt}/bin/rustfmt "$@"
+              ''
+            else pkgs.rustfmt)
+
+          # runtime
+          pkgs.libiconv
         ];
       };
     });
