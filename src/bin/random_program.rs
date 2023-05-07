@@ -1,7 +1,7 @@
 use rand::RngCore;
 
 use boo::ast::*;
-use boo::interpreter::*;
+use boo::*;
 
 fn main() {
     let mut unstructured_bytes = vec![0; 0x10000];
@@ -11,6 +11,6 @@ fn main() {
     let expr = unstructured.arbitrary::<Expr<()>>().unwrap();
     println!("Expression:\n{}\n", expr);
 
-    let result = interpret(expr.into()).expect("Could not interpret the expression.");
+    let result = evaluate(expr.into()).expect("Could not interpret the expression.");
     println!("Result:\n{}", result);
 }

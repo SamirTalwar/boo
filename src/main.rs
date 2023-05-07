@@ -7,17 +7,17 @@ fn main() {
     if atty::is(atty::Stream::Stdin) {
         repl();
     } else {
-        match read_and_run(std::io::stdin()) {
+        match read_and_interpret(std::io::stdin()) {
             Ok(()) => (),
             Err(report) => eprintln!("{:?}", report),
         }
     }
 }
 
-fn read_and_run(mut input: impl std::io::Read) -> miette::Result<()> {
+fn read_and_interpret(mut input: impl std::io::Read) -> miette::Result<()> {
     let mut buffer = String::new();
     input.read_to_string(&mut buffer).into_diagnostic()?;
-    run(&buffer).map_err(|report| report.with_source_code(buffer))
+    interpret(&buffer).map_err(|report| report.with_source_code(buffer))
 }
 
 fn repl() {
@@ -30,7 +30,7 @@ fn repl() {
     loop {
         let sig = line_editor.read_line(&prompt);
         match sig {
-            Ok(Signal::Success(buffer)) => match run(&buffer) {
+            Ok(Signal::Success(buffer)) => match interpret(&buffer) {
                 Ok(()) => (),
                 Err(report) => eprintln!("{:?}", report.with_source_code(buffer)),
             },
@@ -44,10 +44,10 @@ fn repl() {
     }
 }
 
-fn run(buffer: &str) -> miette::Result<()> {
+fn interpret(buffer: &str) -> miette::Result<()> {
     let tokens = lex(buffer)?;
     let expr = parse(&tokens)?;
-    let result = interpret(expr.into())?;
+    let result = evaluate(expr.into())?;
     println!("{}", result);
     Ok(())
 }

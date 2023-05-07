@@ -7,11 +7,11 @@ use crate::error::*;
 use crate::identifier::*;
 use crate::primitive::*;
 
-pub fn interpret<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Result<Rc<Expr<Annotation>>> {
-    interpret_(expr, HashMap::new())
+pub fn evaluate<Annotation: Clone>(expr: Rc<Expr<Annotation>>) -> Result<Rc<Expr<Annotation>>> {
+    evaluate_(expr, HashMap::new())
 }
 
-pub fn interpret_<Annotation: Clone>(
+pub fn evaluate_<Annotation: Clone>(
     expr: Rc<Expr<Annotation>>,
     assignments: HashMap<Identifier, Rc<Expr<Annotation>>>,
 ) -> Result<Rc<Expr<Annotation>>> {
@@ -21,7 +21,7 @@ pub fn interpret_<Annotation: Clone>(
             annotation: _,
             name,
         } => match assignments.get(name) {
-            Some(value) => interpret_(value.clone(), assignments),
+            Some(value) => evaluate_(value.clone(), assignments),
             None => Err(Error::UnknownVariable {
                 span: 0.into(), // this is wrong
                 name: name.to_string(),
@@ -32,7 +32,7 @@ pub fn interpret_<Annotation: Clone>(
             name,
             value,
             inner,
-        } => interpret_(
+        } => evaluate_(
             inner.clone(),
             assignments.update(name.clone(), value.clone()),
         ),
@@ -67,9 +67,9 @@ pub fn interpret_<Annotation: Clone>(
             }
             .into()),
             _ => {
-                let left_result = interpret_(left.clone(), assignments.clone())?;
-                let right_result = interpret_(right.clone(), assignments.clone())?;
-                interpret_(
+                let left_result = evaluate_(left.clone(), assignments.clone())?;
+                let right_result = evaluate_(right.clone(), assignments.clone())?;
+                evaluate_(
                     Expr::Infix {
                         annotation: annotation.clone(),
                         operation: *operation,
@@ -96,7 +96,7 @@ mod tests {
                 annotation: (),
                 value,
             });
-            let result = interpret(expr.clone());
+            let result = evaluate(expr.clone());
             assert_eq!(result, Ok(expr));
             Ok(())
         })
@@ -121,7 +121,7 @@ mod tests {
                 }
                 .into(),
             };
-            let result = interpret(expr.into());
+            let result = evaluate(expr.into());
             assert_eq!(
                 result,
                 Ok(Expr::Primitive {
@@ -142,7 +142,7 @@ mod tests {
                 annotation: (),
                 name: name.clone(),
             };
-            let result = interpret(expr.into());
+            let result = evaluate(expr.into());
             assert_eq!(
                 result,
                 Err(Error::UnknownVariable {
@@ -191,7 +191,7 @@ mod tests {
                 }
                 .into(),
             };
-            let result = interpret(expr.into());
+            let result = evaluate(expr.into());
             assert_eq!(
                 result,
                 Ok(Expr::Primitive {
@@ -235,7 +235,7 @@ mod tests {
                 }
                 .into(),
             });
-            let result = interpret(expr);
+            let result = evaluate(expr);
             assert_eq!(
                 result,
                 Ok(Expr::Primitive {
