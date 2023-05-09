@@ -142,7 +142,8 @@ const SMALL_BYTES: usize = Small::BITS as usize / 8;
 
 impl<'a> arbitrary::Arbitrary<'a> for Integer {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let size = u.int_in_range(1..=(i128::BITS as usize / 8))?;
+        let (min_size, max_size) = Self::size_hint(0);
+        let size = u.int_in_range(min_size..=max_size.unwrap())?;
         let bytes = u.bytes(size)?;
         if size <= (Small::BITS as usize) / 8 {
             let mut small_bytes: [u8; SMALL_BYTES] = [0; SMALL_BYTES];
@@ -152,6 +153,10 @@ impl<'a> arbitrary::Arbitrary<'a> for Integer {
             let sign = u.choose(&[num_bigint::Sign::NoSign, num_bigint::Sign::Minus])?;
             Ok(Self::Large(Large::from_bytes_be(*sign, bytes)))
         }
+    }
+
+    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+        (1, Some(i128::BITS as usize / 8))
     }
 }
 

@@ -60,7 +60,8 @@ impl std::fmt::Display for Identifier {
 
 impl<'a> arbitrary::Arbitrary<'a> for Identifier {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let length = u.int_in_range(1..=16)?;
+        let (min_length, max_length) = Self::size_hint(0);
+        let length = u.int_in_range(min_length..=max_length.unwrap())?;
         let mut name = "".to_string();
         while !Identifier::is_valid(&name) {
             let first = loop {
@@ -86,6 +87,10 @@ impl<'a> arbitrary::Arbitrary<'a> for Identifier {
             name = first.to_string() + &rest;
         }
         Identifier::new(name).map_err(|_| arbitrary::Error::IncorrectFormat)
+    }
+
+    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+        (1, Some(16))
     }
 }
 

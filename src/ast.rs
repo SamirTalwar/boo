@@ -89,14 +89,37 @@ impl<'a> arbitrary::Arbitrary<'a> for Expr<()> {
         unstructured: &mut arbitrary::Unstructured<'a>,
     ) -> std::result::Result<Self, arbitrary::Error> {
         let length = unstructured.arbitrary_len::<Expr<()>>()?;
-        let depth = if length <= 1 {
-            0
-        } else {
-            (usize::ilog2(length) - 1) / 4
-        };
+        let depth = (if length == 0 { 0 } else { length.ilog2() }).min(4);
         Self::arbitrary_of_depth(depth, HashSet::new(), unstructured)
     }
+
+    fn size_hint(depth: usize) -> (usize, Option<usize>) {
+        arbitrary::size_hint::recursion_guard(depth, |depth| {
+            let mut choices: Vec<(usize, Option<usize>)> =
+                vec![Primitive::size_hint(depth), Identifier::size_hint(depth)];
+            // don't go further than 4 deep
+            if depth < 4 {
+                choices.push(arbitrary::size_hint::and_all(&[
+                    Expr::size_hint(depth),
+                    Operation::size_hint(depth),
+                    Expr::size_hint(depth),
+                ]));
+                choices.push(arbitrary::size_hint::and_all(&[
+                    Identifier::size_hint(depth),
+                    Expr::size_hint(depth),
+                    Expr::size_hint(depth),
+                ]));
+            }
+
+            arbitrary::size_hint::or_all(&choices)
+        })
+    }
 }
+
+type ExprChoice<'a> = dyn FnOnce(
+    &mut arbitrary::Unstructured<'a>,
+    HashSet<Identifier>,
+) -> arbitrary::Result<Expr<()>>;
 
 impl<'a> Expr<()> {
     fn arbitrary_of_depth(
@@ -104,71 +127,53 @@ impl<'a> Expr<()> {
         bound_identifiers: HashSet<Identifier>,
         unstructured: &mut arbitrary::Unstructured<'a>,
     ) -> std::result::Result<Self, arbitrary::Error> {
-        if depth == 0 {
-            match (
-                bound_identifiers.is_empty(),
-                unstructured.int_in_range(0..=1)?,
-            ) {
-                (_, 0) | (true, _) => {
-                    let primitive = unstructured.arbitrary::<Primitive>()?;
-                    Ok(Expr::Primitive {
-                        annotation: (),
-                        value: primitive,
-                    })
-                }
-                (false, 1) => {
-                    let index = unstructured.choose_index(bound_identifiers.len())?;
-                    let name = bound_identifiers.iter().nth(index).unwrap().clone();
-                    Ok(Expr::Identifier {
-                        annotation: (),
-                        name,
-                    })
-                }
-                _ => unreachable!(),
-            }
-        } else {
-            let choice = unstructured.int_in_range(0..=1)?;
-            match choice {
-                0 => {
-                    let operation = unstructured.arbitrary::<Operation>()?;
-                    let left = Self::arbitrary_of_depth(
-                        depth - 1,
-                        bound_identifiers.clone(),
-                        unstructured,
-                    )?;
-                    let right =
-                        Self::arbitrary_of_depth(depth - 1, bound_identifiers, unstructured)?;
-                    Ok(Expr::Infix {
-                        annotation: (),
-                        operation,
-                        left: left.into(),
-                        right: right.into(),
-                    })
-                }
-                1 => {
-                    let mut name = unstructured.arbitrary::<Identifier>()?;
-                    while bound_identifiers.contains(&name) {
-                        name = unstructured.arbitrary::<Identifier>()?;
-                    }
-                    let value = Self::arbitrary_of_depth(
-                        depth - 1,
-                        bound_identifiers.clone(),
-                        unstructured,
-                    )?;
-                    let inner = Self::arbitrary_of_depth(
-                        depth - 1,
-                        bound_identifiers.update(name.clone()),
-                        unstructured,
-                    )?;
-                    Ok(Expr::Let {
-                        annotation: (),
-                        name,
-                        value: value.into(),
-                        inner: inner.into(),
-                    })
-                }
-                _ => unreachable!(),
-            }
+        let mut choices: Vec<Box<ExprChoice<'a>>> = Vec::new();
+        choices.push(Box::new(|u, _| {
+            let primitive = u.arbitrary::<Primitive>()?;
+            Ok(Expr::Primitive {
+                annotation: (),
+                value: primitive,
+            })
+        }));
+        if !bound_identifiers.is_empty() {
+            choices.push(Box::new(|u, bound| {
+                let index = u.choose_index(bound.len())?;
+                let name = bound.iter().nth(index).unwrap().clone();
+                Ok(Expr::Identifier {
+                    annotation: (),
+                    name,
+                })
+            }));
         }
+        if depth > 0 {
+            choices.push(Box::new(move |u, bound| {
+                let operation = u.arbitrary::<Operation>()?;
+                let left = Self::arbitrary_of_depth(depth - 1, bound.clone(), u)?;
+                let right = Self::arbitrary_of_depth(depth - 1, bound, u)?;
+                Ok(Expr::Infix {
+                    annotation: (),
+                    operation,
+                    left: left.into(),
+                    right: right.into(),
+                })
+            }));
+            choices.push(Box::new(move |u, bound| {
+                let mut name = u.arbitrary::<Identifier>()?;
+                while bound.contains(&name) {
+                    name = u.arbitrary::<Identifier>()?;
+                }
+                let value = Self::arbitrary_of_depth(depth - 1, bound.clone(), u)?;
+                let inner = Self::arbitrary_of_depth(depth - 1, bound.update(name.clone()), u)?;
+                Ok(Expr::Let {
+                    annotation: (),
+                    name,
+                    value: value.into(),
+                    inner: inner.into(),
+                })
+            }));
+        }
+
+        let choice = unstructured.choose_index(choices.len())?;
+        choices.swap_remove(choice)(unstructured, bound_identifiers)
     }
 }
