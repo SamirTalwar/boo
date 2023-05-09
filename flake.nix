@@ -54,6 +54,9 @@
 
           # testing
           pkgs.nushell
+
+          # benchmarking
+          pkgs.gnuplot
         ];
       };
     });
