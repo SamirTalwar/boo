@@ -60,7 +60,8 @@ pub fn lex(input: &str) -> Result<Vec<AnnotatedToken<Span>>> {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
-    use proptest::test_runner::TestRunner;
+
+    use crate::proptest_helpers::*;
 
     use super::*;
 
@@ -204,21 +205,19 @@ mod tests {
 
     #[test]
     fn test_lexing_identifier() {
-        TestRunner::default()
-            .run(&Identifier::arbitrary_of_max_length(16), |identifier| {
-                let input = format!("{}", identifier);
-                let tokens = lex(&input);
+        check(&Identifier::arbitrary_of_max_length(16), |identifier| {
+            let input = format!("{}", identifier);
+            let tokens = lex(&input);
 
-                prop_assert_eq!(
-                    tokens,
-                    Ok(vec![AnnotatedToken {
-                        annotation: (0..input.len()).into(),
-                        token: Token::Identifier(identifier),
-                    }])
-                );
-                Ok(())
-            })
-            .unwrap()
+            prop_assert_eq!(
+                tokens,
+                Ok(vec![AnnotatedToken {
+                    annotation: (0..input.len()).into(),
+                    token: Token::Identifier(identifier),
+                }])
+            );
+            Ok(())
+        })
     }
 
     #[test]

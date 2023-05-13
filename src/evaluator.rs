@@ -87,82 +87,77 @@ pub fn evaluate_<Annotation: Clone>(
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
-    use proptest::test_runner::TestRunner;
+
+    use crate::proptest_helpers::*;
 
     use super::*;
 
     #[test]
     fn test_interpreting_a_primitive() {
-        TestRunner::default()
-            .run(&Primitive::arbitrary(), |value| {
-                let expr = Rc::new(Expr::Primitive {
-                    annotation: (),
-                    value,
-                });
-                let result = evaluate(expr.clone());
-                prop_assert_eq!(result, Ok(expr));
-                Ok(())
-            })
-            .unwrap()
+        check(&Primitive::arbitrary(), |value| {
+            let expr = Rc::new(Expr::Primitive {
+                annotation: (),
+                value,
+            });
+            let result = evaluate(expr.clone());
+            prop_assert_eq!(result, Ok(expr));
+            Ok(())
+        })
     }
 
     #[test]
     fn test_interpreting_assignment() {
-        TestRunner::default()
-            .run(
-                &(
-                    Identifier::arbitrary_of_max_length(16),
-                    Primitive::arbitrary(),
-                ),
-                |(name, value)| {
-                    let expr = Expr::Let {
-                        annotation: (),
-                        name: name.clone(),
-                        value: Expr::Primitive {
-                            annotation: (),
-                            value: value.clone(),
-                        }
-                        .into(),
-                        inner: Expr::Identifier {
-                            annotation: (),
-                            name,
-                        }
-                        .into(),
-                    };
-                    let result = evaluate(expr.into());
-                    prop_assert_eq!(
-                        result,
-                        Ok(Expr::Primitive {
-                            annotation: (),
-                            value,
-                        }
-                        .into())
-                    );
-                    Ok(())
-                },
-            )
-            .unwrap()
-    }
-
-    #[test]
-    fn test_interpreting_an_unknown_variable() {
-        TestRunner::default()
-            .run(&Identifier::arbitrary_of_max_length(16), |name| {
-                let expr = Expr::Identifier {
+        check(
+            &(
+                Identifier::arbitrary_of_max_length(16),
+                Primitive::arbitrary(),
+            ),
+            |(name, value)| {
+                let expr = Expr::Let {
                     annotation: (),
                     name: name.clone(),
+                    value: Expr::Primitive {
+                        annotation: (),
+                        value: value.clone(),
+                    }
+                    .into(),
+                    inner: Expr::Identifier {
+                        annotation: (),
+                        name,
+                    }
+                    .into(),
                 };
                 let result = evaluate(expr.into());
                 prop_assert_eq!(
                     result,
-                    Err(Error::UnknownVariable {
-                        span: 0.into(), // this is wrong
-                        name: name.to_string()
-                    })
+                    Ok(Expr::Primitive {
+                        annotation: (),
+                        value,
+                    }
+                    .into())
                 );
                 Ok(())
-            })
-            .unwrap()
+            },
+        )
+    }
+
+    #[test]
+    fn test_interpreting_an_unknown_variable() {
+        check(&Identifier::arbitrary_of_max_length(16), |name| {
+            let expr = Expr::Identifier {
+                annotation: (),
+                name: name.clone(),
+            };
+            let result = evaluate(expr.into());
+            prop_assert_eq!(
+                result,
+                Err(Error::UnknownVariable {
+                    span: 0.into(), // this is wrong
+                    name: name.to_string()
+                })
+            );
+            Ok(())
+        })
     }
 
     #[test]
@@ -184,87 +179,83 @@ mod tests {
         operation: Operation,
         implementation: impl Fn(&Integer, &Integer) -> Integer,
     ) {
-        TestRunner::default()
-            .run(
-                &(Integer::arbitrary(), Integer::arbitrary()),
-                |(left, right)| {
-                    let expected = implementation(&left, &right);
-                    let expr = Expr::Infix {
+        check(
+            &(Integer::arbitrary(), Integer::arbitrary()),
+            |(left, right)| {
+                let expected = implementation(&left, &right);
+                let expr = Expr::Infix {
+                    annotation: (),
+                    operation,
+                    left: Expr::Primitive {
                         annotation: (),
-                        operation,
-                        left: Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(left),
-                        }
-                        .into(),
-                        right: Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(right),
-                        }
-                        .into(),
-                    };
-                    let result = evaluate(expr.into());
-                    prop_assert_eq!(
-                        result,
-                        Ok(Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(expected),
-                        }
-                        .into())
-                    );
-                    Ok(())
-                },
-            )
-            .unwrap()
+                        value: Primitive::Integer(left),
+                    }
+                    .into(),
+                    right: Expr::Primitive {
+                        annotation: (),
+                        value: Primitive::Integer(right),
+                    }
+                    .into(),
+                };
+                let result = evaluate(expr.into());
+                prop_assert_eq!(
+                    result,
+                    Ok(Expr::Primitive {
+                        annotation: (),
+                        value: Primitive::Integer(expected),
+                    }
+                    .into())
+                );
+                Ok(())
+            },
+        )
     }
 
     #[test]
     fn test_interpreting_variable_use() {
-        TestRunner::default()
-            .run(
-                &(
-                    Identifier::arbitrary_of_max_length(16),
-                    Integer::arbitrary(),
-                    Integer::arbitrary(),
-                ),
-                |(name, variable, constant)| {
-                    let sum = &variable + &constant;
-                    let expr = Rc::new(Expr::Let {
+        check(
+            &(
+                Identifier::arbitrary_of_max_length(16),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(name, variable, constant)| {
+                let sum = &variable + &constant;
+                let expr = Rc::new(Expr::Let {
+                    annotation: (),
+                    name: name.clone(),
+                    value: Expr::Primitive {
                         annotation: (),
-                        name: name.clone(),
-                        value: Expr::Primitive {
+                        value: Primitive::Integer(variable),
+                    }
+                    .into(),
+                    inner: Expr::Infix {
+                        annotation: (),
+                        operation: Operation::Add,
+                        left: Expr::Identifier {
                             annotation: (),
-                            value: Primitive::Integer(variable),
+                            name,
                         }
                         .into(),
-                        inner: Expr::Infix {
+                        right: Expr::Primitive {
                             annotation: (),
-                            operation: Operation::Add,
-                            left: Expr::Identifier {
-                                annotation: (),
-                                name,
-                            }
-                            .into(),
-                            right: Expr::Primitive {
-                                annotation: (),
-                                value: Primitive::Integer(constant),
-                            }
-                            .into(),
+                            value: Primitive::Integer(constant),
                         }
                         .into(),
-                    });
-                    let result = evaluate(expr);
-                    prop_assert_eq!(
-                        result,
-                        Ok(Expr::Primitive {
-                            annotation: (),
-                            value: Primitive::Integer(sum),
-                        }
-                        .into())
-                    );
-                    Ok(())
-                },
-            )
-            .unwrap()
+                    }
+                    .into(),
+                });
+                let result = evaluate(expr);
+                prop_assert_eq!(
+                    result,
+                    Ok(Expr::Primitive {
+                        annotation: (),
+                        value: Primitive::Integer(sum),
+                    }
+                    .into())
+                );
+                Ok(())
+            },
+        )
     }
 }

@@ -1,29 +1,27 @@
 #![cfg(test)]
 
 use proptest::prelude::*;
-use proptest::test_runner::TestRunner;
 
 use crate::ast::Expr;
 use crate::lexer::lex;
 use crate::parser::parse;
+use crate::proptest_helpers::check;
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {
-    TestRunner::default()
-        .run(&Expr::gen(0..4), |input| {
-            let rendered = format!("{}", input);
-            let lexed = lex(&rendered)?;
-            let parsed = parse(&lexed)?;
-            prop_assert!(
-                eq_ignoring_annotations(&parsed, &input),
-                "{} and {} were not equal\nLexed: {:?}",
-                &parsed,
-                &input,
-                &lexed,
-            );
-            Ok(())
-        })
-        .unwrap()
+    check(&Expr::gen(0..4), |input| {
+        let rendered = format!("{}", input);
+        let lexed = lex(&rendered)?;
+        let parsed = parse(&lexed)?;
+        prop_assert!(
+            eq_ignoring_annotations(&parsed, &input),
+            "{} and {} were not equal\nLexed: {:?}",
+            &parsed,
+            &input,
+            &lexed,
+        );
+        Ok(())
+    })
 }
 
 fn eq_ignoring_annotations<LeftAnnotation, RightAnnotation>(

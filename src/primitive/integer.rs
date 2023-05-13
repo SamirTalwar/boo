@@ -148,57 +148,50 @@ impl Integer {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
-    use proptest::test_runner::TestRunner;
+
+    use crate::proptest_helpers::*;
 
     use super::*;
 
     #[test]
     fn test_from_string() {
-        TestRunner::default()
-            .run(&Integer::arbitrary(), |value| {
-                let input = format!("{}", value);
-                prop_assert_eq!(input.parse::<Integer>(), Ok(value));
-                Ok(())
-            })
-            .unwrap()
+        check(&Integer::arbitrary(), |value| {
+            let input = format!("{}", value);
+            prop_assert_eq!(input.parse::<Integer>(), Ok(value));
+            Ok(())
+        })
     }
 
     #[test]
     fn test_addition() {
-        TestRunner::default()
-            .run(&(any::<i128>(), any::<i128>()), |(left, right)| {
-                prop_assert_eq!(
-                    Integer::from(left) + Integer::from(right),
-                    Integer::Large(Large::from(left) + Large::from(right))
-                );
-                Ok(())
-            })
-            .unwrap()
+        check(&(any::<i128>(), any::<i128>()), |(left, right)| {
+            prop_assert_eq!(
+                Integer::from(left) + Integer::from(right),
+                Integer::Large(Large::from(left) + Large::from(right))
+            );
+            Ok(())
+        })
     }
 
     #[test]
     fn test_subtraction() {
-        TestRunner::default()
-            .run(&(any::<i128>(), any::<i128>()), |(left, right)| {
-                prop_assert_eq!(
-                    Integer::from(left) - Integer::from(right),
-                    Integer::Large(Large::from(left) - Large::from(right))
-                );
-                Ok(())
-            })
-            .unwrap()
+        check(&(any::<i128>(), any::<i128>()), |(left, right)| {
+            prop_assert_eq!(
+                Integer::from(left) - Integer::from(right),
+                Integer::Large(Large::from(left) - Large::from(right))
+            );
+            Ok(())
+        })
     }
 
     #[test]
     fn test_multiplication() {
-        TestRunner::default()
-            .run(&(any::<i128>(), any::<i128>()), |(left, right)| {
-                prop_assert_eq!(
-                    Integer::from(left) * Integer::from(right),
-                    Integer::Large(Large::from(left) * Large::from(right))
-                );
-                Ok(())
-            })
-            .unwrap()
+        check(&(any::<i128>(), any::<i128>()), |(left, right)| {
+            prop_assert_eq!(
+                Integer::from(left) * Integer::from(right),
+                Integer::Large(Large::from(left) * Large::from(right))
+            );
+            Ok(())
+        })
     }
 }

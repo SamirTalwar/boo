@@ -97,32 +97,30 @@ fn infix(left: Expr<Span>, operation: Operation, right: Expr<Span>) -> Expr<Span
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
-    use proptest::test_runner::TestRunner;
 
     use crate::identifier::*;
+    use crate::proptest_helpers::*;
 
     use super::*;
 
     #[test]
     fn test_parsing_an_integer() {
-        TestRunner::default()
-            .run(&Integer::arbitrary(), |value| {
-                let tokens = vec![AnnotatedToken {
-                    annotation: (0..10).into(),
-                    token: Token::Integer(value.clone()),
-                }];
-                let expr = parse(&tokens);
+        check(&Integer::arbitrary(), |value| {
+            let tokens = vec![AnnotatedToken {
+                annotation: (0..10).into(),
+                token: Token::Integer(value.clone()),
+            }];
+            let expr = parse(&tokens);
 
-                prop_assert_eq!(
-                    expr,
-                    Ok(Expr::Primitive {
-                        annotation: (0..10).into(),
-                        value: Primitive::Integer(value),
-                    })
-                );
-                Ok(())
-            })
-            .unwrap()
+            prop_assert_eq!(
+                expr,
+                Ok(Expr::Primitive {
+                    annotation: (0..10).into(),
+                    value: Primitive::Integer(value),
+                })
+            );
+            Ok(())
+        })
     }
 
     #[test]
@@ -141,168 +139,96 @@ mod tests {
     }
 
     fn test_parsing_an_operation(text: &str, operation: Operation) {
-        TestRunner::default()
-            .run(
-                &(Integer::arbitrary(), Integer::arbitrary()),
-                |(left, right)| {
-                    let tokens = vec![
-                        AnnotatedToken {
-                            annotation: (0..1).into(),
-                            token: Token::Integer(left.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (2..3).into(),
-                            token: Token::Operator(text),
-                        },
-                        AnnotatedToken {
-                            annotation: (4..5).into(),
-                            token: Token::Integer(right.clone()),
-                        },
-                    ];
-                    let expr = parse(&tokens);
+        check(
+            &(Integer::arbitrary(), Integer::arbitrary()),
+            |(left, right)| {
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Integer(left.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (2..3).into(),
+                        token: Token::Operator(text),
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Integer(right.clone()),
+                    },
+                ];
+                let expr = parse(&tokens);
 
-                    prop_assert_eq!(
-                        expr,
-                        Ok(Expr::Infix {
-                            annotation: (0..5).into(),
-                            operation,
-                            left: Expr::Primitive {
-                                annotation: (0..1).into(),
-                                value: Primitive::Integer(left),
-                            }
-                            .into(),
-                            right: Expr::Primitive {
-                                annotation: (4..5).into(),
-                                value: Primitive::Integer(right),
-                            }
-                            .into(),
-                        })
-                    );
-                    Ok(())
-                },
-            )
-            .unwrap()
+                prop_assert_eq!(
+                    expr,
+                    Ok(Expr::Infix {
+                        annotation: (0..5).into(),
+                        operation,
+                        left: Expr::Primitive {
+                            annotation: (0..1).into(),
+                            value: Primitive::Integer(left),
+                        }
+                        .into(),
+                        right: Expr::Primitive {
+                            annotation: (4..5).into(),
+                            value: Primitive::Integer(right),
+                        }
+                        .into(),
+                    })
+                );
+                Ok(())
+            },
+        )
     }
 
     #[test]
     fn test_parsing_two_operations_with_higher_precedence_to_the_right() {
-        TestRunner::default()
-            .run(
-                &(
-                    Integer::arbitrary(),
-                    Integer::arbitrary(),
-                    Integer::arbitrary(),
-                ),
-                |(a, b, c)| {
-                    let tokens = vec![
-                        AnnotatedToken {
-                            annotation: (0..1).into(),
-                            token: Token::Integer(a.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (2..3).into(),
-                            token: Token::Operator("+"),
-                        },
-                        AnnotatedToken {
-                            annotation: (4..5).into(),
-                            token: Token::Integer(b.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (6..7).into(),
-                            token: Token::Operator("*"),
-                        },
-                        AnnotatedToken {
-                            annotation: (8..9).into(),
-                            token: Token::Integer(c.clone()),
-                        },
-                    ];
-                    let expr = parse(&tokens);
+        check(
+            &(
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(a, b, c)| {
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Integer(a.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (2..3).into(),
+                        token: Token::Operator("+"),
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Integer(b.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (6..7).into(),
+                        token: Token::Operator("*"),
+                    },
+                    AnnotatedToken {
+                        annotation: (8..9).into(),
+                        token: Token::Integer(c.clone()),
+                    },
+                ];
+                let expr = parse(&tokens);
 
-                    prop_assert_eq!(
-                        expr,
-                        Ok(Expr::Infix {
-                            annotation: (0..9).into(),
-                            operation: Operation::Add,
+                prop_assert_eq!(
+                    expr,
+                    Ok(Expr::Infix {
+                        annotation: (0..9).into(),
+                        operation: Operation::Add,
+                        left: Expr::Primitive {
+                            annotation: (0..1).into(),
+                            value: Primitive::Integer(a),
+                        }
+                        .into(),
+                        right: Expr::Infix {
+                            annotation: (4..9).into(),
+                            operation: Operation::Multiply,
                             left: Expr::Primitive {
-                                annotation: (0..1).into(),
-                                value: Primitive::Integer(a),
-                            }
-                            .into(),
-                            right: Expr::Infix {
-                                annotation: (4..9).into(),
-                                operation: Operation::Multiply,
-                                left: Expr::Primitive {
-                                    annotation: (4..5).into(),
-                                    value: Primitive::Integer(b),
-                                }
-                                .into(),
-                                right: Expr::Primitive {
-                                    annotation: (8..9).into(),
-                                    value: Primitive::Integer(c),
-                                }
-                                .into(),
-                            }
-                            .into(),
-                        })
-                    );
-                    Ok(())
-                },
-            )
-            .unwrap()
-    }
-
-    #[test]
-    fn test_parsing_two_operations_with_higher_precedence_to_the_left() {
-        TestRunner::default()
-            .run(
-                &(
-                    Integer::arbitrary(),
-                    Integer::arbitrary(),
-                    Integer::arbitrary(),
-                ),
-                |(a, b, c)| {
-                    let tokens = vec![
-                        AnnotatedToken {
-                            annotation: (0..1).into(),
-                            token: Token::Integer(a.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (2..3).into(),
-                            token: Token::Operator("*"),
-                        },
-                        AnnotatedToken {
-                            annotation: (4..5).into(),
-                            token: Token::Integer(b.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (6..7).into(),
-                            token: Token::Operator("-"),
-                        },
-                        AnnotatedToken {
-                            annotation: (8..9).into(),
-                            token: Token::Integer(c.clone()),
-                        },
-                    ];
-                    let expr = parse(&tokens);
-
-                    prop_assert_eq!(
-                        expr,
-                        Ok(Expr::Infix {
-                            annotation: (0..9).into(),
-                            operation: Operation::Subtract,
-                            left: Expr::Infix {
-                                annotation: (0..5).into(),
-                                operation: Operation::Multiply,
-                                left: Expr::Primitive {
-                                    annotation: (0..1).into(),
-                                    value: Primitive::Integer(a),
-                                }
-                                .into(),
-                                right: Expr::Primitive {
-                                    annotation: (4..5).into(),
-                                    value: Primitive::Integer(b),
-                                }
-                                .into(),
+                                annotation: (4..5).into(),
+                                value: Primitive::Integer(b),
                             }
                             .into(),
                             right: Expr::Primitive {
@@ -310,221 +236,279 @@ mod tests {
                                 value: Primitive::Integer(c),
                             }
                             .into(),
-                        })
-                    );
-                    Ok(())
-                },
-            )
-            .unwrap()
+                        }
+                        .into(),
+                    })
+                );
+                Ok(())
+            },
+        )
     }
 
     #[test]
-    fn test_variables() {
-        TestRunner::default()
-            .run(
-                &(
-                    Identifier::arbitrary_of_max_length(16),
-                    Integer::arbitrary(),
-                    Integer::arbitrary(),
-                ),
-                |(name, variable, constant)| {
-                    let tokens = vec![
-                        AnnotatedToken {
-                            annotation: (0..1).into(),
-                            token: Token::Let,
-                        },
-                        AnnotatedToken {
-                            annotation: (2..3).into(),
-                            token: Token::Identifier(name.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (4..5).into(),
-                            token: Token::Assign,
-                        },
-                        AnnotatedToken {
-                            annotation: (6..7).into(),
-                            token: Token::Integer(variable.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (8..9).into(),
-                            token: Token::In,
-                        },
-                        AnnotatedToken {
-                            annotation: (10..11).into(),
-                            token: Token::Identifier(name.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (12..13).into(),
-                            token: Token::Operator("*"),
-                        },
-                        AnnotatedToken {
-                            annotation: (14..15).into(),
-                            token: Token::Integer(constant.clone()),
-                        },
-                    ];
-                    let expr = parse(&tokens);
+    fn test_parsing_two_operations_with_higher_precedence_to_the_left() {
+        check(
+            &(
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(a, b, c)| {
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Integer(a.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (2..3).into(),
+                        token: Token::Operator("*"),
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Integer(b.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (6..7).into(),
+                        token: Token::Operator("-"),
+                    },
+                    AnnotatedToken {
+                        annotation: (8..9).into(),
+                        token: Token::Integer(c.clone()),
+                    },
+                ];
+                let expr = parse(&tokens);
 
-                    prop_assert_eq!(
-                        expr,
-                        Ok(Expr::Let {
-                            annotation: (0..15).into(),
-                            name: name.clone(),
-                            value: Expr::Primitive {
-                                annotation: (6..7).into(),
-                                value: Primitive::Integer(variable),
-                            }
-                            .into(),
-                            inner: Expr::Infix {
-                                annotation: (10..15).into(),
-                                operation: Operation::Multiply,
-                                left: Expr::Identifier {
-                                    annotation: (10..11).into(),
-                                    name,
-                                }
-                                .into(),
-                                right: Expr::Primitive {
-                                    annotation: (14..15).into(),
-                                    value: Primitive::Integer(constant),
-                                }
-                                .into(),
-                            }
-                            .into(),
-                        })
-                    );
-                    Ok(())
-                },
-            )
-            .unwrap()
-    }
-
-    #[test]
-    fn test_parentheses() {
-        TestRunner::default()
-            .run(
-                &(
-                    Integer::arbitrary(),
-                    Integer::arbitrary(),
-                    Integer::arbitrary(),
-                ),
-                |(a, b, c)| {
-                    let tokens = vec![
-                        AnnotatedToken {
-                            annotation: (0..1).into(),
-                            token: Token::Integer(a.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (2..3).into(),
-                            token: Token::Operator("*"),
-                        },
-                        AnnotatedToken {
-                            annotation: (4..5).into(),
-                            token: Token::StartGroup,
-                        },
-                        AnnotatedToken {
-                            annotation: (5..6).into(),
-                            token: Token::Integer(b.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (7..8).into(),
-                            token: Token::Operator("+"),
-                        },
-                        AnnotatedToken {
-                            annotation: (9..10).into(),
-                            token: Token::Integer(c.clone()),
-                        },
-                        AnnotatedToken {
-                            annotation: (10..11).into(),
-                            token: Token::EndGroup,
-                        },
-                    ];
-                    let expr = parse(&tokens);
-
-                    prop_assert_eq!(
-                        expr,
-                        Ok(Expr::Infix {
-                            annotation: (0..10).into(),
+                prop_assert_eq!(
+                    expr,
+                    Ok(Expr::Infix {
+                        annotation: (0..9).into(),
+                        operation: Operation::Subtract,
+                        left: Expr::Infix {
+                            annotation: (0..5).into(),
                             operation: Operation::Multiply,
                             left: Expr::Primitive {
                                 annotation: (0..1).into(),
                                 value: Primitive::Integer(a),
                             }
                             .into(),
-                            right: Expr::Infix {
-                                annotation: (5..10).into(),
-                                operation: Operation::Add,
-                                left: Expr::Primitive {
-                                    annotation: (5..6).into(),
-                                    value: Primitive::Integer(b),
-                                }
-                                .into(),
-                                right: Expr::Primitive {
-                                    annotation: (9..10).into(),
-                                    value: Primitive::Integer(c),
-                                }
-                                .into(),
+                            right: Expr::Primitive {
+                                annotation: (4..5).into(),
+                                value: Primitive::Integer(b),
                             }
                             .into(),
-                        })
-                    );
-                    Ok(())
-                },
-            )
-            .unwrap()
+                        }
+                        .into(),
+                        right: Expr::Primitive {
+                            annotation: (8..9).into(),
+                            value: Primitive::Integer(c),
+                        }
+                        .into(),
+                    })
+                );
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_variables() {
+        check(
+            &(
+                Identifier::arbitrary_of_max_length(16),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(name, variable, constant)| {
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Let,
+                    },
+                    AnnotatedToken {
+                        annotation: (2..3).into(),
+                        token: Token::Identifier(name.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Assign,
+                    },
+                    AnnotatedToken {
+                        annotation: (6..7).into(),
+                        token: Token::Integer(variable.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (8..9).into(),
+                        token: Token::In,
+                    },
+                    AnnotatedToken {
+                        annotation: (10..11).into(),
+                        token: Token::Identifier(name.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (12..13).into(),
+                        token: Token::Operator("*"),
+                    },
+                    AnnotatedToken {
+                        annotation: (14..15).into(),
+                        token: Token::Integer(constant.clone()),
+                    },
+                ];
+                let expr = parse(&tokens);
+
+                prop_assert_eq!(
+                    expr,
+                    Ok(Expr::Let {
+                        annotation: (0..15).into(),
+                        name: name.clone(),
+                        value: Expr::Primitive {
+                            annotation: (6..7).into(),
+                            value: Primitive::Integer(variable),
+                        }
+                        .into(),
+                        inner: Expr::Infix {
+                            annotation: (10..15).into(),
+                            operation: Operation::Multiply,
+                            left: Expr::Identifier {
+                                annotation: (10..11).into(),
+                                name,
+                            }
+                            .into(),
+                            right: Expr::Primitive {
+                                annotation: (14..15).into(),
+                                value: Primitive::Integer(constant),
+                            }
+                            .into(),
+                        }
+                        .into(),
+                    })
+                );
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_parentheses() {
+        check(
+            &(
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(a, b, c)| {
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Integer(a.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (2..3).into(),
+                        token: Token::Operator("*"),
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::StartGroup,
+                    },
+                    AnnotatedToken {
+                        annotation: (5..6).into(),
+                        token: Token::Integer(b.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (7..8).into(),
+                        token: Token::Operator("+"),
+                    },
+                    AnnotatedToken {
+                        annotation: (9..10).into(),
+                        token: Token::Integer(c.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (10..11).into(),
+                        token: Token::EndGroup,
+                    },
+                ];
+                let expr = parse(&tokens);
+
+                prop_assert_eq!(
+                    expr,
+                    Ok(Expr::Infix {
+                        annotation: (0..10).into(),
+                        operation: Operation::Multiply,
+                        left: Expr::Primitive {
+                            annotation: (0..1).into(),
+                            value: Primitive::Integer(a),
+                        }
+                        .into(),
+                        right: Expr::Infix {
+                            annotation: (5..10).into(),
+                            operation: Operation::Add,
+                            left: Expr::Primitive {
+                                annotation: (5..6).into(),
+                                value: Primitive::Integer(b),
+                            }
+                            .into(),
+                            right: Expr::Primitive {
+                                annotation: (9..10).into(),
+                                value: Primitive::Integer(c),
+                            }
+                            .into(),
+                        }
+                        .into(),
+                    })
+                );
+                Ok(())
+            },
+        )
     }
 
     #[test]
     fn test_fails_to_parse_gracefully() {
-        TestRunner::default()
-            .run(&Integer::arbitrary(), |value| {
-                let tokens = vec![
-                    AnnotatedToken {
-                        annotation: (0..1).into(),
-                        token: Token::Operator("+"),
-                    },
-                    AnnotatedToken {
-                        annotation: (2..3).into(),
-                        token: Token::Integer(value),
-                    },
-                ];
-                let expr = parse(&tokens);
+        check(&Integer::arbitrary(), |value| {
+            let tokens = vec![
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Operator("+"),
+                },
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Integer(value),
+                },
+            ];
+            let expr = parse(&tokens);
 
-                prop_assert_eq!(
-                    expr,
-                    Err(Error::ParseError {
-                        span: (0..1).into(),
-                        expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
-                    })
-                );
-                Ok(())
-            })
-            .unwrap()
+            prop_assert_eq!(
+                expr,
+                Err(Error::ParseError {
+                    span: (0..1).into(),
+                    expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
+                })
+            );
+            Ok(())
+        })
     }
 
     #[test]
     fn test_fails_to_parse_at_the_end() {
-        TestRunner::default()
-            .run(&Integer::arbitrary(), |value| {
-                let tokens = vec![
-                    AnnotatedToken {
-                        annotation: (0..1).into(),
-                        token: Token::Integer(value),
-                    },
-                    AnnotatedToken {
-                        annotation: (2..3).into(),
-                        token: Token::Operator("+"),
-                    },
-                ];
-                let expr = parse(&tokens);
+        check(&Integer::arbitrary(), |value| {
+            let tokens = vec![
+                AnnotatedToken {
+                    annotation: (0..1).into(),
+                    token: Token::Integer(value),
+                },
+                AnnotatedToken {
+                    annotation: (2..3).into(),
+                    token: Token::Operator("+"),
+                },
+            ];
+            let expr = parse(&tokens);
 
-                prop_assert_eq!(
-                    expr,
-                    Err(Error::ParseError {
-                        span: (3..3).into(),
-                        expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
-                    })
-                );
-                Ok(())
-            })
-            .unwrap()
+            prop_assert_eq!(
+                expr,
+                Err(Error::ParseError {
+                    span: (3..3).into(),
+                    expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
+                })
+            );
+            Ok(())
+        })
     }
 }

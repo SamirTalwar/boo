@@ -7,6 +7,7 @@ pub mod parser;
 pub mod primitive;
 pub mod span;
 
+mod proptest_helpers;
 mod roundtrip_test;
 
 pub use evaluator::evaluate;
