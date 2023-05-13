@@ -68,6 +68,7 @@ impl<Annotation> std::fmt::Display for Expr<Annotation> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, arbitrary::Arbitrary)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum Operation {
     Add,
     Subtract,
