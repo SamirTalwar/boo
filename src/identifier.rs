@@ -59,42 +59,6 @@ impl std::fmt::Display for Identifier {
     }
 }
 
-impl<'a> arbitrary::Arbitrary<'a> for Identifier {
-    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let (min_length, max_length) = Self::size_hint(0);
-        let length = u.int_in_range(min_length..=max_length.unwrap())?;
-        let mut name = "".to_string();
-        while !Identifier::is_valid(&name) {
-            let first = loop {
-                if u.is_empty() {
-                    break Err(arbitrary::Error::NotEnoughData);
-                }
-                let c = u.arbitrary::<char>()?;
-                if c == '_' || c.is_alphabetic() {
-                    break Ok(c);
-                }
-            }?;
-            let rest = (1..length)
-                .map(|_| loop {
-                    if u.is_empty() {
-                        return Err(arbitrary::Error::NotEnoughData);
-                    }
-                    let c = u.arbitrary::<char>()?;
-                    if c == '_' || c.is_alphabetic() || c.is_numeric() {
-                        return Ok(c);
-                    }
-                })
-                .collect::<Result<String, arbitrary::Error>>()?;
-            name = first.to_string() + &rest;
-        }
-        Identifier::new(name).map_err(|_| arbitrary::Error::IncorrectFormat)
-    }
-
-    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
-        (1, Some(16))
-    }
-}
-
 impl Identifier {
     pub fn arbitrary_of_max_length(max_length: usize) -> impl Strategy<Value = Identifier> {
         proptest::string::string_regex(&format!(

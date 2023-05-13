@@ -139,28 +139,6 @@ impl std::ops::Mul for Integer {
     }
 }
 
-const SMALL_BYTES: usize = Small::BITS as usize / 8;
-
-impl<'a> arbitrary::Arbitrary<'a> for Integer {
-    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let (min_size, max_size) = Self::size_hint(0);
-        let size = u.int_in_range(min_size..=max_size.unwrap())?;
-        let bytes = u.bytes(size)?;
-        if size <= (Small::BITS as usize) / 8 {
-            let mut small_bytes: [u8; SMALL_BYTES] = [0; SMALL_BYTES];
-            small_bytes[0..bytes.len()].copy_from_slice(bytes);
-            Ok(Self::Small(Small::from_le_bytes(small_bytes)))
-        } else {
-            let sign = u.choose(&[num_bigint::Sign::NoSign, num_bigint::Sign::Minus])?;
-            Ok(Self::Large(Large::from_bytes_be(*sign, bytes)))
-        }
-    }
-
-    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
-        (1, Some(i128::BITS as usize / 8))
-    }
-}
-
 impl Integer {
     pub fn arbitrary() -> impl Strategy<Value = Integer> {
         proptest::num::i128::ANY.prop_map(|n| n.into())

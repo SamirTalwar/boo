@@ -4,7 +4,7 @@ use proptest::strategy::Strategy;
 
 pub use integer::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, arbitrary::Arbitrary)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Primitive {
     Integer(Integer),
 }
