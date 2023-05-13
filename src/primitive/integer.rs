@@ -169,54 +169,58 @@ impl Integer {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+    use proptest::test_runner::TestRunner;
+
     use super::*;
 
     #[test]
     fn test_from_string() {
-        arbtest::builder().run(|u| {
-            let value = u.arbitrary::<Integer>()?;
-            let input = format!("{}", value);
-            assert_eq!(input.parse::<Integer>(), Ok(value));
-            Ok(())
-        });
+        TestRunner::default()
+            .run(&Integer::arbitrary(), |value| {
+                let input = format!("{}", value);
+                prop_assert_eq!(input.parse::<Integer>(), Ok(value));
+                Ok(())
+            })
+            .unwrap()
     }
 
     #[test]
     fn test_addition() {
-        arbtest::builder().run(|u| {
-            let left = u.arbitrary::<i128>()?;
-            let right = u.arbitrary::<i128>()?;
-            assert_eq!(
-                Integer::from(left) + Integer::from(right),
-                Integer::Large(Large::from(left) + Large::from(right)),
-            );
-            Ok(())
-        });
+        TestRunner::default()
+            .run(&(any::<i128>(), any::<i128>()), |(left, right)| {
+                prop_assert_eq!(
+                    Integer::from(left) + Integer::from(right),
+                    Integer::Large(Large::from(left) + Large::from(right))
+                );
+                Ok(())
+            })
+            .unwrap()
     }
 
     #[test]
     fn test_subtraction() {
-        arbtest::builder().run(|u| {
-            let left = u.arbitrary::<i128>()?;
-            let right = u.arbitrary::<i128>()?;
-            assert_eq!(
-                Integer::from(left) - Integer::from(right),
-                Integer::Large(Large::from(left) - Large::from(right)),
-            );
-            Ok(())
-        });
+        TestRunner::default()
+            .run(&(any::<i128>(), any::<i128>()), |(left, right)| {
+                prop_assert_eq!(
+                    Integer::from(left) - Integer::from(right),
+                    Integer::Large(Large::from(left) - Large::from(right))
+                );
+                Ok(())
+            })
+            .unwrap()
     }
 
     #[test]
     fn test_multiplication() {
-        arbtest::builder().run(|u| {
-            let left = u.arbitrary::<i128>()?;
-            let right = u.arbitrary::<i128>()?;
-            assert_eq!(
-                Integer::from(left) * Integer::from(right),
-                Integer::Large(Large::from(left) * Large::from(right)),
-            );
-            Ok(())
-        });
+        TestRunner::default()
+            .run(&(any::<i128>(), any::<i128>()), |(left, right)| {
+                prop_assert_eq!(
+                    Integer::from(left) * Integer::from(right),
+                    Integer::Large(Large::from(left) * Large::from(right))
+                );
+                Ok(())
+            })
+            .unwrap()
     }
 }

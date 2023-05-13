@@ -218,34 +218,34 @@ impl Expr<()> {
         }
 
         if depth.end > 0 {
-            let next_depth = {
-                let start = if depth.start == 0 { 0 } else { depth.start - 1 };
-                let end = depth.end - 1;
-                start..end
-            };
+            let next_start = if depth.start == 0 { 0 } else { depth.start - 1 };
+            let next_end = depth.end - 1;
 
-            choices.push(
-                (
-                    proptest::arbitrary::any::<Operation>(),
-                    Self::gen_nested(next_depth.clone(), bound_identifiers.clone()),
-                    Self::gen_nested(next_depth.clone(), bound_identifiers.clone()),
-                )
-                    .prop_map(|(operation, left, right)| Expr::Infix {
-                        annotation: (),
-                        operation,
-                        left: left.into(),
-                        right: right.into(),
+            choices.push({
+                let bound = bound_identifiers.clone();
+                proptest::arbitrary::any::<Operation>()
+                    .prop_flat_map(move |operation| {
+                        (
+                            Self::gen_nested(next_start..next_end, bound.clone()),
+                            Self::gen_nested(next_start..next_end, bound.clone()),
+                        )
+                            .prop_map(move |(left, right)| Expr::Infix {
+                                annotation: (),
+                                operation,
+                                left: left.into(),
+                                right: right.into(),
+                            })
                     })
-                    .boxed(),
-            );
+                    .boxed()
+            });
 
             choices.push({
                 let bound = bound_identifiers;
                 Identifier::arbitrary_of_max_length(16)
                     .prop_flat_map(move |name| {
-                        let gen_value = Self::gen_nested(next_depth.clone(), bound.clone());
+                        let gen_value = Self::gen_nested(next_start..next_end, bound.clone());
                         let gen_inner =
-                            Self::gen_nested(next_depth.clone(), bound.update(name.clone()));
+                            Self::gen_nested(next_start..next_end, bound.update(name.clone()));
                         (gen_value, gen_inner).prop_map(move |(value, inner)| Expr::Let {
                             annotation: (),
                             name: name.clone(),

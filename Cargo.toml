@@ -38,5 +38,4 @@ regex = "1.8.1"
 thiserror = "1.0.40"
 
 [dev-dependencies]
-arbtest = "0.2.0"
 criterion = { version = "0.4.0", features = ["csv", "html_reports"] }

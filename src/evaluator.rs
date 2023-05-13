@@ -86,72 +86,83 @@ pub fn evaluate_<Annotation: Clone>(
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+    use proptest::test_runner::TestRunner;
+
     use super::*;
 
     #[test]
     fn test_interpreting_a_primitive() {
-        arbtest::builder().run(|u| {
-            let value = u.arbitrary::<Primitive>()?;
-            let expr = Rc::new(Expr::Primitive {
-                annotation: (),
-                value,
-            });
-            let result = evaluate(expr.clone());
-            assert_eq!(result, Ok(expr));
-            Ok(())
-        })
+        TestRunner::default()
+            .run(&Primitive::arbitrary(), |value| {
+                let expr = Rc::new(Expr::Primitive {
+                    annotation: (),
+                    value,
+                });
+                let result = evaluate(expr.clone());
+                prop_assert_eq!(result, Ok(expr));
+                Ok(())
+            })
+            .unwrap()
     }
 
     #[test]
     fn test_interpreting_assignment() {
-        arbtest::builder().run(|u| {
-            let name = u.arbitrary::<Identifier>()?;
-            let value = u.arbitrary::<Primitive>()?;
-            let expr = Expr::Let {
-                annotation: (),
-                name: name.clone(),
-                value: Expr::Primitive {
-                    annotation: (),
-                    value: value.clone(),
-                }
-                .into(),
-                inner: Expr::Identifier {
-                    annotation: (),
-                    name,
-                }
-                .into(),
-            };
-            let result = evaluate(expr.into());
-            assert_eq!(
-                result,
-                Ok(Expr::Primitive {
-                    annotation: (),
-                    value,
-                }
-                .into())
-            );
-            Ok(())
-        })
+        TestRunner::default()
+            .run(
+                &(
+                    Identifier::arbitrary_of_max_length(16),
+                    Primitive::arbitrary(),
+                ),
+                |(name, value)| {
+                    let expr = Expr::Let {
+                        annotation: (),
+                        name: name.clone(),
+                        value: Expr::Primitive {
+                            annotation: (),
+                            value: value.clone(),
+                        }
+                        .into(),
+                        inner: Expr::Identifier {
+                            annotation: (),
+                            name,
+                        }
+                        .into(),
+                    };
+                    let result = evaluate(expr.into());
+                    prop_assert_eq!(
+                        result,
+                        Ok(Expr::Primitive {
+                            annotation: (),
+                            value,
+                        }
+                        .into())
+                    );
+                    Ok(())
+                },
+            )
+            .unwrap()
     }
 
     #[test]
     fn test_interpreting_an_unknown_variable() {
-        arbtest::builder().run(|u| {
-            let name = u.arbitrary::<Identifier>()?;
-            let expr = Expr::Identifier {
-                annotation: (),
-                name: name.clone(),
-            };
-            let result = evaluate(expr.into());
-            assert_eq!(
-                result,
-                Err(Error::UnknownVariable {
-                    span: 0.into(), // this is wrong
-                    name: name.to_string()
-                })
-            );
-            Ok(())
-        })
+        TestRunner::default()
+            .run(&Identifier::arbitrary_of_max_length(16), |name| {
+                let expr = Expr::Identifier {
+                    annotation: (),
+                    name: name.clone(),
+                };
+                let result = evaluate(expr.into());
+                prop_assert_eq!(
+                    result,
+                    Err(Error::UnknownVariable {
+                        span: 0.into(), // this is wrong
+                        name: name.to_string()
+                    })
+                );
+                Ok(())
+            })
+            .unwrap()
     }
 
     #[test]
@@ -173,78 +184,87 @@ mod tests {
         operation: Operation,
         implementation: impl Fn(&Integer, &Integer) -> Integer,
     ) {
-        arbtest::builder().run(|u| {
-            let left = u.arbitrary::<Integer>()?;
-            let right = u.arbitrary::<Integer>()?;
-            let expected = implementation(&left, &right);
-            let expr = Expr::Infix {
-                annotation: (),
-                operation,
-                left: Expr::Primitive {
-                    annotation: (),
-                    value: Primitive::Integer(left),
-                }
-                .into(),
-                right: Expr::Primitive {
-                    annotation: (),
-                    value: Primitive::Integer(right),
-                }
-                .into(),
-            };
-            let result = evaluate(expr.into());
-            assert_eq!(
-                result,
-                Ok(Expr::Primitive {
-                    annotation: (),
-                    value: Primitive::Integer(expected),
-                }
-                .into())
-            );
-            Ok(())
-        })
+        TestRunner::default()
+            .run(
+                &(Integer::arbitrary(), Integer::arbitrary()),
+                |(left, right)| {
+                    let expected = implementation(&left, &right);
+                    let expr = Expr::Infix {
+                        annotation: (),
+                        operation,
+                        left: Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Integer(left),
+                        }
+                        .into(),
+                        right: Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Integer(right),
+                        }
+                        .into(),
+                    };
+                    let result = evaluate(expr.into());
+                    prop_assert_eq!(
+                        result,
+                        Ok(Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Integer(expected),
+                        }
+                        .into())
+                    );
+                    Ok(())
+                },
+            )
+            .unwrap()
     }
 
     #[test]
     fn test_interpreting_variable_use() {
-        arbtest::builder().run(|u| {
-            let name = u.arbitrary::<Identifier>()?;
-            let variable = u.arbitrary::<Integer>()?;
-            let constant = u.arbitrary::<Integer>()?;
-            let sum = &variable + &constant;
-            let expr = Rc::new(Expr::Let {
-                annotation: (),
-                name: name.clone(),
-                value: Expr::Primitive {
-                    annotation: (),
-                    value: Primitive::Integer(variable),
-                }
-                .into(),
-                inner: Expr::Infix {
-                    annotation: (),
-                    operation: Operation::Add,
-                    left: Expr::Identifier {
+        TestRunner::default()
+            .run(
+                &(
+                    Identifier::arbitrary_of_max_length(16),
+                    Integer::arbitrary(),
+                    Integer::arbitrary(),
+                ),
+                |(name, variable, constant)| {
+                    let sum = &variable + &constant;
+                    let expr = Rc::new(Expr::Let {
                         annotation: (),
-                        name,
-                    }
-                    .into(),
-                    right: Expr::Primitive {
-                        annotation: (),
-                        value: Primitive::Integer(constant),
-                    }
-                    .into(),
-                }
-                .into(),
-            });
-            let result = evaluate(expr);
-            assert_eq!(
-                result,
-                Ok(Expr::Primitive {
-                    annotation: (),
-                    value: Primitive::Integer(sum),
-                }
-                .into())
-            );
-            Ok(())
-        })
+                        name: name.clone(),
+                        value: Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Integer(variable),
+                        }
+                        .into(),
+                        inner: Expr::Infix {
+                            annotation: (),
+                            operation: Operation::Add,
+                            left: Expr::Identifier {
+                                annotation: (),
+                                name,
+                            }
+                            .into(),
+                            right: Expr::Primitive {
+                                annotation: (),
+                                value: Primitive::Integer(constant),
+                            }
+                            .into(),
+                        }
+                        .into(),
+                    });
+                    let result = evaluate(expr);
+                    prop_assert_eq!(
+                        result,
+                        Ok(Expr::Primitive {
+                            annotation: (),
+                            value: Primitive::Integer(sum),
+                        }
+                        .into())
+                    );
+                    Ok(())
+                },
+            )
+            .unwrap()
     }
 }

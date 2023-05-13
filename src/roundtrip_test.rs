@@ -1,35 +1,29 @@
 #![cfg(test)]
 
+use proptest::prelude::*;
+use proptest::test_runner::TestRunner;
+
 use crate::ast::Expr;
 use crate::lexer::lex;
 use crate::parser::parse;
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {
-    arbtest::builder().budget_ms(250).run(|u| {
-        let input = u.arbitrary::<Expr<()>>()?;
-        let rendered = format!("{}", input);
-        let lexed = lex(&rendered).unwrap_or_else(|err| {
-            panic!(
-                "Could not lex: {:?}",
-                miette::Report::from(err).with_source_code(rendered.clone())
-            )
-        });
-        let parsed = parse(&lexed).unwrap_or_else(|err| {
-            panic!(
-                "Could not parse: {:?}",
-                miette::Report::from(err).with_source_code(rendered.clone())
-            )
-        });
-        assert!(
-            eq_ignoring_annotations(&parsed, &input),
-            "{} and {} were not equal\nLexed: {:?}",
-            &parsed,
-            &input,
-            &lexed,
-        );
-        Ok(())
-    })
+    TestRunner::default()
+        .run(&Expr::gen(0..4), |input| {
+            let rendered = format!("{}", input);
+            let lexed = lex(&rendered)?;
+            let parsed = parse(&lexed)?;
+            prop_assert!(
+                eq_ignoring_annotations(&parsed, &input),
+                "{} and {} were not equal\nLexed: {:?}",
+                &parsed,
+                &input,
+                &lexed,
+            );
+            Ok(())
+        })
+        .unwrap()
 }
 
 fn eq_ignoring_annotations<LeftAnnotation, RightAnnotation>(
