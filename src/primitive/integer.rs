@@ -1,6 +1,4 @@
 use num_bigint::BigInt;
-
-#[cfg(test)]
 use proptest::strategy::Strategy;
 
 type Small = i32;
@@ -163,7 +161,6 @@ impl<'a> arbitrary::Arbitrary<'a> for Integer {
     }
 }
 
-#[cfg(test)]
 impl Integer {
     pub fn arbitrary() -> impl Strategy<Value = Integer> {
         proptest::num::i128::ANY.prop_map(|n| n.into())

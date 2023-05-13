@@ -1,16 +1,23 @@
-use rand::RngCore;
+use anyhow::anyhow;
+use proptest::prelude::*;
+use proptest::strategy::ValueTree;
+use proptest::test_runner::{Config, TestRunner};
 
 use boo::ast::*;
 use boo::*;
 
-fn main() {
-    let mut unstructured_bytes = vec![0; 0x10000];
-    rand::thread_rng().fill_bytes(&mut unstructured_bytes);
-    let mut unstructured = arbitrary::Unstructured::new(&unstructured_bytes);
+fn main() -> anyhow::Result<()> {
+    let any_expr = Expr::arbitrary();
+    let mut runner = TestRunner::new(Config::default());
+    let tree = any_expr
+        .new_tree(&mut runner)
+        .map_err(|err| anyhow!("Generation failed: {}", err))?;
 
-    let expr = unstructured.arbitrary::<Expr<()>>().unwrap();
+    let expr = tree.current();
     println!("Expression:\n{}\n", expr);
 
     let result = evaluate(expr.into()).expect("Could not interpret the expression.");
     println!("Result:\n{}", result);
+
+    Ok(())
 }

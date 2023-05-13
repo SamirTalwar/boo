@@ -2,10 +2,8 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
-use regex::Regex;
-
-#[cfg(test)]
 use proptest::strategy::Strategy;
+use regex::Regex;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Identifier {
@@ -97,11 +95,10 @@ impl<'a> arbitrary::Arbitrary<'a> for Identifier {
     }
 }
 
-#[cfg(test)]
 impl Identifier {
     pub fn arbitrary_of_max_length(max_length: usize) -> impl Strategy<Value = Identifier> {
         proptest::string::string_regex(&format!(
-            "^{}{}{{0,{}}}$",
+            "{}{}{{0,{}}}",
             *VALID_IDENTIFIER_INITIAL_CHARACTER_REGEX,
             *VALID_IDENTIFIER_CHARACTER_REGEX,
             max_length - 1,

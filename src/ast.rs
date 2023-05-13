@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use im::HashSet;
+use proptest::{strategy::BoxedStrategy, strategy::Strategy};
 
 use crate::identifier::Identifier;
 use crate::primitive::Primitive;
@@ -67,8 +68,7 @@ impl<Annotation> std::fmt::Display for Expr<Annotation> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, arbitrary::Arbitrary)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, arbitrary::Arbitrary, proptest_derive::Arbitrary)]
 pub enum Operation {
     Add,
     Subtract,
@@ -176,5 +176,87 @@ impl<'a> Expr<()> {
 
         let choice = unstructured.choose_index(choices.len())?;
         choices.swap_remove(choice)(unstructured, bound_identifiers)
+    }
+}
+
+impl Expr<()> {
+    pub fn arbitrary() -> impl Strategy<Value = Expr<()>> {
+        Self::gen(0..8)
+    }
+
+    pub fn gen(depth: std::ops::Range<usize>) -> impl Strategy<Value = Expr<()>> {
+        Self::gen_nested(depth, HashSet::new())
+    }
+
+    fn gen_nested(
+        depth: std::ops::Range<usize>,
+        bound_identifiers: HashSet<Identifier>,
+    ) -> impl Strategy<Value = Expr<()>> {
+        let mut choices: Vec<BoxedStrategy<Expr<()>>> = Vec::new();
+
+        if depth.start == 0 {
+            choices.push(
+                Primitive::arbitrary()
+                    .prop_map(|value| Expr::Primitive {
+                        annotation: (),
+                        value,
+                    })
+                    .boxed(),
+            );
+
+            if !bound_identifiers.is_empty() {
+                let bound = bound_identifiers.clone();
+                choices.push(
+                    proptest::arbitrary::any::<proptest::sample::Index>()
+                        .prop_map(move |index| Expr::Identifier {
+                            annotation: (),
+                            name: bound.iter().nth(index.index(bound.len())).unwrap().clone(),
+                        })
+                        .boxed(),
+                );
+            }
+        }
+
+        if depth.end > 0 {
+            let next_depth = {
+                let start = if depth.start == 0 { 0 } else { depth.start - 1 };
+                let end = depth.end - 1;
+                start..end
+            };
+
+            choices.push(
+                (
+                    proptest::arbitrary::any::<Operation>(),
+                    Self::gen_nested(next_depth.clone(), bound_identifiers.clone()),
+                    Self::gen_nested(next_depth.clone(), bound_identifiers.clone()),
+                )
+                    .prop_map(|(operation, left, right)| Expr::Infix {
+                        annotation: (),
+                        operation,
+                        left: left.into(),
+                        right: right.into(),
+                    })
+                    .boxed(),
+            );
+
+            choices.push({
+                let bound = bound_identifiers;
+                Identifier::arbitrary_of_max_length(16)
+                    .prop_flat_map(move |name| {
+                        let gen_value = Self::gen_nested(next_depth.clone(), bound.clone());
+                        let gen_inner =
+                            Self::gen_nested(next_depth.clone(), bound.update(name.clone()));
+                        (gen_value, gen_inner).prop_map(move |(value, inner)| Expr::Let {
+                            annotation: (),
+                            name: name.clone(),
+                            value: value.into(),
+                            inner: inner.into(),
+                        })
+                    })
+                    .boxed()
+            });
+        }
+
+        proptest::strategy::Union::new(choices)
     }
 }

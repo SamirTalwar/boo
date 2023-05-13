@@ -1,6 +1,5 @@
 pub mod integer;
 
-#[cfg(test)]
 use proptest::strategy::Strategy;
 
 pub use integer::*;
@@ -18,7 +17,6 @@ impl std::fmt::Display for Primitive {
     }
 }
 
-#[cfg(test)]
 impl Primitive {
     pub fn arbitrary() -> impl Strategy<Value = Primitive> {
         Integer::arbitrary().prop_map(Primitive::Integer)
