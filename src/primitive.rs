@@ -1,9 +1,11 @@
 pub mod integer;
 
+#[cfg(test)]
+use proptest::strategy::Strategy;
+
 pub use integer::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, arbitrary::Arbitrary)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum Primitive {
     Integer(Integer),
 }
@@ -13,5 +15,12 @@ impl std::fmt::Display for Primitive {
         match self {
             Primitive::Integer(value) => write!(f, "{}", value),
         }
+    }
+}
+
+#[cfg(test)]
+impl Primitive {
+    pub fn arbitrary() -> impl Strategy<Value = Primitive> {
+        Integer::arbitrary().prop_map(Primitive::Integer)
     }
 }

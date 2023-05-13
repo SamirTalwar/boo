@@ -4,6 +4,9 @@ use std::str::FromStr;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+#[cfg(test)]
+use proptest::strategy::Strategy;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Identifier {
     name: String,
@@ -95,64 +98,22 @@ impl<'a> arbitrary::Arbitrary<'a> for Identifier {
 }
 
 #[cfg(test)]
+impl Identifier {
+    pub fn arbitrary_of_max_length(max_length: usize) -> impl Strategy<Value = Identifier> {
+        proptest::string::string_regex(&format!(
+            "^{}{}{{0,{}}}$",
+            *VALID_IDENTIFIER_INITIAL_CHARACTER_REGEX,
+            *VALID_IDENTIFIER_CHARACTER_REGEX,
+            max_length - 1,
+        ))
+        .unwrap()
+        .prop_map(|x| Identifier::new(x).unwrap())
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
-
-    #[derive(Debug)]
-    pub struct IdentifierStrategy(proptest::string::RegexGeneratorStrategy<String>);
-
-    impl proptest::strategy::Strategy for IdentifierStrategy {
-        type Tree = IdentifierValueTree;
-
-        type Value = Identifier;
-
-        fn new_tree(
-            &self,
-            runner: &mut proptest::test_runner::TestRunner,
-        ) -> proptest::strategy::NewTree<Self> {
-            self.0.new_tree(runner).map(IdentifierValueTree)
-        }
-    }
-
-    pub struct IdentifierValueTree(proptest::string::RegexGeneratorValueTree<String>);
-
-    impl proptest::strategy::ValueTree for IdentifierValueTree {
-        type Value = Identifier;
-
-        fn current(&self) -> Self::Value {
-            Identifier::new(self.0.current()).unwrap()
-        }
-
-        fn simplify(&mut self) -> bool {
-            self.0.simplify()
-        }
-
-        fn complicate(&mut self) -> bool {
-            self.0.complicate()
-        }
-    }
-
-    impl proptest::arbitrary::Arbitrary for Identifier {
-        type Strategy = IdentifierStrategy;
-
-        type Parameters = usize; // length
-
-        fn arbitrary() -> Self::Strategy {
-            Self::arbitrary_with(16)
-        }
-
-        fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
-            IdentifierStrategy(
-                proptest::string::string_regex(&format!(
-                    "^{}{}{{0,{}}}$",
-                    *VALID_IDENTIFIER_INITIAL_CHARACTER_REGEX,
-                    *VALID_IDENTIFIER_CHARACTER_REGEX,
-                    args - 1,
-                ))
-                .unwrap(),
-            )
-        }
-    }
 
     #[test]
     fn test_alphabetic_names_are_allowed() {

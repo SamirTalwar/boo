@@ -1,5 +1,8 @@
 use num_bigint::BigInt;
 
+#[cfg(test)]
+use proptest::strategy::Strategy;
+
 type Small = i32;
 type Large = BigInt;
 
@@ -161,65 +164,15 @@ impl<'a> arbitrary::Arbitrary<'a> for Integer {
 }
 
 #[cfg(test)]
+impl Integer {
+    pub fn arbitrary() -> impl Strategy<Value = Integer> {
+        proptest::num::i128::ANY.prop_map(|n| n.into())
+    }
+}
+
+#[cfg(test)]
 mod tests {
-    // use proptest::sample::SizeRange;
-
     use super::*;
-
-    #[derive(Debug)]
-    pub struct IntegerTree<S: proptest::strategy::Strategy<Value = i128>>(S::Tree);
-
-    impl<S: proptest::strategy::Strategy<Value = i128>> proptest::strategy::ValueTree
-        for IntegerTree<S>
-    {
-        type Value = Integer;
-
-        fn current(&self) -> Self::Value {
-            self.0.current().into()
-        }
-
-        fn simplify(&mut self) -> bool {
-            self.0.simplify()
-        }
-
-        fn complicate(&mut self) -> bool {
-            self.0.complicate()
-        }
-    }
-
-    #[derive(Debug)]
-    pub struct IntegerStrategy<S: proptest::strategy::Strategy<Value = i128>>(S);
-
-    impl<S: proptest::strategy::Strategy<Value = i128>> proptest::strategy::Strategy
-        for IntegerStrategy<S>
-    {
-        type Tree = IntegerTree<S>;
-
-        type Value = Integer;
-
-        fn new_tree(
-            &self,
-            runner: &mut proptest::test_runner::TestRunner,
-        ) -> proptest::strategy::NewTree<Self> {
-            self.0.new_tree(runner).map(IntegerTree)
-        }
-    }
-
-    impl proptest::arbitrary::Arbitrary for Integer {
-        type Strategy = IntegerStrategy<<i128 as proptest::arbitrary::Arbitrary>::Strategy>;
-
-        type Parameters = ();
-
-        fn arbitrary() -> Self::Strategy {
-            IntegerStrategy(<i128 as proptest::arbitrary::Arbitrary>::arbitrary())
-        }
-
-        fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
-            IntegerStrategy(<i128 as proptest::arbitrary::Arbitrary>::arbitrary_with(
-                args,
-            ))
-        }
-    }
 
     #[test]
     fn test_from_string() {
