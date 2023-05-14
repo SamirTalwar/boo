@@ -10,6 +10,12 @@ pub enum Integer {
     Large(Large),
 }
 
+impl From<i16> for Integer {
+    fn from(value: i16) -> Self {
+        Integer::Small(value as i32)
+    }
+}
+
 impl From<i32> for Integer {
     fn from(value: i32) -> Self {
         Integer::Small(value)
