@@ -28,14 +28,14 @@ peg::parser! {
             }
             --
             left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("+") }] } / expected!("'+'")) right:@ {
-                infix(left, Operation::Add, right)
+                construct_infix(left, Operation::Add, right)
             }
             left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("-") }] } / expected!("'-'")) right:@ {
-                infix(left, Operation::Subtract, right)
+                construct_infix(left, Operation::Subtract, right)
             }
             --
             left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("*") }] } / expected!("'*'")) right:@ {
-                infix(left, Operation::Multiply, right)
+                construct_infix(left, Operation::Multiply, right)
             }
             --
             p:primitive() { p }
@@ -85,7 +85,7 @@ pub fn parse(input: &[AnnotatedToken<Span>]) -> Result<Expr<Span>> {
     })
 }
 
-fn infix(left: Expr<Span>, operation: Operation, right: Expr<Span>) -> Expr<Span> {
+fn construct_infix(left: Expr<Span>, operation: Operation, right: Expr<Span>) -> Expr<Span> {
     Expr::Infix {
         annotation: *left.annotation() | *right.annotation(),
         operation,
@@ -98,6 +98,7 @@ fn infix(left: Expr<Span>, operation: Operation, right: Expr<Span>) -> Expr<Span
 mod tests {
     use proptest::prelude::*;
 
+    use crate::ast::builders::*;
     use crate::identifier::*;
     use crate::proptest_helpers::*;
 
@@ -106,19 +107,15 @@ mod tests {
     #[test]
     fn test_parsing_an_integer() {
         check(&Integer::arbitrary(), |value| {
+            let expected = primitive_integer(0..10, value.clone());
             let tokens = vec![AnnotatedToken {
                 annotation: (0..10).into(),
-                token: Token::Integer(value.clone()),
+                token: Token::Integer(value),
             }];
-            let expr = parse(&tokens);
 
-            prop_assert_eq!(
-                expr,
-                Ok(Expr::Primitive {
-                    annotation: (0..10).into(),
-                    value: Primitive::Integer(value),
-                })
-            );
+            let actual = parse(&tokens);
+
+            prop_assert_eq!(actual, Ok(expected));
             Ok(())
         })
     }
@@ -142,10 +139,16 @@ mod tests {
         check(
             &(Integer::arbitrary(), Integer::arbitrary()),
             |(left, right)| {
+                let expected = infix(
+                    0..5,
+                    operation,
+                    primitive_integer(0..1, left.clone()),
+                    primitive_integer(4..5, right.clone()),
+                );
                 let tokens = vec![
                     AnnotatedToken {
                         annotation: (0..1).into(),
-                        token: Token::Integer(left.clone()),
+                        token: Token::Integer(left),
                     },
                     AnnotatedToken {
                         annotation: (2..3).into(),
@@ -153,28 +156,13 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (4..5).into(),
-                        token: Token::Integer(right.clone()),
+                        token: Token::Integer(right),
                     },
                 ];
-                let expr = parse(&tokens);
 
-                prop_assert_eq!(
-                    expr,
-                    Ok(Expr::Infix {
-                        annotation: (0..5).into(),
-                        operation,
-                        left: Expr::Primitive {
-                            annotation: (0..1).into(),
-                            value: Primitive::Integer(left),
-                        }
-                        .into(),
-                        right: Expr::Primitive {
-                            annotation: (4..5).into(),
-                            value: Primitive::Integer(right),
-                        }
-                        .into(),
-                    })
-                );
+                let actual = parse(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
                 Ok(())
             },
         )
@@ -189,10 +177,21 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(a, b, c)| {
+                let expected = infix(
+                    0..9,
+                    Operation::Add,
+                    primitive_integer(0..1, a.clone()),
+                    infix(
+                        4..9,
+                        Operation::Multiply,
+                        primitive_integer(4..5, b.clone()),
+                        primitive_integer(8..9, c.clone()),
+                    ),
+                );
                 let tokens = vec![
                     AnnotatedToken {
                         annotation: (0..1).into(),
-                        token: Token::Integer(a.clone()),
+                        token: Token::Integer(a),
                     },
                     AnnotatedToken {
                         annotation: (2..3).into(),
@@ -200,7 +199,7 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (4..5).into(),
-                        token: Token::Integer(b.clone()),
+                        token: Token::Integer(b),
                     },
                     AnnotatedToken {
                         annotation: (6..7).into(),
@@ -208,38 +207,13 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (8..9).into(),
-                        token: Token::Integer(c.clone()),
+                        token: Token::Integer(c),
                     },
                 ];
-                let expr = parse(&tokens);
 
-                prop_assert_eq!(
-                    expr,
-                    Ok(Expr::Infix {
-                        annotation: (0..9).into(),
-                        operation: Operation::Add,
-                        left: Expr::Primitive {
-                            annotation: (0..1).into(),
-                            value: Primitive::Integer(a),
-                        }
-                        .into(),
-                        right: Expr::Infix {
-                            annotation: (4..9).into(),
-                            operation: Operation::Multiply,
-                            left: Expr::Primitive {
-                                annotation: (4..5).into(),
-                                value: Primitive::Integer(b),
-                            }
-                            .into(),
-                            right: Expr::Primitive {
-                                annotation: (8..9).into(),
-                                value: Primitive::Integer(c),
-                            }
-                            .into(),
-                        }
-                        .into(),
-                    })
-                );
+                let actual = parse(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
                 Ok(())
             },
         )
@@ -254,10 +228,21 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(a, b, c)| {
+                let expected = infix(
+                    0..9,
+                    Operation::Subtract,
+                    infix(
+                        0..5,
+                        Operation::Multiply,
+                        primitive_integer(0..1, a.clone()),
+                        primitive_integer(4..5, b.clone()),
+                    ),
+                    primitive_integer(8..9, c.clone()),
+                );
                 let tokens = vec![
                     AnnotatedToken {
                         annotation: (0..1).into(),
-                        token: Token::Integer(a.clone()),
+                        token: Token::Integer(a),
                     },
                     AnnotatedToken {
                         annotation: (2..3).into(),
@@ -265,7 +250,7 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (4..5).into(),
-                        token: Token::Integer(b.clone()),
+                        token: Token::Integer(b),
                     },
                     AnnotatedToken {
                         annotation: (6..7).into(),
@@ -273,38 +258,13 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (8..9).into(),
-                        token: Token::Integer(c.clone()),
+                        token: Token::Integer(c),
                     },
                 ];
-                let expr = parse(&tokens);
 
-                prop_assert_eq!(
-                    expr,
-                    Ok(Expr::Infix {
-                        annotation: (0..9).into(),
-                        operation: Operation::Subtract,
-                        left: Expr::Infix {
-                            annotation: (0..5).into(),
-                            operation: Operation::Multiply,
-                            left: Expr::Primitive {
-                                annotation: (0..1).into(),
-                                value: Primitive::Integer(a),
-                            }
-                            .into(),
-                            right: Expr::Primitive {
-                                annotation: (4..5).into(),
-                                value: Primitive::Integer(b),
-                            }
-                            .into(),
-                        }
-                        .into(),
-                        right: Expr::Primitive {
-                            annotation: (8..9).into(),
-                            value: Primitive::Integer(c),
-                        }
-                        .into(),
-                    })
-                );
+                let actual = parse(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
                 Ok(())
             },
         )
@@ -319,6 +279,17 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(name, variable, constant)| {
+                let expected = assign(
+                    0..15,
+                    name.clone(),
+                    primitive_integer(6..7, variable.clone()),
+                    infix(
+                        10..15,
+                        Operation::Multiply,
+                        identifier(10..11, name.clone()),
+                        primitive_integer(14..15, constant.clone()),
+                    ),
+                );
                 let tokens = vec![
                     AnnotatedToken {
                         annotation: (0..1).into(),
@@ -334,7 +305,7 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (6..7).into(),
-                        token: Token::Integer(variable.clone()),
+                        token: Token::Integer(variable),
                     },
                     AnnotatedToken {
                         annotation: (8..9).into(),
@@ -342,7 +313,7 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (10..11).into(),
-                        token: Token::Identifier(name.clone()),
+                        token: Token::Identifier(name),
                     },
                     AnnotatedToken {
                         annotation: (12..13).into(),
@@ -350,38 +321,13 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (14..15).into(),
-                        token: Token::Integer(constant.clone()),
+                        token: Token::Integer(constant),
                     },
                 ];
-                let expr = parse(&tokens);
 
-                prop_assert_eq!(
-                    expr,
-                    Ok(Expr::Let {
-                        annotation: (0..15).into(),
-                        name: name.clone(),
-                        value: Expr::Primitive {
-                            annotation: (6..7).into(),
-                            value: Primitive::Integer(variable),
-                        }
-                        .into(),
-                        inner: Expr::Infix {
-                            annotation: (10..15).into(),
-                            operation: Operation::Multiply,
-                            left: Expr::Identifier {
-                                annotation: (10..11).into(),
-                                name,
-                            }
-                            .into(),
-                            right: Expr::Primitive {
-                                annotation: (14..15).into(),
-                                value: Primitive::Integer(constant),
-                            }
-                            .into(),
-                        }
-                        .into(),
-                    })
-                );
+                let actual = parse(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
                 Ok(())
             },
         )
@@ -396,10 +342,21 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(a, b, c)| {
+                let expected = infix(
+                    0..10,
+                    Operation::Multiply,
+                    primitive_integer(0..1, a.clone()),
+                    infix(
+                        5..10,
+                        Operation::Add,
+                        primitive_integer(5..6, b.clone()),
+                        primitive_integer(9..10, c.clone()),
+                    ),
+                );
                 let tokens = vec![
                     AnnotatedToken {
                         annotation: (0..1).into(),
-                        token: Token::Integer(a.clone()),
+                        token: Token::Integer(a),
                     },
                     AnnotatedToken {
                         annotation: (2..3).into(),
@@ -411,7 +368,7 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (5..6).into(),
-                        token: Token::Integer(b.clone()),
+                        token: Token::Integer(b),
                     },
                     AnnotatedToken {
                         annotation: (7..8).into(),
@@ -419,42 +376,17 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (9..10).into(),
-                        token: Token::Integer(c.clone()),
+                        token: Token::Integer(c),
                     },
                     AnnotatedToken {
                         annotation: (10..11).into(),
                         token: Token::EndGroup,
                     },
                 ];
-                let expr = parse(&tokens);
 
-                prop_assert_eq!(
-                    expr,
-                    Ok(Expr::Infix {
-                        annotation: (0..10).into(),
-                        operation: Operation::Multiply,
-                        left: Expr::Primitive {
-                            annotation: (0..1).into(),
-                            value: Primitive::Integer(a),
-                        }
-                        .into(),
-                        right: Expr::Infix {
-                            annotation: (5..10).into(),
-                            operation: Operation::Add,
-                            left: Expr::Primitive {
-                                annotation: (5..6).into(),
-                                value: Primitive::Integer(b),
-                            }
-                            .into(),
-                            right: Expr::Primitive {
-                                annotation: (9..10).into(),
-                                value: Primitive::Integer(c),
-                            }
-                            .into(),
-                        }
-                        .into(),
-                    })
-                );
+                let actual = parse(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
                 Ok(())
             },
         )
@@ -473,10 +405,10 @@ mod tests {
                     token: Token::Integer(value),
                 },
             ];
-            let expr = parse(&tokens);
+            let actual = parse(&tokens);
 
             prop_assert_eq!(
-                expr,
+                actual,
                 Err(Error::ParseError {
                     span: (0..1).into(),
                     expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
@@ -499,10 +431,10 @@ mod tests {
                     token: Token::Operator("+"),
                 },
             ];
-            let expr = parse(&tokens);
+            let actual = parse(&tokens);
 
             prop_assert_eq!(
-                expr,
+                actual,
                 Err(Error::ParseError {
                     span: (3..3).into(),
                     expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),

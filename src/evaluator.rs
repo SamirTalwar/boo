@@ -101,6 +101,7 @@ fn evaluate_infix<Annotation>(
 mod tests {
     use proptest::prelude::*;
 
+    use crate::ast::builders::*;
     use crate::proptest_helpers::*;
 
     use super::*;
@@ -108,19 +109,12 @@ mod tests {
     #[test]
     fn test_interpreting_a_primitive() {
         check(&Primitive::arbitrary(), |value| {
-            let expr = Expr::Primitive {
-                annotation: 0.into(),
-                value: value.clone(),
-            };
-            let result = evaluate(expr.into());
-            prop_assert_eq!(
-                result,
-                Ok(Expr::Primitive {
-                    annotation: (),
-                    value,
-                }
-                .into())
-            );
+            let input = primitive(0, value.clone());
+            let expected = primitive((), value);
+
+            let actual = evaluate(input.into());
+
+            prop_assert_eq!(actual, Ok(expected.into()));
             Ok(())
         })
     }
@@ -130,29 +124,17 @@ mod tests {
         check(
             &(Identifier::arbitrary(), Primitive::arbitrary()),
             |(name, value)| {
-                let expr = Expr::Let {
-                    annotation: 0.into(),
-                    name: name.clone(),
-                    value: Expr::Primitive {
-                        annotation: 0.into(),
-                        value: value.clone(),
-                    }
-                    .into(),
-                    inner: Expr::Identifier {
-                        annotation: 0.into(),
-                        name,
-                    }
-                    .into(),
-                };
-                let result = evaluate(expr.into());
-                prop_assert_eq!(
-                    result,
-                    Ok(Expr::Primitive {
-                        annotation: (),
-                        value,
-                    }
-                    .into())
+                let input = assign(
+                    0,
+                    name.clone(),
+                    primitive(0, value.clone()),
+                    identifier(0, name),
                 );
+                let expected = primitive((), value);
+
+                let actual = evaluate(input.into());
+
+                prop_assert_eq!(actual, Ok(expected.into()));
                 Ok(())
             },
         )
@@ -161,13 +143,12 @@ mod tests {
     #[test]
     fn test_interpreting_an_unknown_variable() {
         check(&Identifier::arbitrary(), |name| {
-            let expr = Expr::Identifier {
-                annotation: (5..10).into(),
-                name: name.clone(),
-            };
-            let result = evaluate(expr.into());
+            let input = identifier(5..10, name.clone());
+
+            let actual = evaluate(input.into());
+
             prop_assert_eq!(
-                result,
+                actual,
                 Err(Error::UnknownVariable {
                     span: (5..10).into(),
                     name: name.to_string()
@@ -199,30 +180,17 @@ mod tests {
         check(
             &(Integer::arbitrary(), Integer::arbitrary()),
             |(left, right)| {
-                let expected = implementation(&left, &right);
-                let expr = Expr::Infix {
-                    annotation: 0.into(),
+                let expected = primitive_integer((), implementation(&left, &right));
+                let input = infix(
+                    0,
                     operation,
-                    left: Expr::Primitive {
-                        annotation: 0.into(),
-                        value: Primitive::Integer(left),
-                    }
-                    .into(),
-                    right: Expr::Primitive {
-                        annotation: 0.into(),
-                        value: Primitive::Integer(right),
-                    }
-                    .into(),
-                };
-                let result = evaluate(expr.into());
-                prop_assert_eq!(
-                    result,
-                    Ok(Expr::Primitive {
-                        annotation: (),
-                        value: Primitive::Integer(expected),
-                    }
-                    .into())
+                    primitive_integer(0, left),
+                    primitive_integer(0, right),
                 );
+
+                let actual = evaluate(input.into());
+
+                prop_assert_eq!(actual, Ok(expected.into()));
                 Ok(())
             },
         )
@@ -238,39 +206,25 @@ mod tests {
             ),
             |(name, variable, constant)| {
                 let sum = &variable + &constant;
-                let expr = Expr::Let {
-                    annotation: 0.into(),
-                    name: name.clone(),
-                    value: Expr::Primitive {
-                        annotation: 0.into(),
-                        value: Primitive::Integer(variable),
-                    }
-                    .into(),
-                    inner: Expr::Infix {
-                        annotation: 0.into(),
-                        operation: Operation::Add,
-                        left: Expr::Identifier {
-                            annotation: 0.into(),
-                            name,
-                        }
-                        .into(),
-                        right: Expr::Primitive {
-                            annotation: 0.into(),
-                            value: Primitive::Integer(constant),
-                        }
-                        .into(),
-                    }
-                    .into(),
-                };
-                let result = evaluate(expr.into());
-                prop_assert_eq!(
-                    result,
-                    Ok(Expr::Primitive {
-                        annotation: (),
-                        value: Primitive::Integer(sum),
-                    }
-                    .into())
+                let input = assign(
+                    0,
+                    name.clone(),
+                    primitive_integer(0, variable),
+                    infix(
+                        0,
+                        Operation::Add,
+                        identifier(0, name),
+                        primitive_integer(0, constant),
+                    ),
                 );
+                let expected = Expr::Primitive {
+                    annotation: (),
+                    value: Primitive::Integer(sum),
+                };
+
+                let actual = evaluate(input.into());
+
+                prop_assert_eq!(actual, Ok(expected.into()));
                 Ok(())
             },
         )
