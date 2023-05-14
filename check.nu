@@ -2,7 +2,7 @@
 
 use std
 
-cargo build
+cargo build --all-targets
 cargo test
 cargo clippy
 cargo fmt --check
