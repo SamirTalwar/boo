@@ -3,6 +3,8 @@ name = "boo"
 version = "0.1.0"
 edition = "2021"
 
+autobenches = false
+
 [lib]
 bench = false
 
@@ -15,7 +17,7 @@ name = "random_program"
 bench = false
 
 [[bench]]
-name = "evaluate_benchmark"
+name = "benchmarks"
 harness = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

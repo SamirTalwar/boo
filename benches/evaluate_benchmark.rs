@@ -2,12 +2,12 @@ use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
 use std::rc::Rc;
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, BenchmarkId, Criterion};
 
 use boo::ast::*;
 use boo::*;
 
-fn evaluate_benchmark(c: &mut Criterion) {
+pub fn evaluate_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("evaluate");
 
     let mut runner = TestRunner::deterministic();
@@ -20,6 +20,3 @@ fn evaluate_benchmark(c: &mut Criterion) {
     }
     group.finish();
 }
-
-criterion_group!(benches, evaluate_benchmark);
-criterion_main!(benches);
