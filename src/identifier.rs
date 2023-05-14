@@ -81,6 +81,20 @@ impl Identifier {
         .unwrap()
         .prop_map(|x| Identifier::new(x).unwrap())
     }
+
+    pub fn gen_ascii(length: std::ops::RangeInclusive<usize>) -> impl Strategy<Value = Identifier> {
+        assert!(
+            *length.start() > 0,
+            "Cannot generate an arbitrary identifier of length 0."
+        );
+        proptest::string::string_regex(&format!(
+            "[a-z_][a-z0-9_]{{{},{}}}",
+            length.start() - 1,
+            length.end() - 1,
+        ))
+        .unwrap()
+        .prop_map(|x| Identifier::new(x).unwrap())
+    }
 }
 
 #[cfg(test)]

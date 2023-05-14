@@ -85,16 +85,33 @@ impl std::fmt::Display for Operation {
     }
 }
 
+#[derive(Debug)]
+pub struct ExprGenConfig {
+    pub depth: std::ops::Range<usize>,
+    pub gen_identifier: Rc<BoxedStrategy<Identifier>>,
+}
+
+impl Default for ExprGenConfig {
+    fn default() -> Self {
+        Self {
+            depth: 0..8,
+            gen_identifier: Rc::new(Identifier::arbitrary().boxed()),
+        }
+    }
+}
+
 impl Expr<()> {
     pub fn arbitrary() -> impl Strategy<Value = Expr<()>> {
-        Self::gen(0..8)
+        Self::gen(Rc::new(Default::default()))
     }
 
-    pub fn gen(depth: std::ops::Range<usize>) -> impl Strategy<Value = Expr<()>> {
-        Self::gen_nested(depth, HashSet::new())
+    pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr<()>> {
+        let start_depth = config.depth.clone();
+        Self::gen_nested(config, start_depth, HashSet::new())
     }
 
     fn gen_nested(
+        config: Rc<ExprGenConfig>,
         depth: std::ops::Range<usize>,
         bound_identifiers: HashSet<Identifier>,
     ) -> impl Strategy<Value = Expr<()>> {
@@ -128,12 +145,13 @@ impl Expr<()> {
             let next_end = depth.end - 1;
 
             choices.push({
+                let conf = config.clone();
                 let bound = bound_identifiers.clone();
                 proptest::arbitrary::any::<Operation>()
                     .prop_flat_map(move |operation| {
                         (
-                            Self::gen_nested(next_start..next_end, bound.clone()),
-                            Self::gen_nested(next_start..next_end, bound.clone()),
+                            Self::gen_nested(conf.clone(), next_start..next_end, bound.clone()),
+                            Self::gen_nested(conf.clone(), next_start..next_end, bound.clone()),
                         )
                             .prop_map(move |(left, right)| Expr::Infix {
                                 annotation: (),
@@ -146,12 +164,18 @@ impl Expr<()> {
             });
 
             choices.push({
+                let conf = config;
                 let bound = bound_identifiers;
-                Identifier::arbitrary()
+                conf.gen_identifier
+                    .clone()
                     .prop_flat_map(move |name| {
-                        let gen_value = Self::gen_nested(next_start..next_end, bound.clone());
-                        let gen_inner =
-                            Self::gen_nested(next_start..next_end, bound.update(name.clone()));
+                        let gen_value =
+                            Self::gen_nested(conf.clone(), next_start..next_end, bound.clone());
+                        let gen_inner = Self::gen_nested(
+                            conf.clone(),
+                            next_start..next_end,
+                            bound.update(name.clone()),
+                        );
                         (gen_value, gen_inner).prop_map(move |(value, inner)| Expr::Let {
                             annotation: (),
                             name: name.clone(),

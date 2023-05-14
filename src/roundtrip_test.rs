@@ -9,7 +9,7 @@ use crate::proptest_helpers::check;
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {
-    check(&Expr::gen(0..4), |input| {
+    check(&Expr::arbitrary(), |input| {
         let rendered = format!("{}", input);
         let lexed = lex(&rendered)?;
         let parsed = parse(&lexed)?;
