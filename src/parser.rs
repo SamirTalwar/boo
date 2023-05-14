@@ -314,7 +314,7 @@ mod tests {
     fn test_variables() {
         check(
             &(
-                Identifier::arbitrary_of_max_length(16),
+                Identifier::arbitrary(),
                 Integer::arbitrary(),
                 Integer::arbitrary(),
             ),

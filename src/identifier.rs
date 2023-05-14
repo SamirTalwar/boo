@@ -60,12 +60,23 @@ impl std::fmt::Display for Identifier {
 }
 
 impl Identifier {
-    pub fn arbitrary_of_max_length(max_length: usize) -> impl Strategy<Value = Identifier> {
+    pub fn arbitrary() -> impl Strategy<Value = Identifier> {
+        Self::arbitrary_of_length(1..=16)
+    }
+
+    pub fn arbitrary_of_length(
+        length: std::ops::RangeInclusive<usize>,
+    ) -> impl Strategy<Value = Identifier> {
+        assert!(
+            *length.start() > 0,
+            "Cannot generate an arbitrary identifier of length 0."
+        );
         proptest::string::string_regex(&format!(
-            "{}{}{{0,{}}}",
+            "{}{}{{{},{}}}",
             *VALID_IDENTIFIER_INITIAL_CHARACTER_REGEX,
             *VALID_IDENTIFIER_CHARACTER_REGEX,
-            max_length - 1,
+            length.start() - 1,
+            length.end() - 1,
         ))
         .unwrap()
         .prop_map(|x| Identifier::new(x).unwrap())

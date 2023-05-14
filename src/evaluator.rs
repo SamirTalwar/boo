@@ -108,10 +108,7 @@ mod tests {
     #[test]
     fn test_interpreting_assignment() {
         check(
-            &(
-                Identifier::arbitrary_of_max_length(16),
-                Primitive::arbitrary(),
-            ),
+            &(Identifier::arbitrary(), Primitive::arbitrary()),
             |(name, value)| {
                 let expr = Expr::Let {
                     annotation: (),
@@ -143,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_interpreting_an_unknown_variable() {
-        check(&Identifier::arbitrary_of_max_length(16), |name| {
+        check(&Identifier::arbitrary(), |name| {
             let expr = Expr::Identifier {
                 annotation: (),
                 name: name.clone(),
@@ -215,7 +212,7 @@ mod tests {
     fn test_interpreting_variable_use() {
         check(
             &(
-                Identifier::arbitrary_of_max_length(16),
+                Identifier::arbitrary(),
                 Integer::arbitrary(),
                 Integer::arbitrary(),
             ),

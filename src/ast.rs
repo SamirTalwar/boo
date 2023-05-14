@@ -147,7 +147,7 @@ impl Expr<()> {
 
             choices.push({
                 let bound = bound_identifiers;
-                Identifier::arbitrary_of_max_length(16)
+                Identifier::arbitrary()
                     .prop_flat_map(move |name| {
                         let gen_value = Self::gen_nested(next_start..next_end, bound.clone());
                         let gen_inner =

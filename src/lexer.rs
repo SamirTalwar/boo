@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_lexing_identifier() {
-        check(&Identifier::arbitrary_of_max_length(16), |identifier| {
+        check(&Identifier::arbitrary(), |identifier| {
             let input = format!("{}", identifier);
             let tokens = lex(&input);
 
