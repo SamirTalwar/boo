@@ -25,13 +25,10 @@ pub fn evaluate_(
             value: value.clone(),
         }
         .into()),
-        Expr::Identifier {
-            annotation: _,
-            name,
-        } => match assignments.get(name) {
+        Expr::Identifier { annotation, name } => match assignments.get(name) {
             Some(value) => evaluate_(value.clone(), assignments),
             None => Err(Error::UnknownVariable {
-                span: 0.into(), // this is wrong
+                span: *annotation,
                 name: name.to_string(),
             }),
         },
@@ -165,14 +162,14 @@ mod tests {
     fn test_interpreting_an_unknown_variable() {
         check(&Identifier::arbitrary(), |name| {
             let expr = Expr::Identifier {
-                annotation: 0.into(), // this is silly
+                annotation: (5..10).into(),
                 name: name.clone(),
             };
             let result = evaluate(expr.into());
             prop_assert_eq!(
                 result,
                 Err(Error::UnknownVariable {
-                    span: 0.into(), // this is wrong
+                    span: (5..10).into(),
                     name: name.to_string()
                 })
             );
