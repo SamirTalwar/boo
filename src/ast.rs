@@ -5,6 +5,7 @@ use proptest::{strategy::BoxedStrategy, strategy::Strategy};
 
 use crate::identifier::Identifier;
 use crate::primitive::Primitive;
+use crate::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr<Annotation> {
@@ -100,12 +101,14 @@ impl Default for ExprGenConfig {
     }
 }
 
-impl Expr<()> {
-    pub fn arbitrary() -> impl Strategy<Value = Expr<()>> {
+impl Expr<Span> {
+    // note that the spans generated are nonsense
+
+    pub fn arbitrary() -> impl Strategy<Value = Self> {
         Self::gen(Rc::new(Default::default()))
     }
 
-    pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr<()>> {
+    pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Self> {
         let start_depth = config.depth.clone();
         Self::gen_nested(config, start_depth, HashSet::new())
     }
@@ -114,14 +117,14 @@ impl Expr<()> {
         config: Rc<ExprGenConfig>,
         depth: std::ops::Range<usize>,
         bound_identifiers: HashSet<Identifier>,
-    ) -> impl Strategy<Value = Expr<()>> {
-        let mut choices: Vec<BoxedStrategy<Expr<()>>> = Vec::new();
+    ) -> impl Strategy<Value = Self> {
+        let mut choices: Vec<BoxedStrategy<Self>> = Vec::new();
 
         if depth.start == 0 {
             choices.push(
                 Primitive::arbitrary()
                     .prop_map(|value| Expr::Primitive {
-                        annotation: (),
+                        annotation: 0.into(),
                         value,
                     })
                     .boxed(),
@@ -132,7 +135,7 @@ impl Expr<()> {
                 choices.push(
                     proptest::arbitrary::any::<proptest::sample::Index>()
                         .prop_map(move |index| Expr::Identifier {
-                            annotation: (),
+                            annotation: 0.into(),
                             name: bound.iter().nth(index.index(bound.len())).unwrap().clone(),
                         })
                         .boxed(),
@@ -154,7 +157,7 @@ impl Expr<()> {
                             Self::gen_nested(conf.clone(), next_start..next_end, bound.clone()),
                         )
                             .prop_map(move |(left, right)| Expr::Infix {
-                                annotation: (),
+                                annotation: 0.into(),
                                 operation,
                                 left: left.into(),
                                 right: right.into(),
@@ -177,7 +180,7 @@ impl Expr<()> {
                             bound.update(name.clone()),
                         );
                         (gen_value, gen_inner).prop_map(move |(value, inner)| Expr::Let {
-                            annotation: (),
+                            annotation: 0.into(),
                             name: name.clone(),
                             value: value.into(),
                             inner: inner.into(),
