@@ -10,7 +10,7 @@ use boo::identifier::*;
 use boo::*;
 
 fn main() -> anyhow::Result<()> {
-    let any_expr = Expr::gen(Rc::new(ExprGenConfig {
+    let any_expr = Expression::gen(Rc::new(ExprGenConfig {
         gen_identifier: Rc::new(Identifier::gen_ascii(1..=16).boxed()),
         ..Default::default()
     }));
@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
     let expr = tree.current();
     println!("Expression:\n{}\n", expr);
 
-    let result = evaluate(expr.into()).expect("Could not interpret the expression.");
+    let result = evaluate(expr).expect("Could not interpret the expression.");
     println!("Result:\n{}", result);
 
     Ok(())

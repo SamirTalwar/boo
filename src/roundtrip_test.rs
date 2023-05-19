@@ -2,14 +2,13 @@
 
 use proptest::prelude::*;
 
-use crate::ast::Expr;
-use crate::lexer::lex;
-use crate::parser::parse;
+use crate::ast::*;
 use crate::proptest_helpers::check;
+use crate::*;
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {
-    check(&Expr::arbitrary(), |input| {
+    check(&Expression::arbitrary(), |input| {
         let rendered = format!("{}", input);
         let lexed = lex(&rendered)?;
         let parsed = parse(&lexed)?;
@@ -28,31 +27,31 @@ fn eq_ignoring_annotations<LeftAnnotation, RightAnnotation>(
     left: &Expr<LeftAnnotation>,
     right: &Expr<RightAnnotation>,
 ) -> bool {
-    match (left, right) {
+    match (&left.value, &right.value) {
         (
-            Expr::Primitive {
+            Expression::Primitive {
                 value: left_value, ..
             },
-            Expr::Primitive {
+            Expression::Primitive {
                 value: right_value, ..
             },
         ) => left_value == right_value,
         (
-            Expr::Identifier {
+            Expression::Identifier {
                 name: left_name, ..
             },
-            Expr::Identifier {
+            Expression::Identifier {
                 name: right_name, ..
             },
         ) => left_name == right_name,
         (
-            Expr::Let {
+            Expression::Let {
                 name: left_name,
                 value: left_value,
                 inner: left_inner,
                 ..
             },
-            Expr::Let {
+            Expression::Let {
                 name: right_name,
                 value: right_value,
                 inner: right_inner,
@@ -64,13 +63,13 @@ fn eq_ignoring_annotations<LeftAnnotation, RightAnnotation>(
                 && eq_ignoring_annotations(left_inner, right_inner)
         }
         (
-            Expr::Infix {
+            Expression::Infix {
                 operation: left_operation,
                 left: left_left,
                 right: left_right,
                 ..
             },
-            Expr::Infix {
+            Expression::Infix {
                 operation: right_operation,
                 left: right_left,
                 right: right_right,

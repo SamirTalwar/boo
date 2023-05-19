@@ -19,12 +19,14 @@ peg::parser! {
                     Token::Identifier(name) => name,
                     _ => unreachable!(),
                 };
-                Expr::Let {
-                    annotation: let_.annotation | *inner.annotation(),
-                    name: n.clone(),
-                    value: value.into(),
-                    inner: inner.into(),
-                }
+                Annotated {
+                    annotation: let_.annotation | inner.annotation,
+                    value: Expression::Let {
+                        name: n.clone(),
+                        value,
+                        inner,
+                    }
+                }.into()
             }
             --
             left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("+") }] } / expected!("'+'")) right:@ {
@@ -50,18 +52,22 @@ peg::parser! {
 
         rule primitive() -> Expr<Span> =
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
-                Expr::Primitive {
+                Annotated {
                     annotation: *annotation,
-                    value: Primitive::Integer(n.clone()),
-                }
+                    value: Expression::Primitive {
+                        value: Primitive::Integer(n.clone()),
+                    }
+                }.into()
             } } / expected!("an integer")
 
         rule identifier() -> Expr<Span> =
             quiet! { [AnnotatedToken { annotation, token: Token::Identifier(name) }] {
-                Expr::Identifier {
+                Annotated {
                     annotation: *annotation,
-                    name: name.clone(),
-                }
+                    value: Expression::Identifier {
+                        name: name.clone(),
+                    }
+                }.into()
             } } / expected!("an identifier")
     }
 }
@@ -86,12 +92,15 @@ pub fn parse(input: &[AnnotatedToken<Span>]) -> Result<Expr<Span>> {
 }
 
 fn construct_infix(left: Expr<Span>, operation: Operation, right: Expr<Span>) -> Expr<Span> {
-    Expr::Infix {
-        annotation: *left.annotation() | *right.annotation(),
-        operation,
-        left: left.into(),
-        right: right.into(),
+    Annotated {
+        annotation: left.annotation | right.annotation,
+        value: Expression::Infix {
+            operation,
+            left,
+            right,
+        },
     }
+    .into()
 }
 
 #[cfg(test)]

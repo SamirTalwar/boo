@@ -1,6 +1,5 @@
 use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
-use std::rc::Rc;
 
 use criterion::{black_box, BenchmarkId, Criterion};
 
@@ -12,8 +11,8 @@ pub fn evaluate_benchmark(c: &mut Criterion) {
 
     let mut runner = TestRunner::deterministic();
     for _ in 0..16 {
-        let tree = Expr::arbitrary().new_tree(&mut runner).unwrap();
-        let expr = Rc::new(tree.current());
+        let tree = Expression::arbitrary().new_tree(&mut runner).unwrap();
+        let expr = tree.current();
         group.bench_with_input(BenchmarkId::new("evaluate", &expr), &expr, |b, expr| {
             b.iter(|| evaluate(black_box(expr.clone())))
         });

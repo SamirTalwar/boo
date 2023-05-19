@@ -7,10 +7,11 @@ pub fn primitive<Annotation>(
     annotation: impl Into<Annotation>,
     value: Primitive,
 ) -> Expr<Annotation> {
-    Expr::Primitive {
+    Annotated {
         annotation: annotation.into(),
-        value,
+        value: Expression::Primitive { value },
     }
+    .into()
 }
 
 pub fn primitive_integer<Annotation>(
@@ -24,10 +25,11 @@ pub fn identifier<Annotation>(
     annotation: impl Into<Annotation>,
     name: Identifier,
 ) -> Expr<Annotation> {
-    Expr::Identifier {
+    Annotated {
         annotation: annotation.into(),
-        name,
+        value: Expression::Identifier { name },
     }
+    .into()
 }
 
 pub fn identifier_string<Annotation>(
@@ -43,12 +45,11 @@ pub fn assign<Annotation>(
     value: Expr<Annotation>,
     inner: Expr<Annotation>,
 ) -> Expr<Annotation> {
-    Expr::Let {
+    Annotated {
         annotation: annotation.into(),
-        name,
-        value: value.into(),
-        inner: inner.into(),
+        value: Expression::Let { name, value, inner },
     }
+    .into()
 }
 
 pub fn assign_string<Annotation>(
@@ -66,10 +67,13 @@ pub fn infix<Annotation>(
     left: Expr<Annotation>,
     right: Expr<Annotation>,
 ) -> Expr<Annotation> {
-    Expr::Infix {
+    Annotated {
         annotation: annotation.into(),
-        operation,
-        left: left.into(),
-        right: right.into(),
+        value: Expression::Infix {
+            operation,
+            left,
+            right,
+        },
     }
+    .into()
 }

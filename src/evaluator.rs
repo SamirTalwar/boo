@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use im::HashMap;
 
 use crate::ast::*;
@@ -8,56 +6,45 @@ use crate::identifier::*;
 use crate::primitive::*;
 use crate::span::*;
 
-pub fn evaluate(expr: Rc<Expr<Span>>) -> Result<Rc<Expr<()>>> {
+pub fn evaluate(expr: Expr<Span>) -> Result<Expr<()>> {
     evaluate_(expr, HashMap::new())
 }
 
 pub fn evaluate_(
-    expr: Rc<Expr<Span>>,
-    assignments: HashMap<Identifier, Rc<Expr<Span>>>,
-) -> Result<Rc<Expr<()>>> {
-    match expr.as_ref() {
-        Expr::Primitive {
-            annotation: _,
-            value,
-        } => Ok(Expr::Primitive {
+    expr: Expr<Span>,
+    assignments: HashMap<Identifier, Expr<Span>>,
+) -> Result<Expr<()>> {
+    match &expr.value {
+        Expression::Primitive { value } => Ok(Annotated {
             annotation: (),
-            value: value.clone(),
+            value: Expression::Primitive {
+                value: value.clone(),
+            },
         }
         .into()),
-        Expr::Identifier { annotation, name } => match assignments.get(name) {
+        Expression::Identifier { name } => match assignments.get(name) {
             Some(value) => evaluate_(value.clone(), assignments),
             None => Err(Error::UnknownVariable {
-                span: *annotation,
+                span: expr.annotation,
                 name: name.to_string(),
             }),
         },
-        Expr::Let {
-            annotation: _,
-            name,
-            value,
-            inner,
-        } => evaluate_(
+        Expression::Let { name, value, inner } => evaluate_(
             inner.clone(),
             assignments.update(name.clone(), value.clone()),
         ),
-        Expr::Infix {
-            annotation: _,
+        Expression::Infix {
             operation,
             left,
             right,
-        } => match (left.as_ref(), right.as_ref()) {
-            (Expr::Primitive { .. }, Expr::Primitive { .. }) => {
-                Ok(evaluate_infix(*operation, left.as_ref(), right.as_ref()))
+        } => match (&left.value, &right.value) {
+            (Expression::Primitive { .. }, Expression::Primitive { .. }) => {
+                Ok(evaluate_infix(*operation, left.clone(), right.clone()))
             }
             _ => {
                 let left_result = evaluate_(left.clone(), assignments.clone())?;
                 let right_result = evaluate_(right.clone(), assignments)?;
-                Ok(evaluate_infix(
-                    *operation,
-                    left_result.as_ref(),
-                    right_result.as_ref(),
-                ))
+                Ok(evaluate_infix(*operation, left_result, right_result))
             }
         },
     }
@@ -65,36 +52,35 @@ pub fn evaluate_(
 
 fn evaluate_infix<Annotation>(
     operation: Operation,
-    left: &Expr<Annotation>,
-    right: &Expr<Annotation>,
-) -> Rc<Expr<()>> {
-    match (left, right) {
+    left: Expr<Annotation>,
+    right: Expr<Annotation>,
+) -> Expr<()> {
+    let value = match (&left.value, &right.value) {
         (
-            Expr::Primitive {
-                annotation: _,
+            Expression::Primitive {
                 value: Primitive::Integer(left),
             },
-            Expr::Primitive {
-                annotation: _,
+            Expression::Primitive {
                 value: Primitive::Integer(right),
             },
         ) => match operation {
-            Operation::Add => Expr::Primitive {
-                annotation: (),
+            Operation::Add => Expression::Primitive {
                 value: Primitive::Integer(left + right),
             },
-            Operation::Subtract => Expr::Primitive {
-                annotation: (),
+            Operation::Subtract => Expression::Primitive {
                 value: Primitive::Integer(left - right),
             },
-            Operation::Multiply => Expr::Primitive {
-                annotation: (),
+            Operation::Multiply => Expression::Primitive {
                 value: Primitive::Integer(left * right),
             },
-        }
-        .into(),
+        },
         _ => unreachable!(),
+    };
+    Annotated {
+        annotation: (),
+        value,
     }
+    .into()
 }
 
 #[cfg(test)]
@@ -112,9 +98,9 @@ mod tests {
             let input = primitive(0, value.clone());
             let expected = primitive((), value);
 
-            let actual = evaluate(input.into());
+            let actual = evaluate(input);
 
-            prop_assert_eq!(actual, Ok(expected.into()));
+            prop_assert_eq!(actual, Ok(expected));
             Ok(())
         })
     }
@@ -132,9 +118,9 @@ mod tests {
                 );
                 let expected = primitive((), value);
 
-                let actual = evaluate(input.into());
+                let actual = evaluate(input);
 
-                prop_assert_eq!(actual, Ok(expected.into()));
+                prop_assert_eq!(actual, Ok(expected));
                 Ok(())
             },
         )
@@ -145,7 +131,7 @@ mod tests {
         check(&Identifier::arbitrary(), |name| {
             let input = identifier(5..10, name.clone());
 
-            let actual = evaluate(input.into());
+            let actual = evaluate(input);
 
             prop_assert_eq!(
                 actual,
@@ -188,9 +174,9 @@ mod tests {
                     primitive_integer(0, right),
                 );
 
-                let actual = evaluate(input.into());
+                let actual = evaluate(input);
 
-                prop_assert_eq!(actual, Ok(expected.into()));
+                prop_assert_eq!(actual, Ok(expected));
                 Ok(())
             },
         )
@@ -217,14 +203,11 @@ mod tests {
                         primitive_integer(0, constant),
                     ),
                 );
-                let expected = Expr::Primitive {
-                    annotation: (),
-                    value: Primitive::Integer(sum),
-                };
+                let expected = primitive_integer((), sum);
 
-                let actual = evaluate(input.into());
+                let actual = evaluate(input);
 
-                prop_assert_eq!(actual, Ok(expected.into()));
+                prop_assert_eq!(actual, Ok(expected));
                 Ok(())
             },
         )

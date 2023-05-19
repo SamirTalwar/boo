@@ -9,39 +9,32 @@ use crate::identifier::Identifier;
 use crate::primitive::Primitive;
 use crate::span::Span;
 
+pub type Expr<Annotation> = Rc<Annotated<Annotation, Expression<Annotation>>>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Expr<Annotation> {
+pub struct Annotated<Annotation, Value> {
+    pub annotation: Annotation,
+    pub value: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Expression<Annotation> {
     Primitive {
-        annotation: Annotation,
         value: Primitive,
     },
     Identifier {
-        annotation: Annotation,
         name: Identifier,
     },
     Let {
-        annotation: Annotation,
         name: Identifier,
-        value: Rc<Expr<Annotation>>,
-        inner: Rc<Expr<Annotation>>,
+        value: Expr<Annotation>,
+        inner: Expr<Annotation>,
     },
     Infix {
-        annotation: Annotation,
         operation: Operation,
-        left: Rc<Expr<Annotation>>,
-        right: Rc<Expr<Annotation>>,
+        left: Expr<Annotation>,
+        right: Expr<Annotation>,
     },
-}
-
-impl<Annotation> Expr<Annotation> {
-    pub fn annotation(&self) -> &Annotation {
-        match self {
-            Expr::Primitive { annotation, .. } => annotation,
-            Expr::Identifier { annotation, .. } => annotation,
-            Expr::Let { annotation, .. } => annotation,
-            Expr::Infix { annotation, .. } => annotation,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, proptest_derive::Arbitrary)]
@@ -76,14 +69,14 @@ impl Default for ExprGenConfig {
     }
 }
 
-impl Expr<Span> {
+impl Expression<Span> {
     // note that the spans generated are nonsense
 
-    pub fn arbitrary() -> impl Strategy<Value = Self> {
+    pub fn arbitrary() -> impl Strategy<Value = Expr<Span>> {
         Self::gen(Rc::new(Default::default()))
     }
 
-    pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Self> {
+    pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr<Span>> {
         let start_depth = config.depth.clone();
         Self::gen_nested(config, start_depth, HashSet::new())
     }
@@ -92,15 +85,18 @@ impl Expr<Span> {
         config: Rc<ExprGenConfig>,
         depth: std::ops::Range<usize>,
         bound_identifiers: HashSet<Identifier>,
-    ) -> impl Strategy<Value = Self> {
-        let mut choices: Vec<BoxedStrategy<Self>> = Vec::new();
+    ) -> impl Strategy<Value = Expr<Span>> {
+        let mut choices: Vec<BoxedStrategy<Expr<Span>>> = Vec::new();
 
         if depth.start == 0 {
             choices.push(
                 Primitive::arbitrary()
-                    .prop_map(|value| Expr::Primitive {
-                        annotation: 0.into(),
-                        value,
+                    .prop_map(|value| {
+                        Annotated {
+                            annotation: 0.into(),
+                            value: Expression::Primitive { value },
+                        }
+                        .into()
                     })
                     .boxed(),
             );
@@ -109,9 +105,18 @@ impl Expr<Span> {
                 let bound = bound_identifiers.clone();
                 choices.push(
                     proptest::arbitrary::any::<proptest::sample::Index>()
-                        .prop_map(move |index| Expr::Identifier {
-                            annotation: 0.into(),
-                            name: bound.iter().nth(index.index(bound.len())).unwrap().clone(),
+                        .prop_map(move |index| {
+                            Annotated {
+                                annotation: 0.into(),
+                                value: Expression::Identifier {
+                                    name: bound
+                                        .iter()
+                                        .nth(index.index(bound.len()))
+                                        .unwrap()
+                                        .clone(),
+                                },
+                            }
+                            .into()
                         })
                         .boxed(),
                 );
@@ -131,11 +136,18 @@ impl Expr<Span> {
                             Self::gen_nested(conf.clone(), next_start..next_end, bound.clone()),
                             Self::gen_nested(conf.clone(), next_start..next_end, bound.clone()),
                         )
-                            .prop_map(move |(left, right)| Expr::Infix {
-                                annotation: 0.into(),
-                                operation,
-                                left: left.into(),
-                                right: right.into(),
+                            .prop_map(move |(left, right)| {
+                                {
+                                    Annotated {
+                                        annotation: 0.into(),
+                                        value: Expression::Infix {
+                                            operation,
+                                            left,
+                                            right,
+                                        },
+                                    }
+                                }
+                                .into()
                             })
                     })
                     .boxed()
@@ -154,11 +166,16 @@ impl Expr<Span> {
                             next_start..next_end,
                             bound.update(name.clone()),
                         );
-                        (gen_value, gen_inner).prop_map(move |(value, inner)| Expr::Let {
-                            annotation: 0.into(),
-                            name: name.clone(),
-                            value: value.into(),
-                            inner: inner.into(),
+                        (gen_value, gen_inner).prop_map(move |(value, inner)| {
+                            Annotated {
+                                annotation: 0.into(),
+                                value: Expression::Let {
+                                    name: name.clone(),
+                                    value,
+                                    inner,
+                                },
+                            }
+                            .into()
                         })
                     })
                     .boxed()
