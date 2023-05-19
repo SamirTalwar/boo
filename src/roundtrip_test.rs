@@ -8,7 +8,7 @@ use crate::*;
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {
-    check(&Expression::arbitrary(), |input| {
+    check(&ast::generators::arbitrary(), |input| {
         let rendered = format!("{}", input);
         let lexed = lex(&rendered)?;
         let parsed = parse(&lexed)?;

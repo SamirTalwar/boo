@@ -69,16 +69,18 @@ impl Default for ExprGenConfig {
     }
 }
 
-impl Expression<Span> {
+pub mod generators {
     // note that the spans generated are nonsense
 
+    use super::*;
+
     pub fn arbitrary() -> impl Strategy<Value = Expr<Span>> {
-        Self::gen(Rc::new(Default::default()))
+        gen(Rc::new(Default::default()))
     }
 
     pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr<Span>> {
         let start_depth = config.depth.clone();
-        Self::gen_nested(config, start_depth, HashSet::new())
+        gen_nested(config, start_depth, HashSet::new())
     }
 
     fn gen_nested(
@@ -133,8 +135,8 @@ impl Expression<Span> {
                 proptest::arbitrary::any::<Operation>()
                     .prop_flat_map(move |operation| {
                         (
-                            Self::gen_nested(conf.clone(), next_start..next_end, bound.clone()),
-                            Self::gen_nested(conf.clone(), next_start..next_end, bound.clone()),
+                            gen_nested(conf.clone(), next_start..next_end, bound.clone()),
+                            gen_nested(conf.clone(), next_start..next_end, bound.clone()),
                         )
                             .prop_map(move |(left, right)| {
                                 {
@@ -160,8 +162,8 @@ impl Expression<Span> {
                     .clone()
                     .prop_flat_map(move |name| {
                         let gen_value =
-                            Self::gen_nested(conf.clone(), next_start..next_end, bound.clone());
-                        let gen_inner = Self::gen_nested(
+                            gen_nested(conf.clone(), next_start..next_end, bound.clone());
+                        let gen_inner = gen_nested(
                             conf.clone(),
                             next_start..next_end,
                             bound.update(name.clone()),
