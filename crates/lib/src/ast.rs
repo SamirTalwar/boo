@@ -1,30 +1,11 @@
 macro_rules! expr {
-    {
-      wrapper = $wrapper:tt ,
-    } => {
+    ($wrapper:tt) => {
         $crate::ast::expr! {
             wrapper = $wrapper;
             outer_type = Expr;
             outer_type_id = Expr;
-            outer_type_parameters = ;
             inner_type = Expression;
             inner_type_id = Expression;
-            inner_type_parameters = ;
-        }
-    };
-
-    {
-      wrapper = $wrapper:tt ,
-      parameters = $($parameters:ident) , * ,
-    } => {
-        $crate::ast::expr! {
-            wrapper = $wrapper;
-            outer_type = Expr<$($parameters) , *>;
-            outer_type_id = Expr;
-            outer_type_parameters = $($parameters) , *;
-            inner_type = Expression<$($parameters) , *>;
-            inner_type_id = Expression;
-            inner_type_parameters = $($parameters) , *;
         }
     };
 
@@ -32,15 +13,13 @@ macro_rules! expr {
       wrapper = $wrapper:ty ;
       outer_type = $outer_type:ty ;
       outer_type_id = $outer_type_id:ident ;
-      outer_type_parameters = $($outer_type_parameters:ident) , * ;
       inner_type = $inner_type:ty ;
       inner_type_id = $inner_type_id:ident ;
-      inner_type_parameters = $($inner_type_parameters:ident) , * ;
     } => {
-        pub type $outer_type_id < $($outer_type_parameters) , * > = boo_fill_hole::fill_hole!($wrapper, $inner_type);
+        pub type $outer_type_id = boo_fill_hole::fill_hole!($wrapper, $inner_type);
 
         #[derive(Debug, Clone, PartialEq, Eq)]
-        pub enum $inner_type_id < $($inner_type_parameters) , * > {
+        pub enum $inner_type_id {
             Primitive {
                 value: $crate::primitive::Primitive,
             },
@@ -57,6 +36,23 @@ macro_rules! expr {
                 left: $outer_type,
                 right: $outer_type,
             },
+        }
+
+        impl std::fmt::Display for $inner_type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    Expression::Primitive { value } => value.fmt(f),
+                    Expression::Identifier { name } => name.fmt(f),
+                    Expression::Let { name, value, inner } => {
+                        write!(f, "let {} = ({}) in ({})", name, value, inner)
+                    }
+                    Expression::Infix {
+                        operation,
+                        left,
+                        right,
+                    } => write!(f, "({}) {} ({})", left, operation, right),
+                }
+            }
         }
     };
 }

@@ -14,7 +14,7 @@ fn test_rendering_and_parsing_an_expression() {
         let lexed = lex(&rendered)?;
         let parsed = parse(&lexed)?;
         prop_assert!(
-            eq_ignoring_annotations(&parsed, &input),
+            eq_ignoring_span(&parsed, &input),
             "{} and {} were not equal\nLexed: {:?}",
             &parsed,
             &input,
@@ -24,10 +24,7 @@ fn test_rendering_and_parsing_an_expression() {
     })
 }
 
-fn eq_ignoring_annotations<LeftAnnotation, RightAnnotation>(
-    left: &Expr<LeftAnnotation>,
-    right: &Expr<RightAnnotation>,
-) -> bool {
+fn eq_ignoring_span(left: &Expr, right: &Expr) -> bool {
     match (&left.value, &right.value) {
         (
             Expression::Primitive {
@@ -60,8 +57,8 @@ fn eq_ignoring_annotations<LeftAnnotation, RightAnnotation>(
             },
         ) => {
             left_name == right_name
-                && eq_ignoring_annotations(left_value, right_value)
-                && eq_ignoring_annotations(left_inner, right_inner)
+                && eq_ignoring_span(left_value, right_value)
+                && eq_ignoring_span(left_inner, right_inner)
         }
         (
             Expression::Infix {
@@ -78,8 +75,8 @@ fn eq_ignoring_annotations<LeftAnnotation, RightAnnotation>(
             },
         ) => {
             left_operation == right_operation
-                && eq_ignoring_annotations(left_left, right_left)
-                && eq_ignoring_annotations(left_right, right_right)
+                && eq_ignoring_span(left_left, right_left)
+                && eq_ignoring_span(left_right, right_right)
         }
         _ => false,
     }

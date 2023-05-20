@@ -8,15 +8,14 @@ use crate::identifier::*;
 use crate::operation::*;
 use crate::parser;
 use crate::primitive::*;
-use crate::span::*;
 
-pub fn evaluate(expr: parser::ast::Expr<Span>) -> Result<ast::Expr> {
+pub fn evaluate(expr: parser::ast::Expr) -> Result<ast::Expr> {
     evaluate_(expr, HashMap::new())
 }
 
 pub fn evaluate_(
-    expr: parser::ast::Expr<Span>,
-    assignments: HashMap<Identifier, parser::ast::Expr<Span>>,
+    expr: parser::ast::Expr,
+    assignments: HashMap<Identifier, parser::ast::Expr>,
 ) -> Result<ast::Expr> {
     match &expr.value {
         parser::ast::Expression::Primitive { value } => Ok(ast::Expression::Primitive {
@@ -26,7 +25,7 @@ pub fn evaluate_(
         parser::ast::Expression::Identifier { name } => match assignments.get(name) {
             Some(value) => evaluate_(value.clone(), assignments),
             None => Err(Error::UnknownVariable {
-                span: expr.annotation,
+                span: expr.span,
                 name: name.to_string(),
             }),
         },

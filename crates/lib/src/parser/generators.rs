@@ -24,11 +24,11 @@ impl Default for ExprGenConfig {
     }
 }
 
-pub fn arbitrary() -> impl Strategy<Value = Expr<Span>> {
+pub fn arbitrary() -> impl Strategy<Value = Expr> {
     gen(Rc::new(Default::default()))
 }
 
-pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr<Span>> {
+pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
     let start_depth = config.depth.clone();
     gen_nested(config, start_depth, HashSet::new())
 }
@@ -37,15 +37,15 @@ fn gen_nested(
     config: Rc<ExprGenConfig>,
     depth: std::ops::Range<usize>,
     bound_identifiers: HashSet<Identifier>,
-) -> impl Strategy<Value = Expr<Span>> {
-    let mut choices: Vec<BoxedStrategy<Expr<Span>>> = Vec::new();
+) -> impl Strategy<Value = Expr> {
+    let mut choices: Vec<BoxedStrategy<Expr>> = Vec::new();
 
     if depth.start == 0 {
         choices.push(
             Primitive::arbitrary()
                 .prop_map(|value| {
-                    Annotated {
-                        annotation: 0.into(),
+                    Spanned {
+                        span: 0.into(),
                         value: Expression::Primitive { value },
                     }
                     .into()
@@ -58,8 +58,8 @@ fn gen_nested(
             choices.push(
                 proptest::arbitrary::any::<proptest::sample::Index>()
                     .prop_map(move |index| {
-                        Annotated {
-                            annotation: 0.into(),
+                        Spanned {
+                            span: 0.into(),
                             value: Expression::Identifier {
                                 name: bound.iter().nth(index.index(bound.len())).unwrap().clone(),
                             },
@@ -86,8 +86,8 @@ fn gen_nested(
                     )
                         .prop_map(move |(left, right)| {
                             {
-                                Annotated {
-                                    annotation: 0.into(),
+                                Spanned {
+                                    span: 0.into(),
                                     value: Expression::Infix {
                                         operation,
                                         left,
@@ -114,8 +114,8 @@ fn gen_nested(
                         bound.update(name.clone()),
                     );
                     (gen_value, gen_inner).prop_map(move |(value, inner)| {
-                        Annotated {
-                            annotation: 0.into(),
+                        Spanned {
+                            span: 0.into(),
                             value: Expression::Let {
                                 name: name.clone(),
                                 value,

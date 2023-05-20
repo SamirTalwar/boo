@@ -1,37 +1,18 @@
 use std::rc::Rc;
 
 use crate::ast;
+use crate::span::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Annotated<Annotation, Value> {
-    pub annotation: Annotation,
+pub struct Spanned<Value> {
+    pub span: Span,
     pub value: Value,
 }
 
-ast::expr! {
-    wrapper = (Rc<Annotated<Annotation, _>>),
-    parameters = Annotation,
-}
+ast::expr!((Rc<Spanned<_>>));
 
-impl<Annotation, Value: std::fmt::Display> std::fmt::Display for Annotated<Annotation, Value> {
+impl<Value: std::fmt::Display> std::fmt::Display for Spanned<Value> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.value.fmt(f)
-    }
-}
-
-impl<Annotation> std::fmt::Display for Expression<Annotation> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Expression::Primitive { value } => value.fmt(f),
-            Expression::Identifier { name } => name.fmt(f),
-            Expression::Let { name, value, inner } => {
-                write!(f, "let {} = ({}) in ({})", name, value, inner)
-            }
-            Expression::Infix {
-                operation,
-                left,
-                right,
-            } => write!(f, "({}) {} ({})", left, operation, right),
-        }
     }
 }
