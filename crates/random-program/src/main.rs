@@ -5,12 +5,11 @@ use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
 
-use boo::ast::*;
 use boo::identifier::*;
 use boo::*;
 
 fn main() -> anyhow::Result<()> {
-    let any_expr = ast::generators::gen(Rc::new(ExprGenConfig {
+    let any_expr = ast::generators::gen(Rc::new(ast::generators::ExprGenConfig {
         gen_identifier: Rc::new(Identifier::gen_ascii(1..=16).boxed()),
         ..Default::default()
     }));
