@@ -3,6 +3,7 @@ pub mod error;
 pub mod evaluator;
 pub mod identifier;
 pub mod lexer;
+pub mod operation;
 pub mod parser;
 pub mod primitive;
 pub mod printer;

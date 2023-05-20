@@ -1,6 +1,7 @@
 use crate::ast::*;
 use crate::error::*;
 use crate::lexer::*;
+use crate::operation::*;
 use crate::primitive::*;
 use crate::span::*;
 

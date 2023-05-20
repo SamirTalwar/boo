@@ -6,6 +6,7 @@ use im::HashSet;
 use proptest::{strategy::BoxedStrategy, strategy::Strategy};
 
 use crate::identifier::Identifier;
+use crate::operation::Operation;
 use crate::primitive::Primitive;
 use crate::span::Span;
 
@@ -62,23 +63,6 @@ macro_rules! expr {
                 left: $outer_type,
                 right: $outer_type,
             },
-        }
-
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, proptest_derive::Arbitrary)]
-        pub enum Operation {
-            Add,
-            Subtract,
-            Multiply,
-        }
-
-        impl std::fmt::Display for Operation {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    Operation::Add => write!(f, "+"),
-                    Operation::Subtract => write!(f, "-"),
-                    Operation::Multiply => write!(f, "*"),
-                }
-            }
         }
 
         #[derive(Debug)]

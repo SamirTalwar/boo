@@ -3,6 +3,7 @@ use im::HashMap;
 use crate::ast::*;
 use crate::error::*;
 use crate::identifier::*;
+use crate::operation::*;
 use crate::primitive::*;
 use crate::span::*;
 
