@@ -2,6 +2,7 @@
 
 members = [
   "crates/benchmarks",
+  "crates/fill-hole",
   "crates/interpreter",
   "crates/lib",
   "crates/random-program",

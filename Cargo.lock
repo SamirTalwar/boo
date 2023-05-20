@@ -145,6 +145,7 @@ dependencies = [
 name = "boo"
 version = "0.1.0"
 dependencies = [
+ "boo-fill-hole",
  "im",
  "lazy_static",
  "logos",
@@ -168,6 +169,10 @@ dependencies = [
  "num-bigint",
  "proptest",
 ]
+
+[[package]]
+name = "boo-fill-hole"
+version = "0.1.0"
 
 [[package]]
 name = "boo-interpreter"

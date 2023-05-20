@@ -9,181 +9,215 @@ use crate::identifier::Identifier;
 use crate::primitive::Primitive;
 use crate::span::Span;
 
-pub type Expr<Annotation> = Rc<Annotated<Annotation, Expression<Annotation>>>;
+use boo_fill_hole::fill_hole;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Annotated<Annotation, Value> {
-    pub annotation: Annotation,
-    pub value: Value,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Expression<Annotation> {
-    Primitive {
-        value: Primitive,
-    },
-    Identifier {
-        name: Identifier,
-    },
-    Let {
-        name: Identifier,
-        value: Expr<Annotation>,
-        inner: Expr<Annotation>,
-    },
-    Infix {
-        operation: Operation,
-        left: Expr<Annotation>,
-        right: Expr<Annotation>,
-    },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, proptest_derive::Arbitrary)]
-pub enum Operation {
-    Add,
-    Subtract,
-    Multiply,
-}
-
-impl std::fmt::Display for Operation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Operation::Add => write!(f, "+"),
-            Operation::Subtract => write!(f, "-"),
-            Operation::Multiply => write!(f, "*"),
+macro_rules! expr {
+    {
+      wrapper = $wrapper:tt ,
+      parameters = $($parameters:ident) , * ,
+    } => {
+        expr! {
+            wrapper = $wrapper;
+            outer_type = Expr<$($parameters) , *>;
+            outer_type_id = Expr;
+            outer_type_parameters = $($parameters) , *;
+            inner_type = Expression<$($parameters) , *>;
+            inner_type_id = Expression;
+            inner_type_parameters = $($parameters) , *;
         }
-    }
-}
+    };
 
-#[derive(Debug)]
-pub struct ExprGenConfig {
-    pub depth: std::ops::Range<usize>,
-    pub gen_identifier: Rc<BoxedStrategy<Identifier>>,
-}
+    {
+      wrapper = $wrapper:ty ;
+      outer_type = $outer_type:ty ;
+      outer_type_id = $outer_type_id:ident ;
+      outer_type_parameters = $($outer_type_parameters:ident) , * ;
+      inner_type = $inner_type:ty ;
+      inner_type_id = $inner_type_id:ident ;
+      inner_type_parameters = $($inner_type_parameters:ident) , * ;
+    } => {
+        pub type $outer_type_id < $($outer_type_parameters) , * > = fill_hole!($wrapper, $inner_type);
 
-impl Default for ExprGenConfig {
-    fn default() -> Self {
-        Self {
-            depth: 0..8,
-            gen_identifier: Rc::new(Identifier::arbitrary().boxed()),
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub struct Annotated<Annotation, Value> {
+            pub annotation: Annotation,
+            pub value: Value,
         }
-    }
-}
 
-pub mod generators {
-    // note that the spans generated are nonsense
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub enum $inner_type_id < $($inner_type_parameters) , * > {
+            Primitive {
+                value: Primitive,
+            },
+            Identifier {
+                name: Identifier,
+            },
+            Let {
+                name: Identifier,
+                value: $outer_type,
+                inner: $outer_type,
+            },
+            Infix {
+                operation: Operation,
+                left: $outer_type,
+                right: $outer_type,
+            },
+        }
 
-    use super::*;
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, proptest_derive::Arbitrary)]
+        pub enum Operation {
+            Add,
+            Subtract,
+            Multiply,
+        }
 
-    pub fn arbitrary() -> impl Strategy<Value = Expr<Span>> {
-        gen(Rc::new(Default::default()))
-    }
-
-    pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr<Span>> {
-        let start_depth = config.depth.clone();
-        gen_nested(config, start_depth, HashSet::new())
-    }
-
-    fn gen_nested(
-        config: Rc<ExprGenConfig>,
-        depth: std::ops::Range<usize>,
-        bound_identifiers: HashSet<Identifier>,
-    ) -> impl Strategy<Value = Expr<Span>> {
-        let mut choices: Vec<BoxedStrategy<Expr<Span>>> = Vec::new();
-
-        if depth.start == 0 {
-            choices.push(
-                Primitive::arbitrary()
-                    .prop_map(|value| {
-                        Annotated {
-                            annotation: 0.into(),
-                            value: Expression::Primitive { value },
-                        }
-                        .into()
-                    })
-                    .boxed(),
-            );
-
-            if !bound_identifiers.is_empty() {
-                let bound = bound_identifiers.clone();
-                choices.push(
-                    proptest::arbitrary::any::<proptest::sample::Index>()
-                        .prop_map(move |index| {
-                            Annotated {
-                                annotation: 0.into(),
-                                value: Expression::Identifier {
-                                    name: bound
-                                        .iter()
-                                        .nth(index.index(bound.len()))
-                                        .unwrap()
-                                        .clone(),
-                                },
-                            }
-                            .into()
-                        })
-                        .boxed(),
-                );
+        impl std::fmt::Display for Operation {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    Operation::Add => write!(f, "+"),
+                    Operation::Subtract => write!(f, "-"),
+                    Operation::Multiply => write!(f, "*"),
+                }
             }
         }
 
-        if depth.end > 0 {
-            let next_start = if depth.start == 0 { 0 } else { depth.start - 1 };
-            let next_end = depth.end - 1;
+        #[derive(Debug)]
+        pub struct ExprGenConfig {
+            pub depth: std::ops::Range<usize>,
+            pub gen_identifier: Rc<BoxedStrategy<Identifier>>,
+        }
 
-            choices.push({
-                let conf = config.clone();
-                let bound = bound_identifiers.clone();
-                proptest::arbitrary::any::<Operation>()
-                    .prop_flat_map(move |operation| {
-                        (
-                            gen_nested(conf.clone(), next_start..next_end, bound.clone()),
-                            gen_nested(conf.clone(), next_start..next_end, bound.clone()),
-                        )
-                            .prop_map(move |(left, right)| {
-                                {
-                                    Annotated {
-                                        annotation: 0.into(),
-                                        value: Expression::Infix {
-                                            operation,
-                                            left,
-                                            right,
-                                        },
-                                    }
+        impl Default for ExprGenConfig {
+            fn default() -> Self {
+                Self {
+                    depth: 0..8,
+                    gen_identifier: Rc::new(Identifier::arbitrary().boxed()),
+                }
+            }
+        }
+
+        pub mod generators {
+            // note that the spans generated are nonsense
+
+            use super::*;
+
+            pub fn arbitrary() -> impl Strategy<Value = Expr<Span>> {
+                gen(Rc::new(Default::default()))
+            }
+
+            pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr<Span>> {
+                let start_depth = config.depth.clone();
+                gen_nested(config, start_depth, HashSet::new())
+            }
+
+            fn gen_nested(
+                config: Rc<ExprGenConfig>,
+                depth: std::ops::Range<usize>,
+                bound_identifiers: HashSet<Identifier>,
+            ) -> impl Strategy<Value = Expr<Span>> {
+                let mut choices: Vec<BoxedStrategy<Expr<Span>>> = Vec::new();
+
+                if depth.start == 0 {
+                    choices.push(
+                        Primitive::arbitrary()
+                            .prop_map(|value| {
+                                Annotated {
+                                    annotation: 0.into(),
+                                    value: Expression::Primitive { value },
                                 }
                                 .into()
                             })
-                    })
-                    .boxed()
-            });
+                            .boxed(),
+                    );
 
-            choices.push({
-                let conf = config;
-                let bound = bound_identifiers;
-                conf.gen_identifier
-                    .clone()
-                    .prop_flat_map(move |name| {
-                        let gen_value =
-                            gen_nested(conf.clone(), next_start..next_end, bound.clone());
-                        let gen_inner = gen_nested(
-                            conf.clone(),
-                            next_start..next_end,
-                            bound.update(name.clone()),
+                    if !bound_identifiers.is_empty() {
+                        let bound = bound_identifiers.clone();
+                        choices.push(
+                            proptest::arbitrary::any::<proptest::sample::Index>()
+                                .prop_map(move |index| {
+                                    Annotated {
+                                        annotation: 0.into(),
+                                        value: Expression::Identifier {
+                                            name: bound
+                                                .iter()
+                                                .nth(index.index(bound.len()))
+                                                .unwrap()
+                                                .clone(),
+                                        },
+                                    }
+                                    .into()
+                                })
+                                .boxed(),
                         );
-                        (gen_value, gen_inner).prop_map(move |(value, inner)| {
-                            Annotated {
-                                annotation: 0.into(),
-                                value: Expression::Let {
-                                    name: name.clone(),
-                                    value,
-                                    inner,
-                                },
-                            }
-                            .into()
-                        })
-                    })
-                    .boxed()
-            });
-        }
+                    }
+                }
 
-        proptest::strategy::Union::new(choices)
-    }
+                if depth.end > 0 {
+                    let next_start = if depth.start == 0 { 0 } else { depth.start - 1 };
+                    let next_end = depth.end - 1;
+
+                    choices.push({
+                        let conf = config.clone();
+                        let bound = bound_identifiers.clone();
+                        proptest::arbitrary::any::<Operation>()
+                            .prop_flat_map(move |operation| {
+                                (
+                                    gen_nested(conf.clone(), next_start..next_end, bound.clone()),
+                                    gen_nested(conf.clone(), next_start..next_end, bound.clone()),
+                                )
+                                    .prop_map(move |(left, right)| {
+                                        {
+                                            Annotated {
+                                                annotation: 0.into(),
+                                                value: Expression::Infix {
+                                                    operation,
+                                                    left,
+                                                    right,
+                                                },
+                                            }
+                                        }
+                                        .into()
+                                    })
+                            })
+                            .boxed()
+                    });
+
+                    choices.push({
+                        let conf = config;
+                        let bound = bound_identifiers;
+                        conf.gen_identifier
+                            .clone()
+                            .prop_flat_map(move |name| {
+                                let gen_value =
+                                    gen_nested(conf.clone(), next_start..next_end, bound.clone());
+                                let gen_inner = gen_nested(
+                                    conf.clone(),
+                                    next_start..next_end,
+                                    bound.update(name.clone()),
+                                );
+                                (gen_value, gen_inner).prop_map(move |(value, inner)| {
+                                    Annotated {
+                                        annotation: 0.into(),
+                                        value: Expression::Let {
+                                            name: name.clone(),
+                                            value,
+                                            inner,
+                                        },
+                                    }
+                                    .into()
+                                })
+                            })
+                            .boxed()
+                    });
+                }
+
+                proptest::strategy::Union::new(choices)
+            }
+        }
+    };
+}
+
+expr! {
+    wrapper = (Rc<Annotated<Annotation, _>>),
+    parameters = Annotation,
 }
