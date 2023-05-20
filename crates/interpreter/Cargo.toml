@@ -1,0 +1,17 @@
+[package]
+name = "boo-interpreter"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "interpreter"
+path = "src/main.rs"
+bench = false
+
+[dependencies]
+boo = { version = "0.1.0", path = "../lib" }
+
+anyhow = "1.0.71"
+atty = "0.2.14"
+miette = { version = "5.8.0", features = ["fancy"] }
+reedline = "0.18.0"

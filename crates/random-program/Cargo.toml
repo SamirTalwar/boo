@@ -1,0 +1,15 @@
+[package]
+name = "boo-random-program"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "random-program"
+path = "src/main.rs"
+bench = false
+
+[dependencies]
+boo = { version = "0.1.0", path = "../lib" }
+
+anyhow = "1.0.71"
+proptest = "1.1.0"

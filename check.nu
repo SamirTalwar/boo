@@ -18,4 +18,4 @@ if 'IN_NIX_SHELL' in $env {
 print ''
 print "Here's a random program for you."
 print ''
-cargo run --quiet --example random_program
+cargo run --quiet --bin random-program

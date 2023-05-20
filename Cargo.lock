@@ -145,9 +145,6 @@ dependencies = [
 name = "boo"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "atty",
- "criterion",
  "im",
  "lazy_static",
  "logos",
@@ -160,6 +157,36 @@ dependencies = [
  "reedline",
  "regex",
  "thiserror",
+]
+
+[[package]]
+name = "boo-benchmarks"
+version = "0.1.0"
+dependencies = [
+ "boo",
+ "criterion",
+ "num-bigint",
+ "proptest",
+]
+
+[[package]]
+name = "boo-interpreter"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "atty",
+ "boo",
+ "miette",
+ "reedline",
+]
+
+[[package]]
+name = "boo-random-program"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "boo",
+ "proptest",
 ]
 
 [[package]]
