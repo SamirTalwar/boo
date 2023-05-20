@@ -6,7 +6,6 @@ pub mod lexer;
 pub mod operation;
 pub mod parser;
 pub mod primitive;
-pub mod printer;
 pub mod span;
 
 mod proptest_helpers;

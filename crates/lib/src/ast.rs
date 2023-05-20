@@ -1,6 +1,20 @@
 macro_rules! expr {
     {
       wrapper = $wrapper:tt ,
+    } => {
+        $crate::ast::expr! {
+            wrapper = $wrapper;
+            outer_type = Expr;
+            outer_type_id = Expr;
+            outer_type_parameters = ;
+            inner_type = Expression;
+            inner_type_id = Expression;
+            inner_type_parameters = ;
+        }
+    };
+
+    {
+      wrapper = $wrapper:tt ,
       parameters = $($parameters:ident) , * ,
     } => {
         $crate::ast::expr! {
