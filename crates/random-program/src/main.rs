@@ -9,7 +9,7 @@ use boo::identifier::*;
 use boo::*;
 
 fn main() -> anyhow::Result<()> {
-    let any_expr = ast::generators::gen(Rc::new(ast::generators::ExprGenConfig {
+    let any_expr = parser::generators::gen(Rc::new(parser::generators::ExprGenConfig {
         gen_identifier: Rc::new(Identifier::gen_ascii(1..=16).boxed()),
         ..Default::default()
     }));

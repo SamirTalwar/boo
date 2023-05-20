@@ -1,5 +1,12 @@
 // note that the spans generated are nonsense
 
+use std::rc::Rc;
+
+use im::HashSet;
+use proptest::strategy::{BoxedStrategy, Strategy};
+
+use crate::identifier::Identifier;
+
 use super::*;
 
 #[derive(Debug)]

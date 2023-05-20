@@ -1,24 +1,9 @@
-pub mod builders;
-pub mod generators;
-
-use std::rc::Rc;
-
-use im::HashSet;
-use proptest::{strategy::BoxedStrategy, strategy::Strategy};
-
-use crate::identifier::Identifier;
-use crate::operation::Operation;
-use crate::primitive::Primitive;
-use crate::span::Span;
-
-use boo_fill_hole::fill_hole;
-
 macro_rules! expr {
     {
       wrapper = $wrapper:tt ,
       parameters = $($parameters:ident) , * ,
     } => {
-        expr! {
+        $crate::ast::expr! {
             wrapper = $wrapper;
             outer_type = Expr<$($parameters) , *>;
             outer_type_id = Expr;
@@ -38,29 +23,23 @@ macro_rules! expr {
       inner_type_id = $inner_type_id:ident ;
       inner_type_parameters = $($inner_type_parameters:ident) , * ;
     } => {
-        pub type $outer_type_id < $($outer_type_parameters) , * > = fill_hole!($wrapper, $inner_type);
-
-        #[derive(Debug, Clone, PartialEq, Eq)]
-        pub struct Annotated<Annotation, Value> {
-            pub annotation: Annotation,
-            pub value: Value,
-        }
+        pub type $outer_type_id < $($outer_type_parameters) , * > = boo_fill_hole::fill_hole!($wrapper, $inner_type);
 
         #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum $inner_type_id < $($inner_type_parameters) , * > {
             Primitive {
-                value: Primitive,
+                value: $crate::primitive::Primitive,
             },
             Identifier {
-                name: Identifier,
+                name: $crate::identifier::Identifier,
             },
             Let {
-                name: Identifier,
+                name: $crate::identifier::Identifier,
                 value: $outer_type,
                 inner: $outer_type,
             },
             Infix {
-                operation: Operation,
+                operation: $crate::operation::Operation,
                 left: $outer_type,
                 right: $outer_type,
             },
@@ -68,7 +47,4 @@ macro_rules! expr {
     };
 }
 
-expr! {
-    wrapper = (Rc<Annotated<Annotation, _>>),
-    parameters = Annotation,
-}
+pub(crate) use expr;

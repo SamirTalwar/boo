@@ -1,6 +1,6 @@
 use std::fmt::{Display, Result};
 
-use crate::ast::*;
+use crate::parser::ast::*;
 
 impl<Annotation, Value: Display> Display for Annotated<Annotation, Value> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result {

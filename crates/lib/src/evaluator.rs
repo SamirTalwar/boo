@@ -1,9 +1,9 @@
 use im::HashMap;
 
-use crate::ast::*;
 use crate::error::*;
 use crate::identifier::*;
 use crate::operation::*;
+use crate::parser::ast::*;
 use crate::primitive::*;
 use crate::span::*;
 
@@ -88,7 +88,7 @@ fn evaluate_infix<Annotation>(
 mod tests {
     use proptest::prelude::*;
 
-    use crate::ast::builders::*;
+    use crate::parser::builders::*;
     use crate::proptest_helpers::*;
 
     use super::*;

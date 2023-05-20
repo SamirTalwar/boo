@@ -1,7 +1,11 @@
-use crate::ast::*;
+pub mod ast;
+pub mod builders;
+pub mod generators;
+
 use crate::error::*;
 use crate::lexer::*;
 use crate::operation::*;
+use crate::parser::ast::*;
 use crate::primitive::*;
 use crate::span::*;
 
@@ -108,10 +112,10 @@ fn construct_infix(left: Expr<Span>, operation: Operation, right: Expr<Span>) ->
 mod tests {
     use proptest::prelude::*;
 
-    use crate::ast::builders::*;
     use crate::identifier::*;
     use crate::proptest_helpers::*;
 
+    use super::builders::*;
     use super::*;
 
     #[test]

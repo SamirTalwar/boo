@@ -2,13 +2,14 @@
 
 use proptest::prelude::*;
 
-use crate::ast::*;
+use crate::parser::ast::*;
+use crate::parser::generators;
 use crate::proptest_helpers::check;
 use crate::*;
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {
-    check(&ast::generators::arbitrary(), |input| {
+    check(&generators::arbitrary(), |input| {
         let rendered = format!("{}", input);
         let lexed = lex(&rendered)?;
         let parsed = parse(&lexed)?;

@@ -1,6 +1,8 @@
 #![cfg(test)]
 
 use super::*;
+
+use crate::identifier::Identifier;
 use crate::primitive::*;
 
 pub fn primitive<Annotation>(
