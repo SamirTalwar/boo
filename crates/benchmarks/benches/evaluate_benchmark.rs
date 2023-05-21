@@ -14,8 +14,9 @@ pub fn evaluate_benchmark(c: &mut Criterion) {
             .new_tree(&mut runner)
             .unwrap();
         let expr = tree.current();
-        group.bench_with_input(BenchmarkId::new("evaluate", &expr), &expr, |b, expr| {
-            b.iter(|| evaluate(black_box(expr.clone())))
+        let pool = pool_exprs(&expr);
+        group.bench_with_input(BenchmarkId::new("evaluate", &expr), &pool, |b, pool| {
+            b.iter(|| evaluate(black_box(pool)))
         });
     }
     group.finish();

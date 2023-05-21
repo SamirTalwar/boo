@@ -6,41 +6,48 @@ use im::HashMap;
 use crate::error::*;
 use crate::identifier::*;
 use crate::operation::*;
-use crate::parser;
+use crate::pooler;
+use crate::pooler::ast::ExprPool;
 use crate::primitive::*;
 
-pub fn evaluate(expr: parser::ast::Expr) -> Result<ast::Expr> {
-    evaluate_(expr, HashMap::new())
+pub fn evaluate(pool: &ExprPool) -> Result<ast::Expr> {
+    evaluate_(pool, pool.root(), HashMap::new())
 }
 
 pub fn evaluate_(
-    expr: parser::ast::Expr,
-    assignments: HashMap<Identifier, parser::ast::Expr>,
+    pool: &ExprPool,
+    expr_ref: pooler::ast::Expr,
+    assignments: HashMap<Identifier, pooler::ast::Expr>,
 ) -> Result<ast::Expr> {
+    let expr = pool.get(expr_ref);
     match &expr.value {
-        parser::ast::Expression::Primitive { value } => Ok(ast::Expression::Primitive {
+        pooler::ast::Expression::Primitive { value } => Ok(ast::Expression::Primitive {
             value: value.clone(),
         }
         .into()),
-        parser::ast::Expression::Identifier { name } => match assignments.get(name) {
-            Some(value) => evaluate_(value.clone(), assignments),
+        pooler::ast::Expression::Identifier { name } => match assignments.get(name) {
+            Some(value) => evaluate_(pool, value.clone(), assignments),
             None => Err(Error::UnknownVariable {
                 span: expr.span,
                 name: name.to_string(),
             }),
         },
-        parser::ast::Expression::Let { name, value, inner } => evaluate_(
+        pooler::ast::Expression::Let { name, value, inner } => evaluate_(
+            pool,
             inner.clone(),
             assignments.update(name.clone(), value.clone()),
         ),
-        parser::ast::Expression::Infix {
+        pooler::ast::Expression::Infix {
             operation,
-            left,
-            right,
-        } => match (&left.value, &right.value) {
+            left: left_ref,
+            right: right_ref,
+        } => match (
+            &pool.get(left_ref.clone()).value,
+            &pool.get(right_ref.clone()).value,
+        ) {
             (
-                parser::ast::Expression::Primitive { value: left_value },
-                parser::ast::Expression::Primitive { value: right_value },
+                pooler::ast::Expression::Primitive { value: left_value },
+                pooler::ast::Expression::Primitive { value: right_value },
             ) => Ok(evaluate_infix(
                 *operation,
                 ast::Expression::Primitive {
@@ -53,8 +60,8 @@ pub fn evaluate_(
                 .into(),
             )),
             _ => {
-                let left_result = evaluate_(left.clone(), assignments.clone())?;
-                let right_result = evaluate_(right.clone(), assignments)?;
+                let left_result = evaluate_(pool, left_ref.clone(), assignments.clone())?;
+                let right_result = evaluate_(pool, right_ref.clone(), assignments)?;
                 Ok(evaluate_infix(*operation, left_result, right_result))
             }
         },
@@ -90,18 +97,22 @@ fn evaluate_infix(operation: Operation, left: ast::Expr, right: ast::Expr) -> as
 mod tests {
     use proptest::prelude::*;
 
+    use crate::pooler::pool::pool_with;
     use crate::proptest_helpers::*;
-    use builders::*;
+    use crate::span::Spanned;
 
     use super::*;
+    use builders::*;
 
     #[test]
     fn test_interpreting_a_primitive() {
         check(&Primitive::arbitrary(), |value| {
-            let input = parser::builders::primitive(0, value.clone());
+            let input = pool_with(|pool| {
+                pooler::builders::primitive(pool, value.clone());
+            });
             let expected = primitive(value);
 
-            let actual = evaluate(input);
+            let actual = evaluate(&input);
 
             prop_assert_eq!(actual, Ok(expected));
             Ok(())
@@ -113,15 +124,14 @@ mod tests {
         check(
             &(Identifier::arbitrary(), Primitive::arbitrary()),
             |(name, value)| {
-                let input = parser::builders::assign(
-                    0,
-                    name.clone(),
-                    parser::builders::primitive(0, value.clone()),
-                    parser::builders::identifier(0, name),
-                );
+                let input = pool_with(|pool| {
+                    let value_ref = pooler::builders::primitive(pool, value.clone());
+                    let inner_ref = pooler::builders::identifier(pool, name.clone());
+                    pooler::builders::assign(pool, name.clone(), value_ref, inner_ref);
+                });
                 let expected = primitive(value);
 
-                let actual = evaluate(input);
+                let actual = evaluate(&input);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())
@@ -132,9 +142,14 @@ mod tests {
     #[test]
     fn test_interpreting_an_unknown_variable() {
         check(&Identifier::arbitrary(), |name| {
-            let input = parser::builders::identifier(5..10, name.clone());
+            let input = pool_with(|pool| {
+                pool.add(Spanned {
+                    span: (5..10).into(),
+                    value: pooler::ast::Expression::Identifier { name: name.clone() },
+                });
+            });
 
-            let actual = evaluate(input);
+            let actual = evaluate(&input);
 
             prop_assert_eq!(
                 actual,
@@ -170,14 +185,13 @@ mod tests {
             &(Integer::arbitrary(), Integer::arbitrary()),
             |(left, right)| {
                 let expected = primitive_integer(implementation(&left, &right));
-                let input = parser::builders::infix(
-                    0,
-                    operation,
-                    parser::builders::primitive_integer(0, left),
-                    parser::builders::primitive_integer(0, right),
-                );
+                let input = pool_with(|pool| {
+                    let left_ref = pooler::builders::primitive_integer(pool, left);
+                    let right_ref = pooler::builders::primitive_integer(pool, right);
+                    pooler::builders::infix(pool, operation, left_ref, right_ref);
+                });
 
-                let actual = evaluate(input);
+                let actual = evaluate(&input);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())
@@ -195,20 +209,17 @@ mod tests {
             ),
             |(name, variable, constant)| {
                 let sum = &variable + &constant;
-                let input = parser::builders::assign(
-                    0,
-                    name.clone(),
-                    parser::builders::primitive_integer(0, variable),
-                    parser::builders::infix(
-                        0,
-                        Operation::Add,
-                        parser::builders::identifier(0, name),
-                        parser::builders::primitive_integer(0, constant),
-                    ),
-                );
+                let input = pool_with(|pool| {
+                    let left_ref = pooler::builders::identifier(pool, name.clone());
+                    let right_ref = pooler::builders::primitive_integer(pool, constant);
+                    let value_ref = pooler::builders::primitive_integer(pool, variable);
+                    let inner_ref =
+                        pooler::builders::infix(pool, Operation::Add, left_ref, right_ref);
+                    pooler::builders::assign(pool, name.clone(), value_ref, inner_ref);
+                });
                 let expected = primitive_integer(sum);
 
-                let actual = evaluate(input);
+                let actual = evaluate(&input);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())

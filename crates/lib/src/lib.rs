@@ -15,3 +15,4 @@ mod roundtrip_test;
 pub use evaluator::evaluate;
 pub use lexer::lex;
 pub use parser::parse;
+pub use pooler::pool_exprs;

@@ -6,9 +6,10 @@ use crate::parser;
 use crate::span::Spanned;
 
 use ast::*;
+use pool::pool_with;
 
 pub fn pool_exprs(ast: &parser::ast::Expr) -> ExprPool {
-    with::<ExprPool>(|pool| {
+    pool_with(|pool| {
         add_expr(pool, ast);
     })
 }
@@ -56,12 +57,6 @@ pub fn add_expr(pool: &mut ExprPool, expr: &parser::ast::Expr) -> ExprRef {
     }
 }
 
-fn with<T: Default>(f: impl FnOnce(&mut T)) -> T {
-    let mut value = Default::default();
-    f(&mut value);
-    value
-}
-
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
@@ -78,7 +73,7 @@ mod tests {
     fn test_single_primitive() {
         check(&Integer::arbitrary(), |value| {
             let input = parser::builders::primitive_integer(0..0, value.clone());
-            let expected = with::<ExprPool>(|pool| {
+            let expected = pool_with(|pool| {
                 builders::primitive_integer(pool, value.clone());
             });
 
@@ -93,7 +88,7 @@ mod tests {
     fn test_single_identifier() {
         check(&Identifier::arbitrary(), |name| {
             let input = parser::builders::identifier(0..0, name.clone());
-            let expected = with::<ExprPool>(|pool| {
+            let expected = pool_with(|pool| {
                 builders::identifier(pool, name.clone());
             });
 
@@ -119,7 +114,7 @@ mod tests {
                     parser::builders::primitive_integer(0..0, value.clone()),
                     parser::builders::primitive_integer(0..0, inner.clone()),
                 );
-                let expected = with::<ExprPool>(|pool| {
+                let expected = pool_with(|pool| {
                     let value_ref = builders::primitive_integer(pool, value.clone());
                     let inner_ref = builders::primitive_integer(pool, inner.clone());
                     builders::assign(pool, name.clone(), value_ref, inner_ref);
@@ -148,7 +143,7 @@ mod tests {
                     parser::builders::primitive_integer(0..0, left.clone()),
                     parser::builders::primitive_integer(0..0, right.clone()),
                 );
-                let expected = with::<ExprPool>(|pool| {
+                let expected = pool_with(|pool| {
                     let left_ref = builders::primitive_integer(pool, left.clone());
                     let right_ref = builders::primitive_integer(pool, right.clone());
                     builders::infix(pool, operation, left_ref, right_ref);

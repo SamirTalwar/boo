@@ -53,3 +53,9 @@ impl<T> Default for Pool<T> {
         Self::new()
     }
 }
+
+pub fn pool_with<T>(f: impl FnOnce(&mut Pool<T>)) -> Pool<T> {
+    let mut value = Pool::new();
+    f(&mut value);
+    value
+}
