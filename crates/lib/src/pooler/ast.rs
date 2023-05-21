@@ -1,5 +1,10 @@
 use crate::ast;
+use crate::span::Spanned;
 
-use super::pool::PoolRef;
+use super::pool::*;
 
-ast::expr!((PoolRef<_>));
+ast::expr!((PoolRef<Spanned<_>>));
+
+pub type ExprPool = Pool<Spanned<Expression>>;
+
+pub type ExprRef = PoolRef<Spanned<Expression>>;

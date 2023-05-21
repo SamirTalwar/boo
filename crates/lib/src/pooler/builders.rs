@@ -1,14 +1,14 @@
 #![cfg(test)]
 
 use super::ast::*;
-use super::*;
 
 use crate::identifier::*;
 use crate::operation::*;
 use crate::primitive::*;
+use crate::span::Spanned;
 
 pub fn primitive(pool: &mut ExprPool, value: Primitive) -> ExprRef {
-    pool.add(Expression::Primitive { value })
+    pool.add(spanned(Expression::Primitive { value }))
 }
 
 pub fn primitive_integer(pool: &mut ExprPool, value: Integer) -> ExprRef {
@@ -16,7 +16,7 @@ pub fn primitive_integer(pool: &mut ExprPool, value: Integer) -> ExprRef {
 }
 
 pub fn identifier(pool: &mut ExprPool, name: Identifier) -> ExprRef {
-    pool.add(Expression::Identifier { name })
+    pool.add(spanned(Expression::Identifier { name }))
 }
 
 pub fn identifier_string(pool: &mut ExprPool, name: String) -> ExprRef {
@@ -24,7 +24,7 @@ pub fn identifier_string(pool: &mut ExprPool, name: String) -> ExprRef {
 }
 
 pub fn assign(pool: &mut ExprPool, name: Identifier, value: ExprRef, inner: ExprRef) -> ExprRef {
-    pool.add(Expression::Let { name, value, inner })
+    pool.add(spanned(Expression::Let { name, value, inner }))
 }
 
 pub fn assign_string(pool: &mut ExprPool, name: String, value: ExprRef, inner: ExprRef) -> ExprRef {
@@ -32,9 +32,16 @@ pub fn assign_string(pool: &mut ExprPool, name: String, value: ExprRef, inner: E
 }
 
 pub fn infix(pool: &mut ExprPool, operation: Operation, left: ExprRef, right: ExprRef) -> ExprRef {
-    pool.add(Expression::Infix {
+    pool.add(spanned(Expression::Infix {
         operation,
         left,
         right,
-    })
+    }))
+}
+
+fn spanned(value: Expression) -> Spanned<Expression> {
+    Spanned {
+        span: 0.into(),
+        value,
+    }
 }

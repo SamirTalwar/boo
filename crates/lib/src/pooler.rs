@@ -3,12 +3,9 @@ pub mod builders;
 pub mod pool;
 
 use crate::parser;
+use crate::span::Spanned;
 
-use pool::*;
-
-pub type ExprPool = Pool<ast::Expression>;
-
-pub type ExprRef = PoolRef<ast::Expression>;
+use ast::*;
 
 pub fn pool_exprs(ast: &parser::ast::Expr) -> ExprPool {
     with::<ExprPool>(|pool| {
@@ -18,19 +15,26 @@ pub fn pool_exprs(ast: &parser::ast::Expr) -> ExprPool {
 
 pub fn add_expr(pool: &mut ExprPool, expr: &parser::ast::Expr) -> ExprRef {
     match &expr.value {
-        parser::ast::Expression::Primitive { value } => pool.add(ast::Expression::Primitive {
-            value: value.clone(),
+        parser::ast::Expression::Primitive { value } => pool.add(Spanned {
+            span: expr.span,
+            value: Expression::Primitive {
+                value: value.clone(),
+            },
         }),
-        parser::ast::Expression::Identifier { name } => {
-            pool.add(ast::Expression::Identifier { name: name.clone() })
-        }
+        parser::ast::Expression::Identifier { name } => pool.add(Spanned {
+            span: expr.span,
+            value: Expression::Identifier { name: name.clone() },
+        }),
         parser::ast::Expression::Let { name, value, inner } => {
             let value_ref = add_expr(pool, value);
             let inner_ref = add_expr(pool, inner);
-            pool.add(ast::Expression::Let {
-                name: name.clone(),
-                value: value_ref,
-                inner: inner_ref,
+            pool.add(Spanned {
+                span: expr.span,
+                value: Expression::Let {
+                    name: name.clone(),
+                    value: value_ref,
+                    inner: inner_ref,
+                },
             })
         }
         parser::ast::Expression::Infix {
@@ -40,10 +44,13 @@ pub fn add_expr(pool: &mut ExprPool, expr: &parser::ast::Expr) -> ExprRef {
         } => {
             let left_ref = add_expr(pool, left);
             let right_ref = add_expr(pool, right);
-            pool.add(ast::Expression::Infix {
-                operation: *operation,
-                left: left_ref,
-                right: right_ref,
+            pool.add(Spanned {
+                span: expr.span,
+                value: Expression::Infix {
+                    operation: *operation,
+                    left: left_ref,
+                    right: right_ref,
+                },
             })
         }
     }
