@@ -1,6 +1,3 @@
-pub mod ast;
-pub mod builders;
-
 use im::HashMap;
 
 use crate::error::*;
@@ -10,7 +7,7 @@ use crate::pooler;
 use crate::pooler::ast::ExprPool;
 use crate::primitive::*;
 
-pub fn evaluate(pool: &ExprPool) -> Result<ast::Expr> {
+pub fn evaluate(pool: &ExprPool) -> Result<Primitive> {
     evaluate_(pool, pool.root(), HashMap::new())
 }
 
@@ -18,13 +15,10 @@ pub fn evaluate_(
     pool: &ExprPool,
     expr_ref: pooler::ast::Expr,
     assignments: HashMap<Identifier, pooler::ast::Expr>,
-) -> Result<ast::Expr> {
+) -> Result<Primitive> {
     let expr = pool.get(expr_ref);
     match &expr.value {
-        pooler::ast::Expression::Primitive { value } => Ok(ast::Expression::Primitive {
-            value: value.clone(),
-        }
-        .into()),
+        pooler::ast::Expression::Primitive { value } => Ok(value.clone()),
         pooler::ast::Expression::Identifier { name } => match assignments.get(name) {
             Some(value) => evaluate_(pool, value.clone(), assignments),
             None => Err(Error::UnknownVariable {
@@ -50,14 +44,8 @@ pub fn evaluate_(
                 pooler::ast::Expression::Primitive { value: right_value },
             ) => Ok(evaluate_infix(
                 *operation,
-                ast::Expression::Primitive {
-                    value: left_value.clone(),
-                }
-                .into(),
-                ast::Expression::Primitive {
-                    value: right_value.clone(),
-                }
-                .into(),
+                left_value.clone(),
+                right_value.clone(),
             )),
             _ => {
                 let left_result = evaluate_(pool, left_ref.clone(), assignments.clone())?;
@@ -68,29 +56,14 @@ pub fn evaluate_(
     }
 }
 
-fn evaluate_infix(operation: Operation, left: ast::Expr, right: ast::Expr) -> ast::Expr {
-    let value = match (left.as_ref(), right.as_ref()) {
-        (
-            ast::Expression::Primitive {
-                value: Primitive::Integer(left),
-            },
-            ast::Expression::Primitive {
-                value: Primitive::Integer(right),
-            },
-        ) => match operation {
-            Operation::Add => ast::Expression::Primitive {
-                value: Primitive::Integer(left + right),
-            },
-            Operation::Subtract => ast::Expression::Primitive {
-                value: Primitive::Integer(left - right),
-            },
-            Operation::Multiply => ast::Expression::Primitive {
-                value: Primitive::Integer(left * right),
-            },
+fn evaluate_infix(operation: Operation, left: Primitive, right: Primitive) -> Primitive {
+    match (&left, &right) {
+        (Primitive::Integer(left), Primitive::Integer(right)) => match operation {
+            Operation::Add => Primitive::Integer(left + right),
+            Operation::Subtract => Primitive::Integer(left - right),
+            Operation::Multiply => Primitive::Integer(left * right),
         },
-        _ => unreachable!(),
-    };
-    value.into()
+    }
 }
 
 #[cfg(test)]
@@ -102,7 +75,6 @@ mod tests {
     use crate::span::Spanned;
 
     use super::*;
-    use builders::*;
 
     #[test]
     fn test_interpreting_a_primitive() {
@@ -110,7 +82,7 @@ mod tests {
             let input = pool_with(|pool| {
                 pooler::builders::primitive(pool, value.clone());
             });
-            let expected = primitive(value);
+            let expected = value;
 
             let actual = evaluate(&input);
 
@@ -129,7 +101,7 @@ mod tests {
                     let inner_ref = pooler::builders::identifier(pool, name.clone());
                     pooler::builders::assign(pool, name.clone(), value_ref, inner_ref);
                 });
-                let expected = primitive(value);
+                let expected = value;
 
                 let actual = evaluate(&input);
 
@@ -184,7 +156,7 @@ mod tests {
         check(
             &(Integer::arbitrary(), Integer::arbitrary()),
             |(left, right)| {
-                let expected = primitive_integer(implementation(&left, &right));
+                let expected = Primitive::Integer(implementation(&left, &right));
                 let input = pool_with(|pool| {
                     let left_ref = pooler::builders::primitive_integer(pool, left);
                     let right_ref = pooler::builders::primitive_integer(pool, right);
@@ -217,7 +189,7 @@ mod tests {
                         pooler::builders::infix(pool, Operation::Add, left_ref, right_ref);
                     pooler::builders::assign(pool, name.clone(), value_ref, inner_ref);
                 });
-                let expected = primitive_integer(sum);
+                let expected = Primitive::Integer(sum);
 
                 let actual = evaluate(&input);
 
