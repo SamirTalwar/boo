@@ -14,10 +14,13 @@ pub fn evaluate_benchmark(c: &mut Criterion) {
             .new_tree(&mut runner)
             .unwrap();
         let expr = tree.current();
-        let pool = pool_exprs(&expr);
-        group.bench_with_input(BenchmarkId::new("evaluate", &expr), &pool, |b, pool| {
-            b.iter(|| evaluate(black_box(pool)))
-        });
+        let expr_string = format!("{}", expr);
+        let pool = pool_exprs(expr);
+        group.bench_with_input(
+            BenchmarkId::new("evaluate", &expr_string),
+            &pool,
+            |b, pool| b.iter(|| evaluate(black_box(pool))),
+        );
     }
     group.finish();
 }

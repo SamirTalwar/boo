@@ -8,31 +8,29 @@ use crate::span::Spanned;
 use ast::*;
 use pool::pool_with;
 
-pub fn pool_exprs(ast: &parser::ast::Expr) -> ExprPool {
+pub fn pool_exprs(ast: parser::ast::Expr) -> ExprPool {
     pool_with(|pool| {
-        add_expr(pool, ast);
+        add_expr(pool, *ast);
     })
 }
 
-pub fn add_expr(pool: &mut ExprPool, expr: &parser::ast::Expr) -> ExprRef {
-    match &expr.value {
+pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::ast::Expression>) -> ExprRef {
+    match expr.value {
         parser::ast::Expression::Primitive { value } => pool.add(Spanned {
             span: expr.span,
-            value: Expression::Primitive {
-                value: value.clone(),
-            },
+            value: Expression::Primitive { value },
         }),
         parser::ast::Expression::Identifier { name } => pool.add(Spanned {
             span: expr.span,
-            value: Expression::Identifier { name: name.clone() },
+            value: Expression::Identifier { name },
         }),
         parser::ast::Expression::Let { name, value, inner } => {
-            let value_ref = add_expr(pool, value);
-            let inner_ref = add_expr(pool, inner);
+            let value_ref = add_expr(pool, *value);
+            let inner_ref = add_expr(pool, *inner);
             pool.add(Spanned {
                 span: expr.span,
                 value: Expression::Let {
-                    name: name.clone(),
+                    name,
                     value: value_ref,
                     inner: inner_ref,
                 },
@@ -43,12 +41,12 @@ pub fn add_expr(pool: &mut ExprPool, expr: &parser::ast::Expr) -> ExprRef {
             left,
             right,
         } => {
-            let left_ref = add_expr(pool, left);
-            let right_ref = add_expr(pool, right);
+            let left_ref = add_expr(pool, *left);
+            let right_ref = add_expr(pool, *right);
             pool.add(Spanned {
                 span: expr.span,
                 value: Expression::Infix {
-                    operation: *operation,
+                    operation,
                     left: left_ref,
                     right: right_ref,
                 },
@@ -77,7 +75,7 @@ mod tests {
                 builders::primitive_integer(pool, value.clone());
             });
 
-            let actual = pool_exprs(&input);
+            let actual = pool_exprs(input);
 
             prop_assert_eq!(actual, expected);
             Ok(())
@@ -92,7 +90,7 @@ mod tests {
                 builders::identifier(pool, name.clone());
             });
 
-            let actual = pool_exprs(&input);
+            let actual = pool_exprs(input);
 
             prop_assert_eq!(actual, expected);
             Ok(())
@@ -120,7 +118,7 @@ mod tests {
                     builders::assign(pool, name.clone(), value_ref, inner_ref);
                 });
 
-                let actual = pool_exprs(&input);
+                let actual = pool_exprs(input);
 
                 prop_assert_eq!(actual, expected);
                 Ok(())
@@ -149,7 +147,7 @@ mod tests {
                     builders::infix(pool, operation, left_ref, right_ref);
                 });
 
-                let actual = pool_exprs(&input);
+                let actual = pool_exprs(input);
 
                 prop_assert_eq!(actual, expected);
                 Ok(())

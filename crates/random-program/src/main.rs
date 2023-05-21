@@ -21,7 +21,7 @@ fn main() -> anyhow::Result<()> {
     let expr = tree.current();
     println!("Expression:\n{}\n", expr);
 
-    let result = evaluate(&pool_exprs(&expr)).expect("Could not interpret the expression.");
+    let result = evaluate(&pool_exprs(expr)).expect("Could not interpret the expression.");
     println!("Result:\n{}", result);
 
     Ok(())
