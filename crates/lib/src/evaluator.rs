@@ -20,7 +20,7 @@ pub fn evaluate_<'a>(
     match &expr.value {
         pooler::ast::Expression::Primitive { value } => Ok(value.clone()),
         pooler::ast::Expression::Identifier { name } => match assignments.get(name) {
-            Some(value_ref) => evaluate_(pool, value_ref.clone(), assignments),
+            Some(value_ref) => evaluate_(pool, *value_ref, assignments),
             None => Err(Error::UnknownVariable {
                 span: expr.span,
                 name: name.to_string(),
@@ -30,19 +30,12 @@ pub fn evaluate_<'a>(
             name,
             value: value_ref,
             inner: inner_ref,
-        } => evaluate_(
-            pool,
-            inner_ref.clone(),
-            assignments.update(name, value_ref.clone()),
-        ),
+        } => evaluate_(pool, *inner_ref, assignments.update(name, *value_ref)),
         pooler::ast::Expression::Infix {
             operation,
             left: left_ref,
             right: right_ref,
-        } => match (
-            &pool.get(left_ref.clone()).value,
-            &pool.get(right_ref.clone()).value,
-        ) {
+        } => match (&pool.get(*left_ref).value, &pool.get(*right_ref).value) {
             (
                 pooler::ast::Expression::Primitive { value: left_value },
                 pooler::ast::Expression::Primitive { value: right_value },
@@ -52,8 +45,8 @@ pub fn evaluate_<'a>(
                 right_value.clone(),
             )),
             _ => {
-                let left_result = evaluate_(pool, left_ref.clone(), assignments.clone())?;
-                let right_result = evaluate_(pool, right_ref.clone(), assignments)?;
+                let left_result = evaluate_(pool, *left_ref, assignments.clone())?;
+                let right_result = evaluate_(pool, *right_ref, assignments)?;
                 Ok(evaluate_infix(*operation, left_result, right_result))
             }
         },

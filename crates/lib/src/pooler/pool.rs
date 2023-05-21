@@ -3,11 +3,19 @@ use std::marker::PhantomData;
 #[derive(Debug, PartialEq)]
 pub struct Pool<T>(Vec<T>);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PoolRef<T> {
     index: usize,
     marker: PhantomData<T>,
 }
+
+impl<T> Clone for PoolRef<T> {
+    fn clone(&self) -> Self {
+        PoolRef { ..*self }
+    }
+}
+
+impl<T> Copy for PoolRef<T> {}
 
 impl<T> std::fmt::Display for PoolRef<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
