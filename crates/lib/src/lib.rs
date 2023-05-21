@@ -5,6 +5,7 @@ pub mod identifier;
 pub mod lexer;
 pub mod operation;
 pub mod parser;
+pub mod pooler;
 pub mod primitive;
 pub mod span;
 
