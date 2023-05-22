@@ -1,25 +1,9 @@
 macro_rules! expr {
     ($wrapper:tt) => {
-        $crate::ast::expr! {
-            wrapper = $wrapper;
-            outer_type = Expr;
-            outer_type_id = Expr;
-            inner_type = Expression;
-            inner_type_id = Expression;
-        }
-    };
-
-    {
-      wrapper = $wrapper:ty ;
-      outer_type = $outer_type:ty ;
-      outer_type_id = $outer_type_id:ident ;
-      inner_type = $inner_type:ty ;
-      inner_type_id = $inner_type_id:ident ;
-    } => {
-        pub type $outer_type_id = boo_fill_hole::fill_hole!($wrapper, $inner_type);
+        pub type Expr = boo_fill_hole::fill_hole!($wrapper, Expression);
 
         #[derive(Debug, Clone, PartialEq, Eq)]
-        pub enum $inner_type_id {
+        pub enum Expression {
             Primitive {
                 value: $crate::primitive::Primitive,
             },
@@ -28,17 +12,17 @@ macro_rules! expr {
             },
             Let {
                 name: $crate::identifier::Identifier,
-                value: $outer_type,
-                inner: $outer_type,
+                value: Expr,
+                inner: Expr,
             },
             Infix {
                 operation: $crate::operation::Operation,
-                left: $outer_type,
-                right: $outer_type,
+                left: Expr,
+                right: Expr,
             },
         }
 
-        impl std::fmt::Display for $inner_type {
+        impl std::fmt::Display for Expression {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
                     Expression::Primitive { value } => value.fmt(f),
