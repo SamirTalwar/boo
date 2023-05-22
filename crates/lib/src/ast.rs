@@ -1,22 +1,26 @@
 macro_rules! expr {
     ($wrapper:tt) => {
+        use $crate::identifier::Identifier;
+        use $crate::operation::Operation;
+        use $crate::primitive::Primitive;
+
         pub type Expr = boo_fill_hole::fill_hole!($wrapper, Expression);
 
         #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum Expression {
             Primitive {
-                value: $crate::primitive::Primitive,
+                value: Primitive,
             },
             Identifier {
-                name: $crate::identifier::Identifier,
+                name: Identifier,
             },
             Assign {
-                name: $crate::identifier::Identifier,
+                name: Identifier,
                 value: Expr,
                 inner: Expr,
             },
             Infix {
-                operation: $crate::operation::Operation,
+                operation: Operation,
                 left: Expr,
                 right: Expr,
             },
