@@ -26,7 +26,7 @@ peg::parser! {
                 };
                 Spanned {
                     span: let_.annotation | inner.span,
-                    value: Expression::Let {
+                    value: Expression::Assign {
                         name: n.clone(),
                         value,
                         inner,

@@ -32,7 +32,7 @@ pub fn identifier_string(annotation: impl Into<Span>, name: String) -> Expr {
 pub fn assign(annotation: impl Into<Span>, name: Identifier, value: Expr, inner: Expr) -> Expr {
     Spanned {
         span: annotation.into(),
-        value: Expression::Let { name, value, inner },
+        value: Expression::Assign { name, value, inner },
     }
     .into()
 }

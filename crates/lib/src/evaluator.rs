@@ -26,7 +26,7 @@ pub fn evaluate_<'a>(
                 name: name.to_string(),
             }),
         },
-        pooler::ast::Expression::Let {
+        pooler::ast::Expression::Assign {
             name,
             value: value_ref,
             inner: inner_ref,

@@ -116,7 +116,7 @@ fn gen_nested(
                     (gen_value, gen_inner).prop_map(move |(value, inner)| {
                         Spanned {
                             span: 0.into(),
-                            value: Expression::Let {
+                            value: Expression::Assign {
                                 name: name.clone(),
                                 value,
                                 inner,

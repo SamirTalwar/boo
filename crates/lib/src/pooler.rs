@@ -24,12 +24,12 @@ pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::ast::Expression>) -> 
             span: expr.span,
             value: Expression::Identifier { name },
         }),
-        parser::ast::Expression::Let { name, value, inner } => {
+        parser::ast::Expression::Assign { name, value, inner } => {
             let value_ref = add_expr(pool, *value);
             let inner_ref = add_expr(pool, *inner);
             pool.add(Spanned {
                 span: expr.span,
-                value: Expression::Let {
+                value: Expression::Assign {
                     name,
                     value: value_ref,
                     inner: inner_ref,

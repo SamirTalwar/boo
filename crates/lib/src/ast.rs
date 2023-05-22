@@ -10,7 +10,7 @@ macro_rules! expr {
             Identifier {
                 name: $crate::identifier::Identifier,
             },
-            Let {
+            Assign {
                 name: $crate::identifier::Identifier,
                 value: Expr,
                 inner: Expr,
@@ -27,7 +27,7 @@ macro_rules! expr {
                 match self {
                     Expression::Primitive { value } => value.fmt(f),
                     Expression::Identifier { name } => name.fmt(f),
-                    Expression::Let { name, value, inner } => {
+                    Expression::Assign { name, value, inner } => {
                         write!(f, "let {} = ({}) in ({})", name, value, inner)
                     }
                     Expression::Infix {

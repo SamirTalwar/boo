@@ -24,7 +24,7 @@ pub fn identifier_string(pool: &mut ExprPool, name: String) -> ExprRef {
 }
 
 pub fn assign(pool: &mut ExprPool, name: Identifier, value: ExprRef, inner: ExprRef) -> ExprRef {
-    pool.add(spanned(Expression::Let { name, value, inner }))
+    pool.add(spanned(Expression::Assign { name, value, inner }))
 }
 
 pub fn assign_string(pool: &mut ExprPool, name: String, value: ExprRef, inner: ExprRef) -> ExprRef {

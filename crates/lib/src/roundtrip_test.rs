@@ -43,13 +43,13 @@ fn eq_ignoring_span(left: &Expr, right: &Expr) -> bool {
             },
         ) => left_name == right_name,
         (
-            Expression::Let {
+            Expression::Assign {
                 name: left_name,
                 value: left_value,
                 inner: left_inner,
                 ..
             },
-            Expression::Let {
+            Expression::Assign {
                 name: right_name,
                 value: right_value,
                 inner: right_inner,
