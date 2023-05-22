@@ -5,6 +5,11 @@ edition = "2021"
 
 autobenches = false
 
+[[bin]]
+name = "evaluate-benchmark-list"
+path = "benches/evaluate_benchmark.rs"
+bench = false
+
 [[bench]]
 name = "benchmarks"
 harness = false
