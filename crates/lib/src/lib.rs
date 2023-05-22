@@ -8,6 +8,7 @@ pub mod parser;
 pub mod pooler;
 pub mod primitive;
 pub mod span;
+pub mod thunk;
 
 mod proptest_helpers;
 mod roundtrip_test;
