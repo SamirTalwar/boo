@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use im::HashMap;
 
 use crate::error::*;
@@ -8,17 +10,17 @@ use crate::pooler::ast::ExprPool;
 use crate::primitive::*;
 
 pub fn evaluate(pool: &ExprPool) -> Result<Primitive> {
-    evaluate_(pool, pool.root(), HashMap::new())
+    evaluate_(pool, pool.root(), HashMap::new()).map(Cow::into_owned)
 }
 
 pub fn evaluate_<'a>(
     pool: &'a ExprPool,
     expr_ref: pooler::ast::Expr,
     assignments: HashMap<&'a Identifier, pooler::ast::Expr>,
-) -> Result<Primitive> {
+) -> Result<Cow<'a, Primitive>> {
     let expr = pool.get(expr_ref);
     match &expr.value {
-        pooler::ast::Expression::Primitive { value } => Ok(value.clone()),
+        pooler::ast::Expression::Primitive { value } => Ok(Cow::Borrowed(value)),
         pooler::ast::Expression::Identifier { name } => match assignments.get(name) {
             Some(value_ref) => evaluate_(pool, *value_ref, assignments),
             None => Err(Error::UnknownVariable {
@@ -39,21 +41,29 @@ pub fn evaluate_<'a>(
             (
                 pooler::ast::Expression::Primitive { value: left_value },
                 pooler::ast::Expression::Primitive { value: right_value },
-            ) => Ok(evaluate_infix(
+            ) => Ok(Cow::Owned(evaluate_infix(
                 *operation,
-                left_value.clone(),
-                right_value.clone(),
-            )),
+                left_value,
+                right_value,
+            ))),
             _ => {
                 let left_result = evaluate_(pool, *left_ref, assignments.clone())?;
                 let right_result = evaluate_(pool, *right_ref, assignments)?;
-                Ok(evaluate_infix(*operation, left_result, right_result))
+                Ok(Cow::Owned(evaluate_infix(
+                    *operation,
+                    &left_result,
+                    &right_result,
+                )))
             }
         },
     }
 }
 
-fn evaluate_infix(operation: Operation, left: Primitive, right: Primitive) -> Primitive {
+fn evaluate_infix<'a>(
+    operation: Operation,
+    left: &'a Primitive,
+    right: &'a Primitive,
+) -> Primitive {
     match (&left, &right) {
         (Primitive::Integer(left), Primitive::Integer(right)) => match operation {
             Operation::Add => Primitive::Integer(left + right),
