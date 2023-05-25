@@ -3,7 +3,7 @@
 use std::rc::Rc;
 
 use im::HashSet;
-use proptest::strategy::{BoxedStrategy, Strategy};
+use proptest::prelude::*;
 
 use crate::identifier::Identifier;
 
@@ -102,10 +102,9 @@ fn gen_nested(
         });
 
         choices.push({
-            let conf = config;
-            let bound = bound_identifiers;
-            conf.gen_identifier
-                .clone()
+            let conf = config.clone();
+            let bound = bound_identifiers.clone();
+            gen_unused_identifier(config, bound_identifiers)
                 .prop_flat_map(move |name| {
                     let gen_value = gen_nested(conf.clone(), next_start..next_end, bound.clone());
                     let gen_inner = gen_nested(
@@ -130,4 +129,18 @@ fn gen_nested(
     }
 
     proptest::strategy::Union::new(choices)
+}
+
+fn gen_unused_identifier(
+    config: Rc<ExprGenConfig>,
+    bound_identifiers: HashSet<Identifier>,
+) -> impl Strategy<Value = Identifier> {
+    let conf = config.clone();
+    config.gen_identifier.clone().prop_flat_map(move |name| {
+        if bound_identifiers.contains(&name) {
+            gen_unused_identifier(conf.clone(), bound_identifiers.clone()).boxed()
+        } else {
+            Just(name).boxed()
+        }
+    })
 }
