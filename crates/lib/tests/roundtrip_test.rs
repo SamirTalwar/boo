@@ -1,11 +1,9 @@
-#![cfg(test)]
-
 use proptest::prelude::*;
 
-use crate::parser::ast::*;
-use crate::parser::generators;
-use crate::proptest_helpers::check;
-use crate::*;
+use boo::parser::ast::*;
+use boo::parser::generators;
+use boo::*;
+use boo_test_helpers::proptest::*;
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {

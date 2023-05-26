@@ -112,8 +112,9 @@ fn construct_infix(left: Expr, operation: Operation, right: Expr) -> Expr {
 mod tests {
     use proptest::prelude::*;
 
+    use boo_test_helpers::proptest::*;
+
     use crate::identifier::*;
-    use crate::proptest_helpers::*;
 
     use super::builders::*;
     use super::*;

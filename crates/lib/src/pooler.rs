@@ -59,11 +59,12 @@ pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::ast::Expression>) -> 
 mod tests {
     use proptest::prelude::*;
 
+    use boo_test_helpers::proptest::*;
+
     use crate::identifier::*;
     use crate::operation::*;
     use crate::parser;
     use crate::primitive::*;
-    use crate::proptest_helpers::check;
 
     use super::*;
 

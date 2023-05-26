@@ -61,7 +61,7 @@ pub fn lex(input: &str) -> Result<Vec<AnnotatedToken<Span>>> {
 mod tests {
     use proptest::prelude::*;
 
-    use crate::proptest_helpers::*;
+    use boo_test_helpers::proptest::*;
 
     use super::*;
 

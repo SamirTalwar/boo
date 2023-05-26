@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use proptest::strategy::Strategy;
 use proptest::test_runner::{TestCaseResult, TestRunner};
 

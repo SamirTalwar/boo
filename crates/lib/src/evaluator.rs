@@ -86,8 +86,9 @@ fn evaluate_infix<'a>(
 mod tests {
     use proptest::prelude::*;
 
+    use boo_test_helpers::proptest::*;
+
     use crate::pooler::pool::pool_with;
-    use crate::proptest_helpers::*;
     use crate::span::Spanned;
 
     use super::*;

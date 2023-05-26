@@ -10,9 +10,6 @@ pub mod primitive;
 pub mod span;
 pub mod thunk;
 
-mod proptest_helpers;
-mod roundtrip_test;
-
 pub use evaluator::evaluate;
 pub use lexer::lex;
 pub use parser::parse;

@@ -155,7 +155,7 @@ impl Integer {
 mod tests {
     use proptest::prelude::*;
 
-    use crate::proptest_helpers::*;
+    use boo_test_helpers::proptest::*;
 
     use super::*;
 

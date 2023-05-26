@@ -146,6 +146,7 @@ name = "boo"
 version = "0.1.0"
 dependencies = [
  "boo-fill-hole",
+ "boo-test-helpers",
  "im",
  "lazy_static",
  "logos",
@@ -191,6 +192,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "boo",
+ "proptest",
+]
+
+[[package]]
+name = "boo-test-helpers"
+version = "0.1.0"
+dependencies = [
  "proptest",
 ]
 

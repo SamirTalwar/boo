@@ -6,4 +6,5 @@ members = [
   "crates/interpreter",
   "crates/lib",
   "crates/random-program",
+  "crates/test-helpers",
 ]
