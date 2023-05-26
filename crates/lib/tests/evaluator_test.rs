@@ -17,15 +17,15 @@ fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
 
         match (expected, actual) {
             (
-                naive_evaluator::Evaluated::Primitive(expected),
-                evaluator::Evaluated::Primitive(actual),
+                parser::ast::Expression::Primitive(expected),
+                pooler::ast::Expression::Primitive(actual),
             ) => {
-                prop_assert_eq!(expected, actual.into_owned());
+                prop_assert_eq!(expected, actual);
             }
-            // (expected, actual) => panic!(
-            //     "Test failed: assertion failed: `(left == right)`\n  left: `{}`,\n  right: `{}`",
-            //     expected, actual
-            // ),
+            (expected, actual) => panic!(
+                "Test failed: assertion failed: `(left == right)`\n  left:   `{}`,\n  right:  `{}`",
+                expected, actual
+            ),
         }
         Ok(())
     })
