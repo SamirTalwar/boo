@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::sync::Arc;
 
 use im::HashMap;
 
@@ -8,6 +9,7 @@ use crate::operation::*;
 use crate::pooler;
 use crate::pooler::ast::ExprPool;
 use crate::primitive::*;
+use crate::thunk::Thunk;
 
 pub fn evaluate(pool: &ExprPool) -> Result<Primitive> {
     evaluate_(pool, pool.root(), HashMap::new()).map(Cow::into_owned)
@@ -16,13 +18,16 @@ pub fn evaluate(pool: &ExprPool) -> Result<Primitive> {
 pub fn evaluate_<'a>(
     pool: &'a ExprPool,
     expr_ref: pooler::ast::Expr,
-    assignments: HashMap<&'a Identifier, pooler::ast::Expr>,
+    assignments: HashMap<&'a Identifier, Thunk<pooler::ast::Expr, Result<Cow<'a, Primitive>>>>,
 ) -> Result<Cow<'a, Primitive>> {
     let expr = pool.get(expr_ref);
     match &expr.value {
         pooler::ast::Expression::Primitive { value } => Ok(Cow::Borrowed(value)),
-        pooler::ast::Expression::Identifier { name } => match assignments.get(name) {
-            Some(value_ref) => evaluate_(pool, *value_ref, assignments),
+        pooler::ast::Expression::Identifier { name } => match assignments.clone().get_mut(name) {
+            Some(value_ref) => {
+                let result = value_ref.resolve_by(|r| evaluate_(pool, *r, assignments));
+                Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
+            }
             None => Err(Error::UnknownVariable {
                 span: expr.span,
                 name: name.to_string(),
@@ -32,7 +37,11 @@ pub fn evaluate_<'a>(
             name,
             value: value_ref,
             inner: inner_ref,
-        } => evaluate_(pool, *inner_ref, assignments.update(name, *value_ref)),
+        } => evaluate_(
+            pool,
+            *inner_ref,
+            assignments.update(name, Thunk::unresolved(*value_ref)),
+        ),
         pooler::ast::Expression::Infix {
             operation,
             left: left_ref,
