@@ -94,7 +94,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_interpreting_a_primitive() {
+    fn test_evaluating_a_primitive() {
         check(&Primitive::arbitrary(), |value| {
             let input = pool_with(|pool| {
                 builders::primitive(pool, value.clone());
@@ -109,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interpreting_assignment() {
+    fn test_evaluating_assignment() {
         check(
             &(Identifier::arbitrary(), Primitive::arbitrary()),
             |(name, value)| {
@@ -129,7 +129,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interpreting_an_unknown_variable() {
+    fn test_evaluating_an_unknown_variable() {
         check(&Identifier::arbitrary(), |name| {
             let input = pool_with(|pool| {
                 pool.add(Spanned {
@@ -152,21 +152,21 @@ mod tests {
     }
 
     #[test]
-    fn test_interpreting_addition() {
-        test_interpreting_an_operation(Operation::Add, |x, y| x + y)
+    fn test_evaluating_addition() {
+        test_evaluating_an_operation(Operation::Add, |x, y| x + y)
     }
 
     #[test]
-    fn test_interpreting_subtraction() {
-        test_interpreting_an_operation(Operation::Subtract, |x, y| x - y)
+    fn test_evaluating_subtraction() {
+        test_evaluating_an_operation(Operation::Subtract, |x, y| x - y)
     }
 
     #[test]
-    fn test_interpreting_multiplication() {
-        test_interpreting_an_operation(Operation::Multiply, |x, y| x * y)
+    fn test_evaluating_multiplication() {
+        test_evaluating_an_operation(Operation::Multiply, |x, y| x * y)
     }
 
-    fn test_interpreting_an_operation(
+    fn test_evaluating_an_operation(
         operation: Operation,
         implementation: impl Fn(&Integer, &Integer) -> Integer,
     ) {
@@ -189,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interpreting_variable_use() {
+    fn test_evaluating_variable_use() {
         check(
             &(
                 Identifier::arbitrary(),
