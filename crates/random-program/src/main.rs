@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::time::Instant;
 
 use anyhow::anyhow;
 use proptest::prelude::*;
@@ -21,8 +22,12 @@ fn main() -> anyhow::Result<()> {
     let expr = tree.current();
     println!("Expression:\n{}\n", expr);
 
+    let start_time = Instant::now();
     let result = evaluate(&pool_exprs(expr)).expect("Could not interpret the expression.");
+    let end_time = Instant::now();
     println!("Result:\n{}", result);
+
+    println!("\nEvaluation took {:?}.", end_time - start_time);
 
     Ok(())
 }
