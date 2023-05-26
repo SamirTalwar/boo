@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::fmt::Display;
 use std::sync::Arc;
 
 use im::HashMap;
@@ -10,18 +11,31 @@ use crate::pooler::ast::*;
 use crate::primitive::*;
 use crate::thunk::Thunk;
 
-pub fn evaluate(pool: &ExprPool) -> Result<Primitive> {
-    evaluate_(pool, pool.root(), HashMap::new()).map(Cow::into_owned)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Evaluated<'a> {
+    Primitive(Cow<'a, Primitive>),
+}
+
+impl<'a> Display for Evaluated<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Primitive(primitive) => primitive.as_ref().fmt(f),
+        }
+    }
+}
+
+pub fn evaluate(pool: &ExprPool) -> Result<Evaluated<'_>> {
+    evaluate_(pool, pool.root(), HashMap::new())
 }
 
 fn evaluate_<'a>(
     pool: &'a ExprPool,
     expr_ref: Expr,
-    assignments: HashMap<&'a Identifier, Thunk<Expr, Result<Cow<'a, Primitive>>>>,
-) -> Result<Cow<'a, Primitive>> {
+    assignments: HashMap<&'a Identifier, Thunk<Expr, Result<Evaluated<'a>>>>,
+) -> Result<Evaluated<'a>> {
     let expr = pool.get(expr_ref);
     match &expr.value {
-        Expression::Primitive { value } => Ok(Cow::Borrowed(value)),
+        Expression::Primitive { value } => Ok(Evaluated::Primitive(Cow::Borrowed(value))),
         Expression::Identifier { name } => match assignments.clone().get_mut(name) {
             Some(value_ref) => {
                 let result = value_ref.resolve_by(|r| evaluate_(pool, *r, assignments));
@@ -45,39 +59,31 @@ fn evaluate_<'a>(
             operation,
             left: left_ref,
             right: right_ref,
-        } => match (&pool.get(*left_ref).value, &pool.get(*right_ref).value) {
-            (
-                Expression::Primitive { value: left_value },
-                Expression::Primitive { value: right_value },
-            ) => Ok(Cow::Owned(evaluate_infix(
-                *operation,
-                left_value,
-                right_value,
-            ))),
-            _ => {
-                let left_result = evaluate_(pool, *left_ref, assignments.clone())?;
-                let right_result = evaluate_(pool, *right_ref, assignments)?;
-                Ok(Cow::Owned(evaluate_infix(
-                    *operation,
-                    &left_result,
-                    &right_result,
-                )))
-            }
-        },
+        } => {
+            let left_result = evaluate_(pool, *left_ref, assignments.clone())?;
+            let right_result = evaluate_(pool, *right_ref, assignments)?;
+            Ok(evaluate_infix(*operation, left_result, right_result))
+        }
     }
 }
 
 fn evaluate_infix<'a>(
     operation: Operation,
-    left: &'a Primitive,
-    right: &'a Primitive,
-) -> Primitive {
+    left: Evaluated<'a>,
+    right: Evaluated<'a>,
+) -> Evaluated<'a> {
     match (&left, &right) {
-        (Primitive::Integer(left), Primitive::Integer(right)) => match operation {
-            Operation::Add => Primitive::Integer(left + right),
-            Operation::Subtract => Primitive::Integer(left - right),
-            Operation::Multiply => Primitive::Integer(left * right),
-        },
+        (Evaluated::Primitive(left), Evaluated::Primitive(right)) => {
+            match (left.as_ref(), right.as_ref()) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    Evaluated::Primitive(Cow::Owned(match operation {
+                        Operation::Add => Primitive::Integer(left + right),
+                        Operation::Subtract => Primitive::Integer(left - right),
+                        Operation::Multiply => Primitive::Integer(left * right),
+                    }))
+                }
+            }
+        }
     }
 }
 
@@ -99,7 +105,7 @@ mod tests {
             let input = pool_with(|pool| {
                 builders::primitive(pool, value.clone());
             });
-            let expected = value;
+            let expected = Evaluated::Primitive(Cow::Owned(value));
 
             let actual = evaluate(&input);
 
@@ -118,7 +124,7 @@ mod tests {
                     let inner_ref = builders::identifier(pool, name.clone());
                     builders::assign(pool, name.clone(), value_ref, inner_ref);
                 });
-                let expected = value;
+                let expected = Evaluated::Primitive(Cow::Owned(value));
 
                 let actual = evaluate(&input);
 
@@ -173,7 +179,9 @@ mod tests {
         check(
             &(Integer::arbitrary(), Integer::arbitrary()),
             |(left, right)| {
-                let expected = Primitive::Integer(implementation(&left, &right));
+                let expected = Evaluated::Primitive(Cow::Owned(Primitive::Integer(
+                    implementation(&left, &right),
+                )));
                 let input = pool_with(|pool| {
                     let left_ref = builders::primitive_integer(pool, left);
                     let right_ref = builders::primitive_integer(pool, right);
@@ -205,7 +213,7 @@ mod tests {
                     let inner_ref = builders::infix(pool, Operation::Add, left_ref, right_ref);
                     builders::assign(pool, name.clone(), value_ref, inner_ref);
                 });
-                let expected = Primitive::Integer(sum);
+                let expected = Evaluated::Primitive(Cow::Owned(Primitive::Integer(sum)));
 
                 let actual = evaluate(&input);
 

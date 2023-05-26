@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use im::HashMap;
 
 use boo::error::*;
@@ -6,14 +8,27 @@ use boo::operation::*;
 use boo::parser::ast::*;
 use boo::primitive::*;
 
-pub fn naively_evaluate(expr: Expr) -> Result<Primitive> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Evaluated {
+    Primitive(Primitive),
+}
+
+impl Display for Evaluated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Primitive(primitive) => primitive.fmt(f),
+        }
+    }
+}
+
+pub fn naively_evaluate(expr: Expr) -> Result<Evaluated> {
     evaluate_(expr, HashMap::new())
 }
 
 #[allow(clippy::boxed_local)]
-fn evaluate_(expr: Expr, assignments: HashMap<Identifier, Expr>) -> Result<Primitive> {
+fn evaluate_(expr: Expr, assignments: HashMap<Identifier, Expr>) -> Result<Evaluated> {
     match &expr.value {
-        Expression::Primitive { value } => Ok(value.clone()),
+        Expression::Primitive { value } => Ok(Evaluated::Primitive(value.clone())),
         Expression::Identifier { name } => match assignments.get(name) {
             Some(value) => evaluate_(value.clone(), assignments),
             None => Err(Error::UnknownVariable {
@@ -29,26 +44,23 @@ fn evaluate_(expr: Expr, assignments: HashMap<Identifier, Expr>) -> Result<Primi
             operation,
             left,
             right,
-        } => match (&left.value, &right.value) {
-            (
-                Expression::Primitive { value: left_value },
-                Expression::Primitive { value: right_value },
-            ) => Ok(evaluate_infix(*operation, left_value, right_value)),
-            _ => {
-                let left_result = evaluate_(left.clone(), assignments.clone())?;
-                let right_result = evaluate_(right.clone(), assignments)?;
-                Ok(evaluate_infix(*operation, &left_result, &right_result))
-            }
-        },
+        } => {
+            let left_result = evaluate_(left.clone(), assignments.clone())?;
+            let right_result = evaluate_(right.clone(), assignments)?;
+            Ok(evaluate_infix(*operation, &left_result, &right_result))
+        }
     }
 }
 
-fn evaluate_infix(operation: Operation, left: &Primitive, right: &Primitive) -> Primitive {
+fn evaluate_infix(operation: Operation, left: &Evaluated, right: &Evaluated) -> Evaluated {
     match (left, right) {
-        (Primitive::Integer(left), Primitive::Integer(right)) => match operation {
+        (
+            Evaluated::Primitive(Primitive::Integer(left)),
+            Evaluated::Primitive(Primitive::Integer(right)),
+        ) => Evaluated::Primitive(match operation {
             Operation::Add => Primitive::Integer(left + right),
             Operation::Subtract => Primitive::Integer(left - right),
             Operation::Multiply => Primitive::Integer(left * right),
-        },
+        }),
     }
 }

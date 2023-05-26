@@ -23,7 +23,8 @@ fn main() -> anyhow::Result<()> {
     println!("Expression:\n{}\n", expr);
 
     let start_time = Instant::now();
-    let result = evaluate(&pool_exprs(expr)).expect("Could not interpret the expression.");
+    let pool = pool_exprs(expr);
+    let result = evaluate(&pool).expect("Could not interpret the expression.");
     let end_time = Instant::now();
     println!("Result:\n{}", result);
 
