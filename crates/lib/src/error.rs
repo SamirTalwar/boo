@@ -27,6 +27,13 @@ pub enum Error {
         span: Span,
         name: String,
     },
+
+    #[error("Could not apply the function")]
+    #[diagnostic(code(boo::interpret::unknown_variable))]
+    InvalidFunctionApplication {
+        #[label("invalid function")]
+        span: Span,
+    },
 }
 
 fn expected_one_of(strings: &[&str]) -> String {

@@ -36,6 +36,27 @@ pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::ast::Expression>) -> 
                 }),
             })
         }
+        parser::ast::Expression::Function(parser::ast::Function { parameter, body }) => {
+            let body_ref = add_expr(pool, *body);
+            pool.add(Spanned {
+                span: expr.span,
+                value: Expression::Function(Function {
+                    parameter,
+                    body: body_ref,
+                }),
+            })
+        }
+        parser::ast::Expression::Apply(parser::ast::Apply { function, argument }) => {
+            let function_ref = add_expr(pool, *function);
+            let argument_ref = add_expr(pool, *argument);
+            pool.add(Spanned {
+                span: expr.span,
+                value: Expression::Apply(Apply {
+                    function: function_ref,
+                    argument: argument_ref,
+                }),
+            })
+        }
         parser::ast::Expression::Infix(parser::ast::Infix {
             operation,
             left,
@@ -117,6 +138,76 @@ mod tests {
                     let value_ref = builders::primitive_integer(pool, value.clone());
                     let inner_ref = builders::primitive_integer(pool, inner.clone());
                     builders::assign(pool, name.clone(), value_ref, inner_ref);
+                });
+
+                let actual = pool_exprs(input);
+
+                prop_assert_eq!(actual, expected);
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_functions() {
+        check(
+            &(Identifier::arbitrary(), Integer::arbitrary()),
+            |(parameter, modifier)| {
+                let input = parser::builders::function(
+                    0..0,
+                    parameter.clone(),
+                    parser::builders::infix(
+                        0..0,
+                        Operation::Add,
+                        parser::builders::identifier(0..0, parameter.clone()),
+                        parser::builders::primitive_integer(0..0, modifier.clone()),
+                    ),
+                );
+                let expected = pool_with(|pool| {
+                    let left_ref = builders::identifier(pool, parameter.clone());
+                    let right_ref = builders::primitive_integer(pool, modifier.clone());
+                    let add_ref = builders::infix(pool, Operation::Add, left_ref, right_ref);
+                    builders::function(pool, parameter.clone(), add_ref);
+                });
+
+                let actual = pool_exprs(input);
+
+                prop_assert_eq!(actual, expected);
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_function_application() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(parameter, modifier, value)| {
+                let input = parser::builders::apply(
+                    0..0,
+                    parser::builders::function(
+                        0..0,
+                        parameter.clone(),
+                        parser::builders::infix(
+                            0..0,
+                            Operation::Add,
+                            parser::builders::identifier(0..0, parameter.clone()),
+                            parser::builders::primitive_integer(0..0, modifier.clone()),
+                        ),
+                    ),
+                    parser::builders::primitive_integer(0..0, value.clone()),
+                );
+                let expected = pool_with(|pool| {
+                    let left_ref = builders::identifier(pool, parameter.clone());
+                    let right_ref = builders::primitive_integer(pool, modifier.clone());
+                    let add_ref = builders::infix(pool, Operation::Add, left_ref, right_ref);
+                    let function_ref = builders::function(pool, parameter.clone(), add_ref);
+                    let argument_ref = builders::primitive_integer(pool, value.clone());
+                    builders::apply(pool, function_ref, argument_ref);
                 });
 
                 let actual = pool_exprs(input);

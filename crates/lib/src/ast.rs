@@ -11,6 +11,8 @@ macro_rules! expr {
             Primitive(Primitive),
             Identifier(Identifier),
             Assign(Assign),
+            Function(Function),
+            Apply(Apply),
             Infix(Infix),
         }
 
@@ -19,6 +21,18 @@ macro_rules! expr {
             pub name: Identifier,
             pub value: Expr,
             pub inner: Expr,
+        }
+
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub struct Function {
+            pub parameter: Identifier,
+            pub body: Expr,
+        }
+
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub struct Apply {
+            pub function: Expr,
+            pub argument: Expr,
         }
 
         #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,6 +49,12 @@ macro_rules! expr {
                     Expression::Identifier(name) => name.fmt(f),
                     Expression::Assign(Assign { name, value, inner }) => {
                         write!(f, "let {} = ({}) in ({})", name, value, inner)
+                    }
+                    Expression::Function(Function { parameter, body }) => {
+                        write!(f, "fn {} -> {}", parameter, body)
+                    }
+                    Expression::Apply(Apply { function, argument }) => {
+                        write!(f, "({}) ({})", function, argument)
                     }
                     Expression::Infix(Infix {
                         operation,

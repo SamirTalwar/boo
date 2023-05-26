@@ -18,8 +18,12 @@ pub enum Token<'a> {
     Let,
     #[token(r"in")]
     In,
+    #[token(r"fn")]
+    Fn,
     #[token(r"=")]
     Assign,
+    #[token(r"->")]
+    Arrow,
     #[regex(r"-?[0-9](_?[0-9])*", |token|
         str::replace(token.slice(), "_", "").parse::<Integer>().ok()
     )]
@@ -331,6 +335,42 @@ mod tests {
                 AnnotatedToken {
                     annotation: (45..53).into(),
                     token: Token::Identifier(Identifier::from_str("quantity").unwrap()),
+                },
+            ])
+        );
+    }
+
+    #[test]
+    fn test_lexing_a_function() {
+        let input = "fn x -> x + 1";
+        let tokens = lex(input);
+
+        assert_eq!(
+            tokens,
+            Ok(vec![
+                AnnotatedToken {
+                    annotation: (0..2).into(),
+                    token: Token::Fn,
+                },
+                AnnotatedToken {
+                    annotation: (3..4).into(),
+                    token: Token::Identifier(Identifier::from_str("x").unwrap()),
+                },
+                AnnotatedToken {
+                    annotation: (5..7).into(),
+                    token: Token::Arrow,
+                },
+                AnnotatedToken {
+                    annotation: (8..9).into(),
+                    token: Token::Identifier(Identifier::from_str("x").unwrap()),
+                },
+                AnnotatedToken {
+                    annotation: (10..11).into(),
+                    token: Token::Operator("+"),
+                },
+                AnnotatedToken {
+                    annotation: (12..13).into(),
+                    token: Token::Integer(1.into()),
                 },
             ])
         );

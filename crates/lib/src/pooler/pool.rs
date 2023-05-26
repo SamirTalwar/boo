@@ -63,7 +63,13 @@ impl<T> Default for Pool<T> {
 }
 
 pub fn pool_with<T>(f: impl FnOnce(&mut Pool<T>)) -> Pool<T> {
-    let mut value = Pool::new();
-    f(&mut value);
-    value
+    let mut new_pool = Pool::new();
+    f(&mut new_pool);
+    new_pool
+}
+
+pub fn leaky_pool_with<T, Leak>(f: impl FnOnce(&mut Pool<T>) -> Leak) -> (Pool<T>, Leak) {
+    let mut new_pool = Pool::new();
+    let leak = f(&mut new_pool);
+    (new_pool, leak)
 }

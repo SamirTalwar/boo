@@ -41,6 +41,22 @@ pub fn assign_string(annotation: impl Into<Span>, name: String, value: Expr, inn
     assign(annotation, Identifier::new(name).unwrap(), value, inner)
 }
 
+pub fn function(annotation: impl Into<Span>, parameter: Identifier, body: Expr) -> Expr {
+    Spanned {
+        span: annotation.into(),
+        value: Expression::Function(Function { parameter, body }),
+    }
+    .into()
+}
+
+pub fn apply(annotation: impl Into<Span>, function: Expr, argument: Expr) -> Expr {
+    Spanned {
+        span: annotation.into(),
+        value: Expression::Apply(Apply { function, argument }),
+    }
+    .into()
+}
+
 pub fn infix(annotation: impl Into<Span>, operation: Operation, left: Expr, right: Expr) -> Expr {
     Spanned {
         span: annotation.into(),

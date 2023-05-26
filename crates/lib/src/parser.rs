@@ -14,6 +14,23 @@ peg::parser! {
         pub rule root() -> Expr = e:expr() { e }
 
         pub rule expr() -> Expr = precedence! {
+            fn_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Fn }] } / expected!("fn"))
+            parameter:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] } / expected!("an identifier"))
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::Arrow }] } / expected!("->"))
+            body:expr() {
+                let p = match &parameter.token {
+                    Token::Identifier(parameter) => parameter,
+                    _ => unreachable!(),
+                };
+                Spanned {
+                    span: fn_.annotation | body.span,
+                    value: Expression::Function(Function {
+                        parameter: p.clone(),
+                        body,
+                    }),
+                }.into()
+            }
+            --
             let_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Let }] } / expected!("let"))
             name:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] } / expected!("an identifier"))
             (quiet! { [AnnotatedToken { annotation: _, token: Token::Assign }] } / expected!("="))
@@ -30,7 +47,7 @@ peg::parser! {
                         name: n.clone(),
                         value,
                         inner,
-                    })
+                    }),
                 }.into()
             }
             --
@@ -43,6 +60,16 @@ peg::parser! {
             --
             left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("*") }] } / expected!("'*'")) right:@ {
                 construct_infix(left, Operation::Multiply, right)
+            }
+            --
+            function:(@) argument:expr() {
+                Spanned {
+                    span: argument.span,
+                    value: Expression::Apply(Apply {
+                        function,
+                        argument,
+                    }),
+                }.into()
             }
             --
             p:primitive() { p }
@@ -129,6 +156,307 @@ mod tests {
             prop_assert_eq!(actual, Ok(expected));
             Ok(())
         })
+    }
+
+    #[test]
+    fn test_variables() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(name, variable, constant)| {
+                let expected = assign(
+                    0..15,
+                    name.clone(),
+                    primitive_integer(6..7, variable.clone()),
+                    infix(
+                        10..15,
+                        Operation::Multiply,
+                        identifier(10..11, name.clone()),
+                        primitive_integer(14..15, constant.clone()),
+                    ),
+                );
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Let,
+                    },
+                    AnnotatedToken {
+                        annotation: (2..3).into(),
+                        token: Token::Identifier(name.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Assign,
+                    },
+                    AnnotatedToken {
+                        annotation: (6..7).into(),
+                        token: Token::Integer(variable),
+                    },
+                    AnnotatedToken {
+                        annotation: (8..9).into(),
+                        token: Token::In,
+                    },
+                    AnnotatedToken {
+                        annotation: (10..11).into(),
+                        token: Token::Identifier(name),
+                    },
+                    AnnotatedToken {
+                        annotation: (12..13).into(),
+                        token: Token::Operator("*"),
+                    },
+                    AnnotatedToken {
+                        annotation: (14..15).into(),
+                        token: Token::Integer(constant),
+                    },
+                ];
+
+                let actual = parse(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_parsing_a_function() {
+        check(&Identifier::arbitrary(), |argument| {
+            let expected = function(0..9, argument.clone(), identifier(8..9, argument.clone()));
+            let tokens = vec![
+                AnnotatedToken {
+                    annotation: (0..2).into(),
+                    token: Token::Fn,
+                },
+                AnnotatedToken {
+                    annotation: (3..4).into(),
+                    token: Token::Identifier(argument.clone()),
+                },
+                AnnotatedToken {
+                    annotation: (5..7).into(),
+                    token: Token::Arrow,
+                },
+                AnnotatedToken {
+                    annotation: (8..9).into(),
+                    token: Token::Identifier(argument),
+                },
+            ];
+
+            let actual = parse(&tokens);
+
+            prop_assert_eq!(actual, Ok(expected));
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parsing_a_more_complicated_function() {
+        check(&Identifier::arbitrary(), |argument| {
+            let expected = function(
+                0..13,
+                argument.clone(),
+                infix(
+                    8..13,
+                    Operation::Add,
+                    identifier(8..9, argument.clone()),
+                    identifier(12..13, argument.clone()),
+                ),
+            );
+            let tokens = vec![
+                AnnotatedToken {
+                    annotation: (0..2).into(),
+                    token: Token::Fn,
+                },
+                AnnotatedToken {
+                    annotation: (3..4).into(),
+                    token: Token::Identifier(argument.clone()),
+                },
+                AnnotatedToken {
+                    annotation: (5..7).into(),
+                    token: Token::Arrow,
+                },
+                AnnotatedToken {
+                    annotation: (8..9).into(),
+                    token: Token::Identifier(argument.clone()),
+                },
+                AnnotatedToken {
+                    annotation: (10..11).into(),
+                    token: Token::Operator("+"),
+                },
+                AnnotatedToken {
+                    annotation: (12..13).into(),
+                    token: Token::Identifier(argument),
+                },
+            ];
+
+            let actual = parse(&tokens);
+
+            prop_assert_eq!(actual, Ok(expected));
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_parsing_function_application() {
+        check(
+            &(Identifier::arbitrary(), Integer::arbitrary()),
+            |(argument, input)| {
+                let expected = apply(
+                    16..19,
+                    function(
+                        1..14,
+                        argument.clone(),
+                        infix(
+                            9..14,
+                            Operation::Add,
+                            identifier(9..10, argument.clone()),
+                            identifier(13..14, argument.clone()),
+                        ),
+                    ),
+                    primitive_integer(16..19, input.clone()),
+                );
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::StartGroup,
+                    },
+                    AnnotatedToken {
+                        annotation: (1..3).into(),
+                        token: Token::Fn,
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Identifier(argument.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (6..8).into(),
+                        token: Token::Arrow,
+                    },
+                    AnnotatedToken {
+                        annotation: (9..10).into(),
+                        token: Token::Identifier(argument.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (11..12).into(),
+                        token: Token::Operator("+"),
+                    },
+                    AnnotatedToken {
+                        annotation: (13..14).into(),
+                        token: Token::Identifier(argument),
+                    },
+                    AnnotatedToken {
+                        annotation: (14..15).into(),
+                        token: Token::EndGroup,
+                    },
+                    AnnotatedToken {
+                        annotation: (16..19).into(),
+                        token: Token::Integer(input),
+                    },
+                ];
+
+                let actual = parse(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_parsing_named_function_application() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(function_name, argument, input)| {
+                let expected = assign(
+                    0..32,
+                    function_name.clone(),
+                    function(
+                        8..22,
+                        argument.clone(),
+                        infix(
+                            17..22,
+                            Operation::Add,
+                            identifier(17..18, argument.clone()),
+                            identifier(21..22, argument.clone()),
+                        ),
+                    ),
+                    apply(
+                        29..32,
+                        identifier(27..28, function_name.clone()),
+                        primitive_integer(29..32, input.clone()),
+                    ),
+                );
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..3).into(),
+                        token: Token::Let,
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Identifier(function_name.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (6..7).into(),
+                        token: Token::Assign,
+                    },
+                    AnnotatedToken {
+                        annotation: (8..10).into(),
+                        token: Token::Fn,
+                    },
+                    AnnotatedToken {
+                        annotation: (11..12).into(),
+                        token: Token::Identifier(argument.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (13..15).into(),
+                        token: Token::Arrow,
+                    },
+                    AnnotatedToken {
+                        annotation: (16..17).into(),
+                        token: Token::StartGroup,
+                    },
+                    AnnotatedToken {
+                        annotation: (17..18).into(),
+                        token: Token::Identifier(argument.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (19..20).into(),
+                        token: Token::Operator("+"),
+                    },
+                    AnnotatedToken {
+                        annotation: (21..22).into(),
+                        token: Token::Identifier(argument),
+                    },
+                    AnnotatedToken {
+                        annotation: (22..23).into(),
+                        token: Token::EndGroup,
+                    },
+                    AnnotatedToken {
+                        annotation: (24..26).into(),
+                        token: Token::In,
+                    },
+                    AnnotatedToken {
+                        annotation: (27..28).into(),
+                        token: Token::Identifier(function_name),
+                    },
+                    AnnotatedToken {
+                        annotation: (29..32).into(),
+                        token: Token::Integer(input),
+                    },
+                ];
+
+                let actual = parse(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
     }
 
     #[test]
@@ -282,69 +610,6 @@ mod tests {
     }
 
     #[test]
-    fn test_variables() {
-        check(
-            &(
-                Identifier::arbitrary(),
-                Integer::arbitrary(),
-                Integer::arbitrary(),
-            ),
-            |(name, variable, constant)| {
-                let expected = assign(
-                    0..15,
-                    name.clone(),
-                    primitive_integer(6..7, variable.clone()),
-                    infix(
-                        10..15,
-                        Operation::Multiply,
-                        identifier(10..11, name.clone()),
-                        primitive_integer(14..15, constant.clone()),
-                    ),
-                );
-                let tokens = vec![
-                    AnnotatedToken {
-                        annotation: (0..1).into(),
-                        token: Token::Let,
-                    },
-                    AnnotatedToken {
-                        annotation: (2..3).into(),
-                        token: Token::Identifier(name.clone()),
-                    },
-                    AnnotatedToken {
-                        annotation: (4..5).into(),
-                        token: Token::Assign,
-                    },
-                    AnnotatedToken {
-                        annotation: (6..7).into(),
-                        token: Token::Integer(variable),
-                    },
-                    AnnotatedToken {
-                        annotation: (8..9).into(),
-                        token: Token::In,
-                    },
-                    AnnotatedToken {
-                        annotation: (10..11).into(),
-                        token: Token::Identifier(name),
-                    },
-                    AnnotatedToken {
-                        annotation: (12..13).into(),
-                        token: Token::Operator("*"),
-                    },
-                    AnnotatedToken {
-                        annotation: (14..15).into(),
-                        token: Token::Integer(constant),
-                    },
-                ];
-
-                let actual = parse(&tokens);
-
-                prop_assert_eq!(actual, Ok(expected));
-                Ok(())
-            },
-        )
-    }
-
-    #[test]
     fn test_parentheses() {
         check(
             &(
@@ -422,7 +687,7 @@ mod tests {
                 actual,
                 Err(Error::ParseError {
                     span: (0..1).into(),
-                    expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
+                    expected_tokens: ["'('", "an identifier", "an integer", "fn", "let"].into(),
                 })
             );
             Ok(())
@@ -448,7 +713,7 @@ mod tests {
                 actual,
                 Err(Error::ParseError {
                     span: (3..3).into(),
-                    expected_tokens: ["'('", "an identifier", "an integer", "let"].into(),
+                    expected_tokens: ["'('", "an identifier", "an integer", "fn", "let"].into(),
                 })
             );
             Ok(())

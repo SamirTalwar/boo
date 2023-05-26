@@ -31,6 +31,14 @@ pub fn assign_string(pool: &mut ExprPool, name: String, value: ExprRef, inner: E
     assign(pool, Identifier::new(name).unwrap(), value, inner)
 }
 
+pub fn function(pool: &mut ExprPool, parameter: Identifier, body: ExprRef) -> ExprRef {
+    pool.add(spanned(Expression::Function(Function { parameter, body })))
+}
+
+pub fn apply(pool: &mut ExprPool, function: ExprRef, argument: ExprRef) -> ExprRef {
+    pool.add(spanned(Expression::Apply(Apply { function, argument })))
+}
+
 pub fn infix(pool: &mut ExprPool, operation: Operation, left: ExprRef, right: ExprRef) -> ExprRef {
     pool.add(spanned(Expression::Infix(Infix {
         operation,

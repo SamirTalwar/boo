@@ -25,6 +25,8 @@ fn evaluate_(expr: Expr, assignments: HashMap<Identifier, Expr>) -> Result<Expre
             inner.clone(),
             assignments.update(name.clone(), value.clone()),
         ),
+        Expression::Function(Function { parameter, body }) => todo!(),
+        Expression::Apply(Apply { function, argument }) => todo!(),
         Expression::Infix(Infix {
             operation,
             left,
