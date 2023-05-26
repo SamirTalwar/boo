@@ -3,6 +3,8 @@ name = "boo-interpreter"
 version = "0.1.0"
 edition = "2021"
 
+default-run = "interpreter"
+
 [[bin]]
 name = "interpreter"
 path = "src/main.rs"
