@@ -24,53 +24,43 @@ fn test_rendering_and_parsing_an_expression() {
 
 fn eq_ignoring_span(left: &Expr, right: &Expr) -> bool {
     match (&left.value, &right.value) {
+        (Expression::Primitive(left_value), Expression::Primitive(right_value)) => {
+            left_value == right_value
+        }
+        (Expression::Identifier(left_name), Expression::Identifier(right_name)) => {
+            left_name == right_name
+        }
         (
-            Expression::Primitive {
-                value: left_value, ..
-            },
-            Expression::Primitive {
-                value: right_value, ..
-            },
-        ) => left_value == right_value,
-        (
-            Expression::Identifier {
-                name: left_name, ..
-            },
-            Expression::Identifier {
-                name: right_name, ..
-            },
-        ) => left_name == right_name,
-        (
-            Expression::Assign {
+            Expression::Assign(Assign {
                 name: left_name,
                 value: left_value,
                 inner: left_inner,
                 ..
-            },
-            Expression::Assign {
+            }),
+            Expression::Assign(Assign {
                 name: right_name,
                 value: right_value,
                 inner: right_inner,
                 ..
-            },
+            }),
         ) => {
             left_name == right_name
                 && eq_ignoring_span(left_value, right_value)
                 && eq_ignoring_span(left_inner, right_inner)
         }
         (
-            Expression::Infix {
+            Expression::Infix(Infix {
                 operation: left_operation,
                 left: left_left,
                 right: left_right,
                 ..
-            },
-            Expression::Infix {
+            }),
+            Expression::Infix(Infix {
                 operation: right_operation,
                 left: right_left,
                 right: right_right,
                 ..
-            },
+            }),
         ) => {
             left_operation == right_operation
                 && eq_ignoring_span(left_left, right_left)

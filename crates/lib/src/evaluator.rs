@@ -35,8 +35,8 @@ fn evaluate_<'a>(
 ) -> Result<Evaluated<'a>> {
     let expr = pool.get(expr_ref);
     match &expr.value {
-        Expression::Primitive { value } => Ok(Evaluated::Primitive(Cow::Borrowed(value))),
-        Expression::Identifier { name } => match assignments.clone().get_mut(name) {
+        Expression::Primitive(value) => Ok(Evaluated::Primitive(Cow::Borrowed(value))),
+        Expression::Identifier(name) => match assignments.clone().get_mut(name) {
             Some(value_ref) => {
                 let result = value_ref.resolve_by(|r| evaluate_(pool, *r, assignments));
                 Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
@@ -46,20 +46,20 @@ fn evaluate_<'a>(
                 name: name.to_string(),
             }),
         },
-        Expression::Assign {
+        Expression::Assign(Assign {
             name,
             value: value_ref,
             inner: inner_ref,
-        } => evaluate_(
+        }) => evaluate_(
             pool,
             *inner_ref,
             assignments.update(name, Thunk::unresolved(*value_ref)),
         ),
-        Expression::Infix {
+        Expression::Infix(Infix {
             operation,
             left: left_ref,
             right: right_ref,
-        } => {
+        }) => {
             let left_result = evaluate_(pool, *left_ref, assignments.clone())?;
             let right_result = evaluate_(pool, *right_ref, assignments)?;
             Ok(evaluate_infix(*operation, left_result, right_result))
@@ -140,7 +140,7 @@ mod tests {
             let input = pool_with(|pool| {
                 pool.add(Spanned {
                     span: (5..10).into(),
-                    value: Expression::Identifier { name: name.clone() },
+                    value: Expression::Identifier(name.clone()),
                 });
             });
 

@@ -8,7 +8,7 @@ use crate::primitive::*;
 pub fn primitive(annotation: impl Into<Span>, value: Primitive) -> Expr {
     Spanned {
         span: annotation.into(),
-        value: Expression::Primitive { value },
+        value: Expression::Primitive(value),
     }
     .into()
 }
@@ -20,7 +20,7 @@ pub fn primitive_integer(annotation: impl Into<Span>, value: Integer) -> Expr {
 pub fn identifier(annotation: impl Into<Span>, name: Identifier) -> Expr {
     Spanned {
         span: annotation.into(),
-        value: Expression::Identifier { name },
+        value: Expression::Identifier(name),
     }
     .into()
 }
@@ -32,7 +32,7 @@ pub fn identifier_string(annotation: impl Into<Span>, name: String) -> Expr {
 pub fn assign(annotation: impl Into<Span>, name: Identifier, value: Expr, inner: Expr) -> Expr {
     Spanned {
         span: annotation.into(),
-        value: Expression::Assign { name, value, inner },
+        value: Expression::Assign(Assign { name, value, inner }),
     }
     .into()
 }
@@ -44,11 +44,11 @@ pub fn assign_string(annotation: impl Into<Span>, name: String, value: Expr, inn
 pub fn infix(annotation: impl Into<Span>, operation: Operation, left: Expr, right: Expr) -> Expr {
     Spanned {
         span: annotation.into(),
-        value: Expression::Infix {
+        value: Expression::Infix(Infix {
             operation,
             left,
             right,
-        },
+        }),
     }
     .into()
 }

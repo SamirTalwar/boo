@@ -26,11 +26,11 @@ peg::parser! {
                 };
                 Spanned {
                     span: let_.annotation | inner.span,
-                    value: Expression::Assign {
+                    value: Expression::Assign(Assign {
                         name: n.clone(),
                         value,
                         inner,
-                    }
+                    })
                 }.into()
             }
             --
@@ -59,9 +59,7 @@ peg::parser! {
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
                 Spanned {
                     span: *annotation,
-                    value: Expression::Primitive {
-                        value: Primitive::Integer(n.clone()),
-                    }
+                    value: Expression::Primitive(Primitive::Integer(n.clone())),
                 }.into()
             } } / expected!("an integer")
 
@@ -69,9 +67,7 @@ peg::parser! {
             quiet! { [AnnotatedToken { annotation, token: Token::Identifier(name) }] {
                 Spanned {
                     span: *annotation,
-                    value: Expression::Identifier {
-                        name: name.clone(),
-                    }
+                    value: Expression::Identifier(name.clone()),
                 }.into()
             } } / expected!("an identifier")
     }
@@ -99,11 +95,11 @@ pub fn parse(input: &[AnnotatedToken<Span>]) -> Result<Expr> {
 fn construct_infix(left: Expr, operation: Operation, right: Expr) -> Expr {
     Spanned {
         span: left.span | right.span,
-        value: Expression::Infix {
+        value: Expression::Infix(Infix {
             operation,
             left,
             right,
-        },
+        }),
     }
     .into()
 }

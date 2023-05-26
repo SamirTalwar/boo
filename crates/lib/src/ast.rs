@@ -8,37 +8,39 @@ macro_rules! expr {
 
         #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum Expression {
-            Primitive {
-                value: Primitive,
-            },
-            Identifier {
-                name: Identifier,
-            },
-            Assign {
-                name: Identifier,
-                value: Expr,
-                inner: Expr,
-            },
-            Infix {
-                operation: Operation,
-                left: Expr,
-                right: Expr,
-            },
+            Primitive(Primitive),
+            Identifier(Identifier),
+            Assign(Assign),
+            Infix(Infix),
+        }
+
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub struct Assign {
+            pub name: Identifier,
+            pub value: Expr,
+            pub inner: Expr,
+        }
+
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub struct Infix {
+            pub operation: Operation,
+            pub left: Expr,
+            pub right: Expr,
         }
 
         impl std::fmt::Display for Expression {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
-                    Expression::Primitive { value } => value.fmt(f),
-                    Expression::Identifier { name } => name.fmt(f),
-                    Expression::Assign { name, value, inner } => {
+                    Expression::Primitive(value) => value.fmt(f),
+                    Expression::Identifier(name) => name.fmt(f),
+                    Expression::Assign(Assign { name, value, inner }) => {
                         write!(f, "let {} = ({}) in ({})", name, value, inner)
                     }
-                    Expression::Infix {
+                    Expression::Infix(Infix {
                         operation,
                         left,
                         right,
-                    } => write!(f, "({}) {} ({})", left, operation, right),
+                    }) => write!(f, "({}) {} ({})", left, operation, right),
                 }
             }
         }

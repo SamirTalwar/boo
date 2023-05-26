@@ -46,7 +46,7 @@ fn gen_nested(
                 .prop_map(|value| {
                     Spanned {
                         span: 0.into(),
-                        value: Expression::Primitive { value },
+                        value: Expression::Primitive(value),
                     }
                     .into()
                 })
@@ -60,9 +60,9 @@ fn gen_nested(
                     .prop_map(move |index| {
                         Spanned {
                             span: 0.into(),
-                            value: Expression::Identifier {
-                                name: bound.iter().nth(index.index(bound.len())).unwrap().clone(),
-                            },
+                            value: Expression::Identifier(
+                                bound.iter().nth(index.index(bound.len())).unwrap().clone(),
+                            ),
                         }
                         .into()
                     })
@@ -88,11 +88,11 @@ fn gen_nested(
                             {
                                 Spanned {
                                     span: 0.into(),
-                                    value: Expression::Infix {
+                                    value: Expression::Infix(Infix {
                                         operation,
                                         left,
                                         right,
-                                    },
+                                    }),
                                 }
                             }
                             .into()
@@ -115,11 +115,11 @@ fn gen_nested(
                     (gen_value, gen_inner).prop_map(move |(value, inner)| {
                         Spanned {
                             span: 0.into(),
-                            value: Expression::Assign {
+                            value: Expression::Assign(Assign {
                                 name: name.clone(),
                                 value,
                                 inner,
-                            },
+                            }),
                         }
                         .into()
                     })
