@@ -36,7 +36,7 @@ pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
 fn gen_nested(
     config: Rc<ExprGenConfig>,
     depth: std::ops::Range<usize>,
-    bound_identifiers: HashSet<Identifier>,
+    bindings: HashSet<Identifier>,
 ) -> impl Strategy<Value = Expr> {
     let mut choices: Vec<BoxedStrategy<Expr>> = Vec::new();
 
@@ -53,15 +53,19 @@ fn gen_nested(
                 .boxed(),
         );
 
-        if !bound_identifiers.is_empty() {
-            let bound = bound_identifiers.clone();
+        if !bindings.is_empty() {
+            let bindings_ = bindings.clone();
             choices.push(
                 proptest::arbitrary::any::<proptest::sample::Index>()
                     .prop_map(move |index| {
                         Spanned {
                             span: 0.into(),
                             value: Expression::Identifier(
-                                bound.iter().nth(index.index(bound.len())).unwrap().clone(),
+                                bindings_
+                                    .iter()
+                                    .nth(index.index(bindings_.len()))
+                                    .unwrap()
+                                    .clone(),
                             ),
                         }
                         .into()
@@ -76,13 +80,13 @@ fn gen_nested(
         let next_end = depth.end - 1;
 
         choices.push({
-            let conf = config.clone();
-            let bound = bound_identifiers.clone();
+            let config_ = config.clone();
+            let bindings_ = bindings.clone();
             proptest::arbitrary::any::<Operation>()
                 .prop_flat_map(move |operation| {
                     (
-                        gen_nested(conf.clone(), next_start..next_end, bound.clone()),
-                        gen_nested(conf.clone(), next_start..next_end, bound.clone()),
+                        gen_nested(config_.clone(), next_start..next_end, bindings_.clone()),
+                        gen_nested(config_.clone(), next_start..next_end, bindings_.clone()),
                     )
                         .prop_map(move |(left, right)| {
                             {
@@ -102,15 +106,16 @@ fn gen_nested(
         });
 
         choices.push({
-            let conf = config.clone();
-            let bound = bound_identifiers.clone();
-            gen_unused_identifier(config, bound_identifiers)
+            let config_ = config.clone();
+            let bindings_ = bindings.clone();
+            gen_unused_identifier(config, bindings)
                 .prop_flat_map(move |name| {
-                    let gen_value = gen_nested(conf.clone(), next_start..next_end, bound.clone());
+                    let gen_value =
+                        gen_nested(config_.clone(), next_start..next_end, bindings_.clone());
                     let gen_inner = gen_nested(
-                        conf.clone(),
+                        config_.clone(),
                         next_start..next_end,
-                        bound.update(name.clone()),
+                        bindings_.update(name.clone()),
                     );
                     (gen_value, gen_inner).prop_map(move |(value, inner)| {
                         Spanned {
@@ -133,12 +138,12 @@ fn gen_nested(
 
 fn gen_unused_identifier(
     config: Rc<ExprGenConfig>,
-    bound_identifiers: HashSet<Identifier>,
+    bindings: HashSet<Identifier>,
 ) -> impl Strategy<Value = Identifier> {
     let conf = config.clone();
     config.gen_identifier.clone().prop_flat_map(move |name| {
-        if bound_identifiers.contains(&name) {
-            gen_unused_identifier(conf.clone(), bound_identifiers.clone()).boxed()
+        if bindings.contains(&name) {
+            gen_unused_identifier(conf.clone(), bindings.clone()).boxed()
         } else {
             Just(name).boxed()
         }

@@ -11,20 +11,19 @@ pub fn naively_evaluate(expr: Expr) -> Result<Expression> {
 }
 
 #[allow(clippy::boxed_local)]
-fn evaluate_(expr: Expr, assignments: HashMap<Identifier, Expr>) -> Result<Expression> {
+fn evaluate_(expr: Expr, bindings: HashMap<Identifier, Expr>) -> Result<Expression> {
     match &expr.value {
         Expression::Primitive(_) => Ok(expr.value),
-        Expression::Identifier(name) => match assignments.get(name) {
-            Some(value) => evaluate_(value.clone(), assignments),
+        Expression::Identifier(name) => match bindings.get(name) {
+            Some(value) => evaluate_(value.clone(), bindings),
             None => Err(Error::UnknownVariable {
                 span: expr.span,
                 name: name.to_string(),
             }),
         },
-        Expression::Assign(Assign { name, value, inner }) => evaluate_(
-            inner.clone(),
-            assignments.update(name.clone(), value.clone()),
-        ),
+        Expression::Assign(Assign { name, value, inner }) => {
+            evaluate_(inner.clone(), bindings.update(name.clone(), value.clone()))
+        }
         Expression::Function(Function { parameter, body }) => todo!(),
         Expression::Apply(Apply { function, argument }) => todo!(),
         Expression::Infix(Infix {
@@ -32,8 +31,8 @@ fn evaluate_(expr: Expr, assignments: HashMap<Identifier, Expr>) -> Result<Expre
             left,
             right,
         }) => {
-            let left_result = evaluate_(left.clone(), assignments.clone())?;
-            let right_result = evaluate_(right.clone(), assignments)?;
+            let left_result = evaluate_(left.clone(), bindings.clone())?;
+            let right_result = evaluate_(right.clone(), bindings)?;
             Ok(evaluate_infix(*operation, &left_result, &right_result))
         }
     }

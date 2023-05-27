@@ -18,14 +18,14 @@ pub fn evaluate(pool: &ExprPool) -> Result<Expression> {
 fn evaluate_<'a>(
     pool: &'a ExprPool,
     expr_ref: Expr,
-    assignments: HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<Cow<'a, Expression>>>>,
+    bindings: HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<Cow<'a, Expression>>>>,
 ) -> Result<Cow<'a, Expression>> {
     let expr = pool.get(expr_ref);
     match &expr.value {
         value @ Expression::Primitive(_) => Ok(Cow::Borrowed(value)),
-        Expression::Identifier(name) => match assignments.clone().get_mut(name) {
+        Expression::Identifier(name) => match bindings.clone().get_mut(name) {
             Some(value_ref) => {
-                let result = value_ref.resolve_by(|r| evaluate_(pool, *r, assignments));
+                let result = value_ref.resolve_by(|r| evaluate_(pool, *r, bindings));
                 Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
             }
             None => Err(Error::UnknownVariable {
@@ -40,14 +40,14 @@ fn evaluate_<'a>(
         }) => evaluate_(
             pool,
             *inner_ref,
-            assignments.update(Cow::Borrowed(name), Thunk::unresolved(*value_ref)),
+            bindings.update(Cow::Borrowed(name), Thunk::unresolved(*value_ref)),
         ),
         function @ Expression::Function(_) => Ok(Cow::Borrowed(function)),
         Expression::Apply(Apply {
             function: function_ref,
             argument: argument_ref,
         }) => {
-            let function_result = evaluate_(pool, *function_ref, assignments.clone())?;
+            let function_result = evaluate_(pool, *function_ref, bindings.clone())?;
             match function_result {
                 Cow::Borrowed(Expression::Function(Function {
                     parameter,
@@ -55,7 +55,7 @@ fn evaluate_<'a>(
                 })) => evaluate_(
                     pool,
                     *body_ref,
-                    assignments.update(Cow::Borrowed(parameter), Thunk::unresolved(*argument_ref)),
+                    bindings.update(Cow::Borrowed(parameter), Thunk::unresolved(*argument_ref)),
                 ),
                 Cow::Owned(Expression::Function(Function {
                     parameter,
@@ -63,7 +63,7 @@ fn evaluate_<'a>(
                 })) => evaluate_(
                     pool,
                     body_ref,
-                    assignments.update(Cow::Owned(parameter), Thunk::unresolved(*argument_ref)),
+                    bindings.update(Cow::Owned(parameter), Thunk::unresolved(*argument_ref)),
                 ),
                 _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
             }
@@ -73,8 +73,8 @@ fn evaluate_<'a>(
             left: left_ref,
             right: right_ref,
         }) => {
-            let left_result = evaluate_(pool, *left_ref, assignments.clone())?;
-            let right_result = evaluate_(pool, *right_ref, assignments)?;
+            let left_result = evaluate_(pool, *left_ref, bindings.clone())?;
+            let right_result = evaluate_(pool, *right_ref, bindings)?;
             Ok(evaluate_infix(*operation, left_result, right_result))
         }
     }
