@@ -9,6 +9,7 @@ pub mod pooler;
 pub mod primitive;
 pub mod span;
 pub mod thunk;
+pub mod types;
 
 pub use evaluator::evaluate;
 pub use lexer::lex;
