@@ -1,6 +1,6 @@
 use std::ops::{BitOr, Range};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -47,7 +47,7 @@ impl From<Span> for miette::SourceSpan {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Spanned<Value> {
     pub span: Span,
     pub value: Value,

@@ -73,6 +73,15 @@ impl PartialEq for Integer {
 
 impl Eq for Integer {}
 
+impl std::hash::Hash for Integer {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Integer::Small(value) => Large::from(*value).hash(state),
+            Integer::Large(value) => value.hash(state),
+        }
+    }
+}
+
 impl std::ops::Add for &Integer {
     type Output = Integer;
 

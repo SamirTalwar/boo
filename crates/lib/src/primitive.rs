@@ -6,7 +6,7 @@ use crate::types::Type;
 
 pub use integer::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Primitive {
     Integer(Integer),
 }

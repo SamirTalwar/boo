@@ -6,7 +6,7 @@ macro_rules! expr {
 
         pub type Expr = boo_fill_hole::fill_hole!($wrapper, Expression);
 
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub enum Expression {
             Primitive(Primitive),
             Identifier(Identifier),
@@ -16,26 +16,26 @@ macro_rules! expr {
             Infix(Infix),
         }
 
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct Assign {
             pub name: Identifier,
             pub value: Expr,
             pub inner: Expr,
         }
 
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct Function {
             pub parameter: Identifier,
             pub body: Expr,
         }
 
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct Apply {
             pub function: Expr,
             pub argument: Expr,
         }
 
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct Infix {
             pub operation: Operation,
             pub left: Expr,

@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, proptest_derive::Arbitrary)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, proptest_derive::Arbitrary)]
 pub enum Operation {
     Add,
     Subtract,

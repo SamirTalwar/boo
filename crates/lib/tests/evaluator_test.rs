@@ -8,7 +8,6 @@ use boo_test_helpers::proptest::*;
 use crate::helpers::naive_evaluator;
 
 #[test]
-#[ignore = "functions are not implemented yet"]
 fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
     check(&parser::generators::arbitrary(), |expr| {
         let expected = naive_evaluator::naively_evaluate(expr.clone()).unwrap();

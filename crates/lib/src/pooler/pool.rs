@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 #[derive(Debug, PartialEq)]
 pub struct Pool<T>(Vec<T>);
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct PoolRef<T> {
     index: usize,
     marker: PhantomData<T>,
