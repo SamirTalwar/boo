@@ -45,23 +45,41 @@ macro_rules! expr {
         impl std::fmt::Display for Expression {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
-                    Expression::Primitive(value) => value.fmt(f),
-                    Expression::Identifier(name) => name.fmt(f),
-                    Expression::Assign(Assign { name, value, inner }) => {
-                        write!(f, "let {} = ({}) in ({})", name, value, inner)
-                    }
-                    Expression::Function(Function { parameter, body }) => {
-                        write!(f, "fn {} -> ({})", parameter, body)
-                    }
-                    Expression::Apply(Apply { function, argument }) => {
-                        write!(f, "({}) ({})", function, argument)
-                    }
-                    Expression::Infix(Infix {
-                        operation,
-                        left,
-                        right,
-                    }) => write!(f, "({}) {} ({})", left, operation, right),
+                    Expression::Primitive(x) => x.fmt(f),
+                    Expression::Identifier(x) => x.fmt(f),
+                    Expression::Assign(x) => x.fmt(f),
+                    Expression::Function(x) => x.fmt(f),
+                    Expression::Apply(x) => x.fmt(f),
+                    Expression::Infix(x) => x.fmt(f),
                 }
+            }
+        }
+
+        impl std::fmt::Display for Assign {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(
+                    f,
+                    "let {} = ({}) in ({})",
+                    self.name, self.value, self.inner
+                )
+            }
+        }
+
+        impl std::fmt::Display for Function {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "fn {} -> ({})", self.parameter, self.body)
+            }
+        }
+
+        impl std::fmt::Display for Apply {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "({}) ({})", self.function, self.argument)
+            }
+        }
+
+        impl std::fmt::Display for Infix {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "({}) {} ({})", self.left, self.operation, self.right)
             }
         }
     };

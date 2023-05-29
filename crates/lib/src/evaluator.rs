@@ -10,19 +10,49 @@ use crate::pooler::ast::*;
 use crate::primitive::*;
 use crate::thunk::Thunk;
 
-pub fn evaluate(pool: &ExprPool) -> Result<Expression> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Evaluated {
+    Primitive(Primitive),
+    Function(Function),
+}
+
+impl std::fmt::Display for Evaluated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Evaluated::Primitive(x) => x.fmt(f),
+            Evaluated::Function(x) => x.fmt(f),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum EvaluationProgress<'a> {
+    Primitive(Cow<'a, Primitive>),
+    Function(Cow<'a, Function>),
+}
+
+impl<'a> EvaluationProgress<'a> {
+    fn finish(self) -> Evaluated {
+        match self {
+            Self::Primitive(x) => Evaluated::Primitive(x.into_owned()),
+            Self::Function(x) => Evaluated::Function(x.into_owned()),
+        }
+    }
+}
+
+pub fn evaluate(pool: &ExprPool) -> Result<Evaluated> {
     let evaluated = evaluate_(pool, pool.root(), HashMap::new())?;
-    Ok(evaluated.into_owned())
+    Ok(evaluated.finish())
 }
 
 fn evaluate_<'a>(
     pool: &'a ExprPool,
     expr_ref: Expr,
-    bindings: HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<Cow<'a, Expression>>>>,
-) -> Result<Cow<'a, Expression>> {
+    bindings: HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<EvaluationProgress<'a>>>>,
+) -> Result<EvaluationProgress<'a>> {
     let expr = pool.get(expr_ref);
     match &expr.value {
-        value @ Expression::Primitive(_) => Ok(Cow::Borrowed(value)),
+        Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
         Expression::Identifier(name) => match bindings.clone().get_mut(name) {
             Some(value_ref) => {
                 let result = value_ref.resolve_by(|r| evaluate_(pool, *r, bindings));
@@ -42,14 +72,14 @@ fn evaluate_<'a>(
             *inner_ref,
             bindings.update(Cow::Borrowed(name), Thunk::unresolved(*value_ref)),
         ),
-        function @ Expression::Function(_) => Ok(Cow::Borrowed(function)),
+        Expression::Function(function) => Ok(EvaluationProgress::Function(Cow::Borrowed(function))),
         Expression::Apply(Apply {
             function: function_ref,
             argument: argument_ref,
         }) => {
             let function_result = evaluate_(pool, *function_ref, bindings.clone())?;
             match function_result {
-                Cow::Borrowed(Expression::Function(Function {
+                EvaluationProgress::Function(Cow::Borrowed(Function {
                     parameter,
                     body: body_ref,
                 })) => evaluate_(
@@ -57,7 +87,7 @@ fn evaluate_<'a>(
                     *body_ref,
                     bindings.update(Cow::Borrowed(parameter), Thunk::unresolved(*argument_ref)),
                 ),
-                Cow::Owned(Expression::Function(Function {
+                EvaluationProgress::Function(Cow::Owned(Function {
                     parameter,
                     body: body_ref,
                 })) => evaluate_(
@@ -82,18 +112,21 @@ fn evaluate_<'a>(
 
 fn evaluate_infix<'a>(
     operation: Operation,
-    left: Cow<'a, Expression>,
-    right: Cow<'a, Expression>,
-) -> Cow<'a, Expression> {
-    match (left.as_ref(), right.as_ref()) {
-        (
-            Expression::Primitive(Primitive::Integer(left)),
-            Expression::Primitive(Primitive::Integer(right)),
-        ) => Cow::Owned(Expression::Primitive(match operation {
-            Operation::Add => Primitive::Integer(left + right),
-            Operation::Subtract => Primitive::Integer(left - right),
-            Operation::Multiply => Primitive::Integer(left * right),
-        })),
+    left: EvaluationProgress<'a>,
+    right: EvaluationProgress<'a>,
+) -> EvaluationProgress<'a> {
+    match (&left, &right) {
+        (EvaluationProgress::Primitive(left), EvaluationProgress::Primitive(right)) => {
+            match (left.as_ref(), right.as_ref()) {
+                (Primitive::Integer(left), Primitive::Integer(right)) => {
+                    EvaluationProgress::Primitive(Cow::Owned(match operation {
+                        Operation::Add => Primitive::Integer(left + right),
+                        Operation::Subtract => Primitive::Integer(left - right),
+                        Operation::Multiply => Primitive::Integer(left * right),
+                    }))
+                }
+            }
+        }
         _ => panic!(
             "evaluate_infix branch is not implemented for:\n  left:   {:?}\nright:  {:?}",
             left, right
@@ -119,7 +152,7 @@ mod tests {
             let input = pool_with(|pool| {
                 builders::primitive(pool, value.clone());
             });
-            let expected = Expression::Primitive(value);
+            let expected = Evaluated::Primitive(value);
 
             let actual = evaluate(&input);
 
@@ -138,7 +171,7 @@ mod tests {
                     let inner_ref = builders::identifier(pool, name.clone());
                     builders::assign(pool, name.clone(), value_ref, inner_ref);
                 });
-                let expected = Expression::Primitive(value);
+                let expected = Evaluated::Primitive(value);
 
                 let actual = evaluate(&input);
 
@@ -165,7 +198,7 @@ mod tests {
                     let inner_ref = builders::infix(pool, Operation::Add, left_ref, right_ref);
                     builders::assign(pool, name.clone(), value_ref, inner_ref);
                 });
-                let expected = Expression::Primitive(Primitive::Integer(sum));
+                let expected = Evaluated::Primitive(Primitive::Integer(sum));
 
                 let actual = evaluate(&input);
 
@@ -206,7 +239,7 @@ mod tests {
                 builders::function(pool, parameter.clone(), body_ref);
                 body_ref
             });
-            let expected = Expression::Function(Function {
+            let expected = Evaluated::Function(Function {
                 parameter,
                 body: body_ref,
             });
@@ -229,7 +262,7 @@ mod tests {
                     let argument_ref = builders::primitive_integer(pool, argument.clone());
                     builders::apply(pool, function_ref, argument_ref);
                 });
-                let expected = Expression::Primitive(Primitive::Integer(argument));
+                let expected = Evaluated::Primitive(Primitive::Integer(argument));
 
                 let actual = evaluate(&input);
 
@@ -267,7 +300,7 @@ mod tests {
                     );
                     builders::apply(pool, function_ref, argument_ref);
                 });
-                let expected = Expression::Primitive(Primitive::Integer(
+                let expected = Evaluated::Primitive(Primitive::Integer(
                     (argument_left + argument_right) * multiplier,
                 ));
 
@@ -302,7 +335,7 @@ mod tests {
             &(Integer::arbitrary(), Integer::arbitrary()),
             |(left, right)| {
                 let expected =
-                    Expression::Primitive(Primitive::Integer(implementation(&left, &right)));
+                    Evaluated::Primitive(Primitive::Integer(implementation(&left, &right)));
                 let input = pool_with(|pool| {
                     let left_ref = builders::primitive_integer(pool, left);
                     let right_ref = builders::primitive_integer(pool, right);

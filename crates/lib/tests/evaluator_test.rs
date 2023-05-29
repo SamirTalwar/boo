@@ -18,8 +18,8 @@ fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
 
         match (expected, actual) {
             (
-                parser::ast::Expression::Primitive(expected),
-                pooler::ast::Expression::Primitive(actual),
+                naive_evaluator::Evaluated::Primitive(expected),
+                evaluator::Evaluated::Primitive(actual),
             ) => {
                 prop_assert_eq!(expected, actual);
             }

@@ -6,14 +6,27 @@ use boo::operation::*;
 use boo::parser::ast::*;
 use boo::primitive::*;
 
-pub fn naively_evaluate(expr: Expr) -> Result<Expression> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Evaluated {
+    Primitive(Primitive),
+}
+
+impl std::fmt::Display for Evaluated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Evaluated::Primitive(x) => x.fmt(f),
+        }
+    }
+}
+
+pub fn naively_evaluate(expr: Expr) -> Result<Evaluated> {
     evaluate_(expr, HashMap::new())
 }
 
 #[allow(clippy::boxed_local)]
-fn evaluate_(expr: Expr, bindings: HashMap<Identifier, Expr>) -> Result<Expression> {
+fn evaluate_(expr: Expr, bindings: HashMap<Identifier, Expr>) -> Result<Evaluated> {
     match &expr.value {
-        Expression::Primitive(_) => Ok(expr.value),
+        Expression::Primitive(value) => Ok(Evaluated::Primitive(value.clone())),
         Expression::Identifier(name) => match bindings.get(name) {
             Some(value) => evaluate_(value.clone(), bindings),
             None => Err(Error::UnknownVariable {
@@ -38,19 +51,15 @@ fn evaluate_(expr: Expr, bindings: HashMap<Identifier, Expr>) -> Result<Expressi
     }
 }
 
-fn evaluate_infix(operation: Operation, left: &Expression, right: &Expression) -> Expression {
+fn evaluate_infix(operation: Operation, left: &Evaluated, right: &Evaluated) -> Evaluated {
     match (left, right) {
         (
-            Expression::Primitive(Primitive::Integer(left)),
-            Expression::Primitive(Primitive::Integer(right)),
-        ) => Expression::Primitive(match operation {
+            Evaluated::Primitive(Primitive::Integer(left)),
+            Evaluated::Primitive(Primitive::Integer(right)),
+        ) => Evaluated::Primitive(match operation {
             Operation::Add => Primitive::Integer(left + right),
             Operation::Subtract => Primitive::Integer(left - right),
             Operation::Multiply => Primitive::Integer(left * right),
         }),
-        _ => panic!(
-            "evaluate_infix branch is not implemented for:\n  left:   {:?}\nright:  {:?}",
-            left, right
-        ),
     }
 }
