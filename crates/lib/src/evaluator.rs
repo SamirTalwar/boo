@@ -10,6 +10,8 @@ use crate::pooler::ast::*;
 use crate::primitive::*;
 use crate::thunk::Thunk;
 
+type Bindings<'a> = HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<EvaluationProgress<'a>>>>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Evaluated {
     Primitive(Primitive),
@@ -28,14 +30,14 @@ impl std::fmt::Display for Evaluated {
 #[derive(Debug, Clone)]
 enum EvaluationProgress<'a> {
     Primitive(Cow<'a, Primitive>),
-    Function(&'a Function),
+    Function(&'a Function, Bindings<'a>),
 }
 
 impl<'a> EvaluationProgress<'a> {
     fn finish(self) -> Evaluated {
         match self {
             Self::Primitive(x) => Evaluated::Primitive(x.into_owned()),
-            Self::Function(x) => Evaluated::Function(x.clone()),
+            Self::Function(x, _) => Evaluated::Function(x.clone()),
         }
     }
 }
@@ -48,7 +50,7 @@ pub fn evaluate(pool: &ExprPool) -> Result<Evaluated> {
 fn evaluate_<'a>(
     pool: &'a ExprPool,
     expr_ref: Expr,
-    bindings: HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<EvaluationProgress<'a>>>>,
+    bindings: Bindings<'a>,
 ) -> Result<EvaluationProgress<'a>> {
     let expr = pool.get(expr_ref);
     match &expr.value {
@@ -72,20 +74,26 @@ fn evaluate_<'a>(
             *inner_ref,
             bindings.update(Cow::Borrowed(name), Thunk::unresolved(*value_ref)),
         ),
-        Expression::Function(function) => Ok(EvaluationProgress::Function(function)),
+        Expression::Function(function) => {
+            Ok(EvaluationProgress::Function(function, bindings.clone()))
+        }
         Expression::Apply(Apply {
             function: function_ref,
             argument: argument_ref,
         }) => {
             let function_result = evaluate_(pool, *function_ref, bindings.clone())?;
             match function_result {
-                EvaluationProgress::Function(Function {
-                    parameter,
-                    body: body_ref,
-                }) => evaluate_(
+                EvaluationProgress::Function(
+                    Function {
+                        parameter,
+                        body: body_ref,
+                    },
+                    function_bindings,
+                ) => evaluate_(
                     pool,
                     *body_ref,
-                    bindings.update(Cow::Borrowed(parameter), Thunk::unresolved(*argument_ref)),
+                    function_bindings
+                        .update(Cow::Borrowed(parameter), Thunk::unresolved(*argument_ref)),
                 ),
                 _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
             }
@@ -295,6 +303,44 @@ mod tests {
                 let expected = Evaluated::Primitive(Primitive::Integer(
                     (argument_left + argument_right) * multiplier,
                 ));
+
+                let actual = evaluate(&input);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_closing_a_function_over_a_variable() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(outer_variable_name, outer_variable_value, parameter, argument_value)| {
+                let input = pool_with(|pool| {
+                    let outer_variable_ref =
+                        builders::primitive_integer(pool, outer_variable_value.clone());
+                    let body_left_ref = builders::identifier(pool, outer_variable_name.clone());
+                    let body_right_ref = builders::identifier(pool, parameter.clone());
+                    let body_ref =
+                        builders::infix(pool, Operation::Add, body_left_ref, body_right_ref);
+                    let function_ref = builders::function(pool, parameter.clone(), body_ref);
+                    let assignment_ref = builders::assign(
+                        pool,
+                        outer_variable_name,
+                        outer_variable_ref,
+                        function_ref,
+                    );
+                    let argument_ref = builders::primitive_integer(pool, argument_value.clone());
+                    builders::apply(pool, assignment_ref, argument_ref);
+                });
+                let expected =
+                    Evaluated::Primitive(Primitive::Integer(outer_variable_value + argument_value));
 
                 let actual = evaluate(&input);
 
