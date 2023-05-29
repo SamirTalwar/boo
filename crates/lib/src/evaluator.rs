@@ -10,8 +10,6 @@ use crate::pooler::ast::*;
 use crate::primitive::*;
 use crate::thunk::Thunk;
 
-type Bindings<'a> = HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<EvaluationProgress<'a>>>>;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Evaluated {
     Primitive(Primitive),
@@ -42,8 +40,38 @@ impl<'a> EvaluationProgress<'a> {
     }
 }
 
+#[derive(Debug, Clone)]
+struct Bindings<'a>(HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<EvaluationProgress<'a>>>>);
+
+impl<'a> Bindings<'a> {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    pub fn resolve(
+        &mut self,
+        identifier: &Identifier,
+        resolver: impl Fn(Option<Expr>) -> Result<EvaluationProgress<'a>>,
+    ) -> Result<EvaluationProgress<'a>> {
+        match self.0.get_mut(identifier) {
+            Some(thunk) => {
+                let result = thunk.resolve_by(|r| resolver(Some(*r)));
+                Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
+            }
+            None => resolver(None),
+        }
+    }
+
+    pub fn with(&self, identifier: &'a Identifier, expression: Expr) -> Self {
+        Self(
+            self.0
+                .update(Cow::Borrowed(identifier), Thunk::unresolved(expression)),
+        )
+    }
+}
+
 pub fn evaluate(pool: &ExprPool) -> Result<Evaluated> {
-    let evaluated = evaluate_(pool, pool.root(), HashMap::new())?;
+    let evaluated = evaluate_(pool, pool.root(), Bindings::new())?;
     Ok(evaluated.finish())
 }
 
@@ -55,25 +83,18 @@ fn evaluate_<'a>(
     let expr = pool.get(expr_ref);
     match &expr.value {
         Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
-        Expression::Identifier(name) => match bindings.clone().get_mut(name) {
-            Some(value_ref) => {
-                let result = value_ref.resolve_by(|r| evaluate_(pool, *r, bindings));
-                Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
-            }
+        Expression::Identifier(name) => bindings.clone().resolve(name, |thunk| match thunk {
+            Some(value_ref) => evaluate_(pool, value_ref, bindings.clone()),
             None => Err(Error::UnknownVariable {
                 span: expr.span,
                 name: name.to_string(),
             }),
-        },
+        }),
         Expression::Assign(Assign {
             name,
             value: value_ref,
             inner: inner_ref,
-        }) => evaluate_(
-            pool,
-            *inner_ref,
-            bindings.update(Cow::Borrowed(name), Thunk::unresolved(*value_ref)),
-        ),
+        }) => evaluate_(pool, *inner_ref, bindings.with(name, *value_ref)),
         Expression::Function(function) => {
             Ok(EvaluationProgress::Function(function, bindings.clone()))
         }
@@ -92,8 +113,7 @@ fn evaluate_<'a>(
                 ) => evaluate_(
                     pool,
                     *body_ref,
-                    function_bindings
-                        .update(Cow::Borrowed(parameter), Thunk::unresolved(*argument_ref)),
+                    function_bindings.with(parameter, *argument_ref),
                 ),
                 _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
             }
