@@ -28,14 +28,14 @@ impl std::fmt::Display for Evaluated {
 #[derive(Debug, Clone)]
 enum EvaluationProgress<'a> {
     Primitive(Cow<'a, Primitive>),
-    Function(Cow<'a, Function>),
+    Function(&'a Function),
 }
 
 impl<'a> EvaluationProgress<'a> {
     fn finish(self) -> Evaluated {
         match self {
             Self::Primitive(x) => Evaluated::Primitive(x.into_owned()),
-            Self::Function(x) => Evaluated::Function(x.into_owned()),
+            Self::Function(x) => Evaluated::Function(x.clone()),
         }
     }
 }
@@ -72,28 +72,20 @@ fn evaluate_<'a>(
             *inner_ref,
             bindings.update(Cow::Borrowed(name), Thunk::unresolved(*value_ref)),
         ),
-        Expression::Function(function) => Ok(EvaluationProgress::Function(Cow::Borrowed(function))),
+        Expression::Function(function) => Ok(EvaluationProgress::Function(function)),
         Expression::Apply(Apply {
             function: function_ref,
             argument: argument_ref,
         }) => {
             let function_result = evaluate_(pool, *function_ref, bindings.clone())?;
             match function_result {
-                EvaluationProgress::Function(Cow::Borrowed(Function {
+                EvaluationProgress::Function(Function {
                     parameter,
                     body: body_ref,
-                })) => evaluate_(
+                }) => evaluate_(
                     pool,
                     *body_ref,
                     bindings.update(Cow::Borrowed(parameter), Thunk::unresolved(*argument_ref)),
-                ),
-                EvaluationProgress::Function(Cow::Owned(Function {
-                    parameter,
-                    body: body_ref,
-                })) => evaluate_(
-                    pool,
-                    body_ref,
-                    bindings.update(Cow::Owned(parameter), Thunk::unresolved(*argument_ref)),
                 ),
                 _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
             }
