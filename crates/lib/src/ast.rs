@@ -51,7 +51,7 @@ macro_rules! expr {
                         write!(f, "let {} = ({}) in ({})", name, value, inner)
                     }
                     Expression::Function(Function { parameter, body }) => {
-                        write!(f, "fn {} -> {}", parameter, body)
+                        write!(f, "fn {} -> ({})", parameter, body)
                     }
                     Expression::Apply(Apply { function, argument }) => {
                         write!(f, "({}) ({})", function, argument)

@@ -12,11 +12,12 @@ fn test_rendering_and_parsing_an_expression() {
         let lexed = lex(&rendered)?;
         let parsed = parse(&lexed)?;
         prop_assert!(
-            eq_ignoring_span(&parsed, &input),
-            "{} and {} were not equal\nLexed: {:?}",
+            eq_ignoring_span(&input, &parsed),
+            "{} and {} were not equal\nInput:  {:#?}\nParsed: {:#?}",
+            &input,
             &parsed,
             &input,
-            &lexed,
+            &parsed,
         );
         Ok(())
     })
@@ -35,18 +36,39 @@ fn eq_ignoring_span(left: &Expr, right: &Expr) -> bool {
                 name: left_name,
                 value: left_value,
                 inner: left_inner,
-                ..
             }),
             Expression::Assign(Assign {
                 name: right_name,
                 value: right_value,
                 inner: right_inner,
-                ..
             }),
         ) => {
             left_name == right_name
                 && eq_ignoring_span(left_value, right_value)
                 && eq_ignoring_span(left_inner, right_inner)
+        }
+        (
+            Expression::Function(Function {
+                parameter: left_parameter,
+                body: left_body,
+            }),
+            Expression::Function(Function {
+                parameter: right_parameter,
+                body: right_body,
+            }),
+        ) => left_parameter == right_parameter && eq_ignoring_span(left_body, right_body),
+        (
+            Expression::Apply(Apply {
+                function: left_function,
+                argument: left_argument,
+            }),
+            Expression::Apply(Apply {
+                function: right_function,
+                argument: right_argument,
+            }),
+        ) => {
+            eq_ignoring_span(left_function, right_function)
+                && eq_ignoring_span(left_argument, right_argument)
         }
         (
             Expression::Infix(Infix {

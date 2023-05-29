@@ -2,7 +2,7 @@
 pub enum Type {
     Integer,
     Function {
-        parameter: Box<Type>,
-        body: Box<Type>,
+        parameter: Option<Box<Type>>,
+        body: Option<Box<Type>>,
     },
 }

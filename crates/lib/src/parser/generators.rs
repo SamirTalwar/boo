@@ -19,7 +19,7 @@ pub struct ExprGenConfig {
 impl Default for ExprGenConfig {
     fn default() -> Self {
         Self {
-            depth: 0..8,
+            depth: 0..4,
             gen_identifier: Rc::new(Identifier::arbitrary().boxed()),
         }
     }
@@ -50,8 +50,13 @@ fn gen_nested(
     depth: std::ops::Range<usize>,
     target_type: Option<Type>,
     bindings: HashMap<Identifier, Type>,
-) -> impl Strategy<Value = (Expr, Type)> {
+) -> ExprStrategy {
     let mut choices: Vec<ExprStrategy> = Vec::new();
+    let next_depth = {
+        let next_start = if depth.start == 0 { 0 } else { depth.start - 1 };
+        let next_end = if depth.end == 0 { 0 } else { depth.end - 1 };
+        next_start..next_end
+    };
 
     if depth.start == 0 {
         if let Some(strategy) = gen_primitive(target_type.clone()) {
@@ -64,8 +69,6 @@ fn gen_nested(
     }
 
     if depth.end > 0 {
-        let next_depth = (if depth.start == 0 { 0 } else { depth.start - 1 })..(depth.end - 1);
-
         choices.push(gen_assignment(
             config.clone(),
             next_depth.clone(),
@@ -73,12 +76,44 @@ fn gen_nested(
             bindings.clone(),
         ));
 
-        if let Some(strategy) = gen_infix(config, next_depth, target_type, bindings) {
+        if let Some(strategy) = gen_function(
+            config.clone(),
+            next_depth.clone(),
+            target_type.clone(),
+            bindings.clone(),
+        ) {
             choices.push(strategy);
         }
     }
 
-    proptest::strategy::Union::new(choices)
+    // If we continuously generate nodes that do not introduce new bindings,
+    // we can end up with uncontrollable recursion. By limiting these types of
+    // nodes to depth (max_depth - 2) or higher, we try to avoid this (most of
+    // the time).
+    if depth.end > 1 {
+        choices.push(gen_apply(
+            config.clone(),
+            next_depth.clone(),
+            target_type.clone(),
+            bindings.clone(),
+        ));
+
+        if let Some(strategy) = gen_infix(
+            config.clone(),
+            next_depth,
+            target_type.clone(),
+            bindings.clone(),
+        ) {
+            choices.push(strategy);
+        }
+    }
+
+    if choices.is_empty() {
+        // increase the depth and try again
+        gen_nested(config, depth.start..(depth.end + 1), target_type, bindings)
+    } else {
+        prop::strategy::Union::new(choices).boxed()
+    }
 }
 
 fn gen_unused_identifier(
@@ -182,6 +217,91 @@ fn gen_assignment(
                     })
                 },
             )
+        })
+        .boxed()
+}
+
+fn gen_function(
+    config: Rc<ExprGenConfig>,
+    next_depth: std::ops::Range<usize>,
+    target_type: Option<Type>,
+    bindings: HashMap<Identifier, Type>,
+) -> Option<ExprStrategy> {
+    match target_type.unwrap_or(Type::Function {
+        parameter: None,
+        body: None,
+    }) {
+        Type::Function {
+            parameter: Some(parameter_type), // cannot generate functions for parameters of unknown type without some kind of unification
+            body: body_type,
+        } => Some(
+            gen_unused_identifier(config.clone(), bindings.clone())
+                .prop_flat_map(move |parameter| {
+                    let parameter_ = parameter.clone();
+                    let parameter_type_ = parameter_type.clone();
+                    gen_nested(
+                        config.clone(),
+                        next_depth.clone(),
+                        body_type.clone().map(|t| *t),
+                        bindings.update(parameter, *parameter_type.clone()),
+                    )
+                    .prop_map(move |(body, body_type)| {
+                        let expr = Spanned {
+                            span: 0.into(),
+                            value: Expression::Function(Function {
+                                parameter: parameter_.clone(),
+                                body,
+                            }),
+                        }
+                        .into();
+                        let expr_type = Type::Function {
+                            parameter: Some(parameter_type_.clone()),
+                            body: Some(Box::new(body_type)),
+                        };
+                        (expr, expr_type)
+                    })
+                })
+                .boxed(),
+        ),
+        _ => None,
+    }
+}
+
+fn gen_apply(
+    config: Rc<ExprGenConfig>,
+    next_depth: std::ops::Range<usize>,
+    target_type: Option<Type>,
+    bindings: HashMap<Identifier, Type>,
+) -> ExprStrategy {
+    gen_nested(config.clone(), next_depth.clone(), None, bindings.clone())
+        .prop_flat_map(move |(argument, argument_type)| {
+            gen_nested(
+                config.clone(),
+                next_depth.clone(),
+                Some(Type::Function {
+                    parameter: Some(Box::new(argument_type)),
+                    body: target_type.clone().map(Box::new),
+                }),
+                bindings.clone(),
+            )
+            .prop_map(move |(function, function_type)| {
+                let expr = Spanned {
+                    span: 0.into(),
+                    value: Expression::Apply(Apply {
+                        function,
+                        argument: argument.clone(),
+                    }),
+                }
+                .into();
+                let expr_type = match function_type {
+                    Type::Function {
+                        body: Some(body_type),
+                        ..
+                    } => *body_type,
+                    _ => panic!("No function return type provided."),
+                };
+                (expr, expr_type)
+            })
         })
         .boxed()
 }
