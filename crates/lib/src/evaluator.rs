@@ -40,8 +40,13 @@ impl<'a> EvaluationProgress<'a> {
     }
 }
 
+type UnevaluatedBinding<'a> = (Expr, Bindings<'a>);
+type EvaluatedBinding<'a> = Result<EvaluationProgress<'a>>;
+
 #[derive(Debug, Clone)]
-struct Bindings<'a>(HashMap<Cow<'a, Identifier>, Thunk<Expr, Result<EvaluationProgress<'a>>>>);
+struct Bindings<'a>(
+    HashMap<Cow<'a, Identifier>, Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>>,
+);
 
 impl<'a> Bindings<'a> {
     pub fn new() -> Self {
@@ -51,11 +56,13 @@ impl<'a> Bindings<'a> {
     pub fn resolve(
         &mut self,
         identifier: &Identifier,
-        resolver: impl Fn(Option<Expr>) -> Result<EvaluationProgress<'a>>,
-    ) -> Result<EvaluationProgress<'a>> {
+        resolver: impl Fn(Option<UnevaluatedBinding<'a>>) -> EvaluatedBinding<'a>,
+    ) -> EvaluatedBinding<'a> {
         match self.0.get_mut(identifier) {
             Some(thunk) => {
-                let result = thunk.resolve_by(|r| resolver(Some(*r)));
+                let result = thunk.resolve_by(move |(pool_ref, bindings)| {
+                    resolver(Some((*pool_ref, bindings.clone())))
+                });
                 Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
             }
             None => resolver(None),
@@ -63,10 +70,10 @@ impl<'a> Bindings<'a> {
     }
 
     pub fn with(&self, identifier: &'a Identifier, expression: Expr) -> Self {
-        Self(
-            self.0
-                .update(Cow::Borrowed(identifier), Thunk::unresolved(expression)),
-        )
+        Self(self.0.update(
+            Cow::Borrowed(identifier),
+            Thunk::unresolved((expression, self.clone())),
+        ))
     }
 }
 
@@ -84,7 +91,7 @@ fn evaluate_<'a>(
     match &expr.value {
         Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
         Expression::Identifier(name) => bindings.clone().resolve(name, |thunk| match thunk {
-            Some(value_ref) => evaluate_(pool, value_ref, bindings.clone()),
+            Some((value_ref, thunk_bindings)) => evaluate_(pool, value_ref, thunk_bindings),
             None => Err(Error::UnknownVariable {
                 span: expr.span,
                 name: name.to_string(),
@@ -365,6 +372,90 @@ mod tests {
                 let actual = evaluate(&input);
 
                 prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_does_not_close_functions_over_variables_out_of_scope() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(
+                function_name,
+                outer_variable_name,
+                outer_variable_value,
+                parameter_name,
+                external_variable_name,
+                external_variable_value,
+                argument_value,
+            )| {
+                let input = pool_with(|pool| {
+                    // let f = (let x = 1 in fn y -> x + y + z) in let z = 3 in f 2
+                    let outer_variable_ref =
+                        builders::primitive_integer(pool, outer_variable_value.clone());
+                    let function_body_x_ref =
+                        builders::identifier(pool, outer_variable_name.clone());
+                    let function_body_y_ref = builders::identifier(pool, parameter_name.clone());
+                    let function_body_z_ref =
+                        builders::identifier(pool, external_variable_name.clone());
+                    let function_body_yz_ref = builders::infix(
+                        pool,
+                        Operation::Add,
+                        function_body_y_ref,
+                        function_body_z_ref,
+                    );
+                    let function_body_ref = builders::infix(
+                        pool,
+                        Operation::Add,
+                        function_body_x_ref,
+                        function_body_yz_ref,
+                    );
+                    let function_inner_declaration_ref =
+                        builders::function(pool, parameter_name, function_body_ref);
+                    let function_outer_declaration_ref = builders::assign(
+                        pool,
+                        outer_variable_name,
+                        outer_variable_ref,
+                        function_inner_declaration_ref,
+                    );
+                    let external_variable_ref =
+                        builders::primitive_integer(pool, external_variable_value);
+                    let function_ref = builders::identifier(pool, function_name.clone());
+                    let argument_value_ref =
+                        builders::primitive_integer(pool, argument_value.clone());
+                    let apply_ref = builders::apply(pool, function_ref, argument_value_ref);
+                    let external_assignment_ref = builders::assign(
+                        pool,
+                        external_variable_name.clone(),
+                        external_variable_ref,
+                        apply_ref,
+                    );
+                    builders::assign(
+                        pool,
+                        function_name,
+                        function_outer_declaration_ref,
+                        external_assignment_ref,
+                    );
+                });
+
+                let actual = evaluate(&input);
+
+                prop_assert_eq!(
+                    actual,
+                    Err(Error::UnknownVariable {
+                        span: (0..0).into(),
+                        name: external_variable_name.to_string()
+                    })
+                );
                 Ok(())
             },
         )
