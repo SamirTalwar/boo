@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! expr {
     ($wrapper:tt) => {
         use $crate::identifier::Identifier;
@@ -84,5 +85,3 @@ macro_rules! expr {
         }
     };
 }
-
-pub(crate) use expr;

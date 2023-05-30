@@ -1,10 +1,10 @@
 use im::HashMap;
 
-use boo::error::*;
-use boo::identifier::*;
-use boo::operation::*;
-use boo::parser::ast::*;
-use boo::primitive::*;
+use boo_core::error::*;
+use boo_core::identifier::*;
+use boo_core::operation::*;
+use boo_core::primitive::*;
+use boo_parser::ast::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Evaluated {

@@ -2,10 +2,10 @@
 
 use super::ast::*;
 
-use crate::identifier::*;
-use crate::operation::*;
-use crate::primitive::*;
-use crate::span::Spanned;
+use boo_core::identifier::*;
+use boo_core::operation::*;
+use boo_core::primitive::*;
+use boo_core::span::Spanned;
 
 pub fn primitive(pool: &mut ExprPool, value: Primitive) -> ExprRef {
     pool.add(spanned(Expression::Primitive(value)))

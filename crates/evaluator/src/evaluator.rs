@@ -3,11 +3,12 @@ use std::sync::Arc;
 
 use im::HashMap;
 
-use crate::error::*;
-use crate::identifier::*;
-use crate::operation::*;
+use boo_core::error::*;
+use boo_core::identifier::*;
+use boo_core::operation::*;
+use boo_core::primitive::*;
+
 use crate::pooler::ast::*;
-use crate::primitive::*;
 use crate::thunk::Thunk;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,11 +166,11 @@ fn evaluate_infix<'a>(
 mod tests {
     use proptest::prelude::*;
 
+    use boo_core::span::Spanned;
     use boo_test_helpers::proptest::*;
 
     use crate::pooler::builders;
     use crate::pooler::pool::{leaky_pool_with, pool_with};
-    use crate::span::Spanned;
 
     use super::*;
 

@@ -2,23 +2,21 @@ mod helpers;
 
 use proptest::prelude::*;
 
-use boo::*;
+use boo_parser::generators;
 use boo_test_helpers::proptest::*;
 
 use crate::helpers::naive_evaluator;
 
 #[test]
 fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
-    check(&parser::generators::arbitrary(), |expr| {
+    check(&generators::arbitrary(), |expr| {
         let expected = naive_evaluator::naively_evaluate(expr.clone()).unwrap();
-
-        let pooled = pooler::pool_exprs(expr);
-        let actual = evaluator::evaluate(&pooled).unwrap();
+        let actual = boo_evaluator::evaluate(expr).unwrap();
 
         match (expected, actual) {
             (
                 naive_evaluator::Evaluated::Primitive(expected),
-                evaluator::Evaluated::Primitive(actual),
+                boo_evaluator::Evaluated::Primitive(actual),
             ) => {
                 prop_assert_eq!(expected, actual);
             }

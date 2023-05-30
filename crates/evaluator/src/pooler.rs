@@ -2,29 +2,29 @@ pub mod ast;
 pub mod builders;
 pub mod pool;
 
-use crate::parser;
-use crate::span::Spanned;
+use boo_core::span::Spanned;
+use boo_parser as parser;
 
 use ast::*;
 use pool::pool_with;
 
-pub fn pool_exprs(ast: parser::ast::Expr) -> ExprPool {
+pub fn pool_exprs(ast: parser::Expr) -> ExprPool {
     pool_with(|pool| {
         add_expr(pool, *ast);
     })
 }
 
-pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::ast::Expression>) -> ExprRef {
+pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::Expression>) -> ExprRef {
     match expr.value {
-        parser::ast::Expression::Primitive(value) => pool.add(Spanned {
+        parser::Expression::Primitive(value) => pool.add(Spanned {
             span: expr.span,
             value: Expression::Primitive(value),
         }),
-        parser::ast::Expression::Identifier(name) => pool.add(Spanned {
+        parser::Expression::Identifier(name) => pool.add(Spanned {
             span: expr.span,
             value: Expression::Identifier(name),
         }),
-        parser::ast::Expression::Assign(parser::ast::Assign { name, value, inner }) => {
+        parser::Expression::Assign(parser::Assign { name, value, inner }) => {
             let value_ref = add_expr(pool, *value);
             let inner_ref = add_expr(pool, *inner);
             pool.add(Spanned {
@@ -36,7 +36,7 @@ pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::ast::Expression>) -> 
                 }),
             })
         }
-        parser::ast::Expression::Function(parser::ast::Function { parameter, body }) => {
+        parser::Expression::Function(parser::Function { parameter, body }) => {
             let body_ref = add_expr(pool, *body);
             pool.add(Spanned {
                 span: expr.span,
@@ -46,7 +46,7 @@ pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::ast::Expression>) -> 
                 }),
             })
         }
-        parser::ast::Expression::Apply(parser::ast::Apply { function, argument }) => {
+        parser::Expression::Apply(parser::Apply { function, argument }) => {
             let function_ref = add_expr(pool, *function);
             let argument_ref = add_expr(pool, *argument);
             pool.add(Spanned {
@@ -57,7 +57,7 @@ pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::ast::Expression>) -> 
                 }),
             })
         }
-        parser::ast::Expression::Infix(parser::ast::Infix {
+        parser::Expression::Infix(parser::Infix {
             operation,
             left,
             right,
@@ -82,10 +82,10 @@ mod tests {
 
     use boo_test_helpers::proptest::*;
 
-    use crate::identifier::*;
-    use crate::operation::*;
-    use crate::parser;
-    use crate::primitive::*;
+    use boo_core::identifier::*;
+    use boo_core::operation::*;
+    use boo_core::primitive::*;
+    use boo_parser as parser;
 
     use super::*;
 

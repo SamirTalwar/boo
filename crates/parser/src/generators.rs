@@ -5,8 +5,8 @@ use std::rc::Rc;
 use im::HashMap;
 use proptest::prelude::*;
 
-use crate::identifier::Identifier;
-use crate::types::Type;
+use boo_core::identifier::Identifier;
+use boo_core::types::Type;
 
 use super::*;
 

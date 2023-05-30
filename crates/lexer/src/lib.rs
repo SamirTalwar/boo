@@ -2,10 +2,10 @@ use std::str::FromStr;
 
 use logos::Logos;
 
-use crate::error::*;
-use crate::identifier::*;
-use crate::primitive::*;
-use crate::span::*;
+use boo_core::error::*;
+use boo_core::identifier::*;
+use boo_core::primitive::*;
+use boo_core::span::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Logos)]
 #[logos(skip r"[ \t\n\f]+")]

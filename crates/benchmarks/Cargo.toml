@@ -15,7 +15,10 @@ name = "benchmarks"
 harness = false
 
 [dependencies]
-boo = { version = "0.1.0", path = "../lib" }
+boo = { path = "../lib" }
+boo-core = { path = "../core" }
+boo-evaluator = { path = "../evaluator" }
+boo-parser = { path = "../parser" }
 
 criterion = { version = "0.4.0", features = ["csv", "html_reports"] }
 num-bigint = "0.4.0"

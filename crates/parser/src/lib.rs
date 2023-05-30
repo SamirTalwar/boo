@@ -2,12 +2,13 @@ pub mod ast;
 pub mod builders;
 pub mod generators;
 
-use crate::error::*;
-use crate::lexer::*;
-use crate::operation::*;
-use crate::parser::ast::*;
-use crate::primitive::*;
-use crate::span::*;
+use boo_core::error::*;
+use boo_core::operation::*;
+use boo_core::primitive::*;
+use boo_core::span::*;
+use boo_lexer::*;
+
+pub use crate::ast::*;
 
 peg::parser! {
     grammar parser<'a>() for [&'a AnnotatedToken<'a, Span>] {
@@ -135,9 +136,8 @@ fn construct_infix(left: Expr, operation: Operation, right: Expr) -> Expr {
 mod tests {
     use proptest::prelude::*;
 
+    use boo_core::identifier::*;
     use boo_test_helpers::proptest::*;
-
-    use crate::identifier::*;
 
     use super::builders::*;
     use super::*;

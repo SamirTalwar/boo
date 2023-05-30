@@ -1,8 +1,8 @@
 use proptest::prelude::*;
 
-use boo::parser::ast::*;
-use boo::parser::generators;
-use boo::*;
+use boo_lexer::*;
+use boo_parser::generators;
+use boo_parser::*;
 use boo_test_helpers::proptest::*;
 
 #[test]

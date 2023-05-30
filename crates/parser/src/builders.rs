@@ -1,9 +1,9 @@
-#![cfg(test)]
-
 use super::*;
 
-use crate::identifier::Identifier;
-use crate::primitive::*;
+use boo_core::identifier::Identifier;
+use boo_core::operation::*;
+use boo_core::primitive::*;
+use boo_core::span::*;
 
 pub fn primitive(annotation: impl Into<Span>, value: Primitive) -> Expr {
     Spanned {

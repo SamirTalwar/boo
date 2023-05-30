@@ -1,4 +1,3 @@
-use std::rc::Rc;
 use std::time::Instant;
 
 use anyhow::anyhow;
@@ -6,14 +5,18 @@ use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
 
-use boo::identifier::*;
 use boo::*;
+use boo_core::identifier::*;
+use boo_parser::generators;
 
 fn main() -> anyhow::Result<()> {
-    let any_expr = parser::generators::gen(Rc::new(parser::generators::ExprGenConfig {
-        gen_identifier: Rc::new(Identifier::gen_ascii(1..=16).boxed()),
-        ..Default::default()
-    }));
+    let any_expr = generators::gen(
+        generators::ExprGenConfig {
+            gen_identifier: Identifier::gen_ascii(1..=16).boxed().into(),
+            ..Default::default()
+        }
+        .into(),
+    );
     let mut runner = TestRunner::default();
     let tree = any_expr
         .new_tree(&mut runner)
@@ -23,8 +26,7 @@ fn main() -> anyhow::Result<()> {
     println!("Expression:\n{}\n", expr);
 
     let start_time = Instant::now();
-    let pool = pool_exprs(expr);
-    let result = evaluate(&pool).expect("Could not interpret the expression.");
+    let result = evaluate(expr).expect("Could not interpret the expression.");
     let end_time = Instant::now();
     println!("Result:\n{}", result);
 

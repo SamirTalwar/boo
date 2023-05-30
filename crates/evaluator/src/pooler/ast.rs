@@ -1,9 +1,9 @@
-use crate::ast;
-use crate::span::Spanned;
+use boo_core::expr;
+use boo_core::span::Spanned;
 
 use super::pool::*;
 
-ast::expr!((PoolRef<Spanned<_>>));
+expr!((PoolRef<Spanned<_>>));
 
 pub type ExprPool = Pool<Spanned<Expression>>;
 

@@ -5,7 +5,7 @@ use proptest::test_runner::TestRunner;
 
 use criterion::{black_box, BenchmarkId, Criterion};
 
-use boo::primitive::Integer;
+use boo_core::primitive::Integer;
 
 pub fn integer_benchmark(c: &mut Criterion) {
     let mut runner = TestRunner::deterministic();
