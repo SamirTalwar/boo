@@ -2,6 +2,7 @@
 
 use super::ast::*;
 
+use boo_core::ast::*;
 use boo_core::identifier::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
@@ -47,7 +48,7 @@ pub fn infix(pool: &mut ExprPool, operation: Operation, left: Expr, right: Expr)
     }))))
 }
 
-fn spanned(value: Expression) -> Spanned<Expression> {
+fn spanned(value: Expression<Expr>) -> Spanned<Expression<Expr>> {
     Spanned {
         span: 0.into(),
         value,

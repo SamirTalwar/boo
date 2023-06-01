@@ -1,5 +1,6 @@
 use proptest::prelude::*;
 
+use boo_core::ast::*;
 use boo_lexer::*;
 use boo_parser::generators;
 use boo_parser::*;

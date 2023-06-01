@@ -1,3 +1,4 @@
+use boo_core::ast::Expression;
 use boo_core::expr;
 use boo_core::span::Spanned;
 
@@ -7,4 +8,4 @@ expr!((PoolRef<Spanned<_>>));
 
 impl Copy for Expr {}
 
-pub type ExprPool = Pool<Spanned<Expression>>;
+pub type ExprPool = Pool<Spanned<Expression<Expr>>>;

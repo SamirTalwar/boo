@@ -7,7 +7,7 @@ pub fn fill_hole(stream: TokenStream) -> TokenStream {
         [input, TokenTree::Punct(separator), replacement] if separator.to_string() == "," => {
             fill_hole_impl(input, replacement).into()
         }
-        _ => panic!("Invalid input: {:?}", parts),
+        _ => panic!("Invalid input: {:#?}", parts),
     }
 }
 

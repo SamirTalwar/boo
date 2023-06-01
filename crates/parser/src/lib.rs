@@ -2,6 +2,7 @@ pub mod ast;
 pub mod builders;
 pub mod generators;
 
+use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;

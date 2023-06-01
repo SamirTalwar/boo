@@ -1,5 +1,6 @@
 use im::HashMap;
 
+use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::identifier::*;
 use boo_core::operation::*;
@@ -9,7 +10,7 @@ use boo_parser::ast::*;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Evaluated {
     Primitive(Primitive),
-    Function(Function, Bindings),
+    Function(Function<Expr>, Bindings),
 }
 
 impl std::fmt::Display for Evaluated {

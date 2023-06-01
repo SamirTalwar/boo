@@ -1,5 +1,6 @@
 use super::*;
 
+use boo_core::ast::*;
 use boo_core::identifier::Identifier;
 use boo_core::operation::*;
 use boo_core::primitive::*;
@@ -48,7 +49,7 @@ pub fn infix(span: impl Into<Span>, operation: Operation, left: Expr, right: Exp
     )
 }
 
-fn wrapped(span: impl Into<Span>, value: Expression) -> Expr {
+fn wrapped(span: impl Into<Span>, value: Expression<Expr>) -> Expr {
     Expr(
         Spanned {
             span: span.into(),

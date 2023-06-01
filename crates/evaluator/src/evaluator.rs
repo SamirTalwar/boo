@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use im::HashMap;
 
+use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::identifier::*;
 use boo_core::operation::*;
@@ -14,7 +15,7 @@ use crate::thunk::Thunk;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Evaluated {
     Primitive(Primitive),
-    Function(Function),
+    Function(Function<Expr>),
 }
 
 impl std::fmt::Display for Evaluated {
@@ -29,7 +30,7 @@ impl std::fmt::Display for Evaluated {
 #[derive(Debug, Clone)]
 enum EvaluationProgress<'a> {
     Primitive(Cow<'a, Primitive>),
-    Function(&'a Function, Bindings<'a>),
+    Function(&'a Function<Expr>, Bindings<'a>),
 }
 
 impl<'a> EvaluationProgress<'a> {
