@@ -167,7 +167,6 @@ dependencies = [
 name = "boo-core"
 version = "0.1.0"
 dependencies = [
- "boo-fill-hole",
  "boo-test-helpers",
  "lazy_static",
  "miette",
@@ -183,17 +182,12 @@ name = "boo-evaluator"
 version = "0.1.0"
 dependencies = [
  "boo-core",
- "boo-fill-hole",
  "boo-parser",
  "boo-test-helpers",
  "im",
  "proptest",
  "proptest-derive",
 ]
-
-[[package]]
-name = "boo-fill-hole"
-version = "0.1.0"
 
 [[package]]
 name = "boo-interpreter"
@@ -222,7 +216,6 @@ name = "boo-parser"
 version = "0.1.0"
 dependencies = [
  "boo-core",
- "boo-fill-hole",
  "boo-lexer",
  "boo-test-helpers",
  "im",

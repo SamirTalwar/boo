@@ -4,20 +4,6 @@ use crate::identifier::Identifier;
 use crate::operation::Operation;
 use crate::primitive::Primitive;
 
-#[macro_export]
-macro_rules! expr {
-    ($wrapper:tt) => {
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-        pub struct Expr(pub boo_fill_hole::fill_hole!($wrapper, ($crate::ast::Expression<Expr>)));
-
-        impl std::fmt::Display for Expr {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                self.0.fmt(f)
-            }
-        }
-    };
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression<Outer> {
     Primitive(Primitive),

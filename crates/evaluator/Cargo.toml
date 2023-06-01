@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 boo-core = { path = "../core" }
-boo-fill-hole = { path = "../fill-hole" }
 boo-parser = { path = "../parser" }
 
 im = { version = "15.1.0", features = ["proptest"] }
