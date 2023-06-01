@@ -10,68 +10,68 @@ use pool::pool_with;
 
 pub fn pool_exprs(ast: parser::Expr) -> ExprPool {
     pool_with(|pool| {
-        add_expr(pool, *ast);
+        add_expr(pool, *ast.0);
     })
 }
 
-pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::Expression>) -> ExprRef {
+pub fn add_expr(pool: &mut ExprPool, expr: Spanned<parser::Expression>) -> Expr {
     match expr.value {
-        parser::Expression::Primitive(value) => pool.add(Spanned {
+        parser::Expression::Primitive(value) => Expr(pool.add(Spanned {
             span: expr.span,
             value: Expression::Primitive(value),
-        }),
-        parser::Expression::Identifier(name) => pool.add(Spanned {
+        })),
+        parser::Expression::Identifier(name) => Expr(pool.add(Spanned {
             span: expr.span,
             value: Expression::Identifier(name),
-        }),
+        })),
         parser::Expression::Assign(parser::Assign { name, value, inner }) => {
-            let value_ref = add_expr(pool, *value);
-            let inner_ref = add_expr(pool, *inner);
-            pool.add(Spanned {
+            let value_ref = add_expr(pool, *value.0);
+            let inner_ref = add_expr(pool, *inner.0);
+            Expr(pool.add(Spanned {
                 span: expr.span,
                 value: Expression::Assign(Assign {
                     name,
                     value: value_ref,
                     inner: inner_ref,
                 }),
-            })
+            }))
         }
         parser::Expression::Function(parser::Function { parameter, body }) => {
-            let body_ref = add_expr(pool, *body);
-            pool.add(Spanned {
+            let body_ref = add_expr(pool, *body.0);
+            Expr(pool.add(Spanned {
                 span: expr.span,
                 value: Expression::Function(Function {
                     parameter,
                     body: body_ref,
                 }),
-            })
+            }))
         }
         parser::Expression::Apply(parser::Apply { function, argument }) => {
-            let function_ref = add_expr(pool, *function);
-            let argument_ref = add_expr(pool, *argument);
-            pool.add(Spanned {
+            let function_ref = add_expr(pool, *function.0);
+            let argument_ref = add_expr(pool, *argument.0);
+            Expr(pool.add(Spanned {
                 span: expr.span,
                 value: Expression::Apply(Apply {
                     function: function_ref,
                     argument: argument_ref,
                 }),
-            })
+            }))
         }
         parser::Expression::Infix(parser::Infix {
             operation,
             left,
             right,
         }) => {
-            let left_ref = add_expr(pool, *left);
-            let right_ref = add_expr(pool, *right);
-            pool.add(Spanned {
+            let left_ref = add_expr(pool, *left.0);
+            let right_ref = add_expr(pool, *right.0);
+            Expr(pool.add(Spanned {
                 span: expr.span,
                 value: Expression::Infix(Infix {
                     operation,
                     left: left_ref,
                     right: right_ref,
                 }),
-            })
+            }))
         }
     }
 }

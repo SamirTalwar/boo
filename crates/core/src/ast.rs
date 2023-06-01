@@ -5,7 +5,14 @@ macro_rules! expr {
         use $crate::operation::Operation;
         use $crate::primitive::Primitive;
 
-        pub type Expr = boo_fill_hole::fill_hole!($wrapper, Expression);
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        pub struct Expr(pub boo_fill_hole::fill_hole!($wrapper, Expression));
+
+        impl std::fmt::Display for Expr {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
 
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub enum Expression {

@@ -5,66 +5,55 @@ use boo_core::operation::*;
 use boo_core::primitive::*;
 use boo_core::span::*;
 
-pub fn primitive(annotation: impl Into<Span>, value: Primitive) -> Expr {
-    Spanned {
-        span: annotation.into(),
-        value: Expression::Primitive(value),
-    }
-    .into()
+pub fn primitive(span: impl Into<Span>, value: Primitive) -> Expr {
+    wrapped(span, Expression::Primitive(value))
 }
 
-pub fn primitive_integer(annotation: impl Into<Span>, value: Integer) -> Expr {
-    primitive(annotation, Primitive::Integer(value))
+pub fn primitive_integer(span: impl Into<Span>, value: Integer) -> Expr {
+    primitive(span, Primitive::Integer(value))
 }
 
-pub fn identifier(annotation: impl Into<Span>, name: Identifier) -> Expr {
-    Spanned {
-        span: annotation.into(),
-        value: Expression::Identifier(name),
-    }
-    .into()
+pub fn identifier(span: impl Into<Span>, name: Identifier) -> Expr {
+    wrapped(span, Expression::Identifier(name))
 }
 
-pub fn identifier_string(annotation: impl Into<Span>, name: String) -> Expr {
-    identifier(annotation, Identifier::new(name).unwrap())
+pub fn identifier_string(span: impl Into<Span>, name: String) -> Expr {
+    identifier(span, Identifier::new(name).unwrap())
 }
 
-pub fn assign(annotation: impl Into<Span>, name: Identifier, value: Expr, inner: Expr) -> Expr {
-    Spanned {
-        span: annotation.into(),
-        value: Expression::Assign(Assign { name, value, inner }),
-    }
-    .into()
+pub fn assign(span: impl Into<Span>, name: Identifier, value: Expr, inner: Expr) -> Expr {
+    wrapped(span, Expression::Assign(Assign { name, value, inner }))
 }
 
-pub fn assign_string(annotation: impl Into<Span>, name: String, value: Expr, inner: Expr) -> Expr {
-    assign(annotation, Identifier::new(name).unwrap(), value, inner)
+pub fn assign_string(span: impl Into<Span>, name: String, value: Expr, inner: Expr) -> Expr {
+    assign(span, Identifier::new(name).unwrap(), value, inner)
 }
 
-pub fn function(annotation: impl Into<Span>, parameter: Identifier, body: Expr) -> Expr {
-    Spanned {
-        span: annotation.into(),
-        value: Expression::Function(Function { parameter, body }),
-    }
-    .into()
+pub fn function(span: impl Into<Span>, parameter: Identifier, body: Expr) -> Expr {
+    wrapped(span, Expression::Function(Function { parameter, body }))
 }
 
-pub fn apply(annotation: impl Into<Span>, function: Expr, argument: Expr) -> Expr {
-    Spanned {
-        span: annotation.into(),
-        value: Expression::Apply(Apply { function, argument }),
-    }
-    .into()
+pub fn apply(span: impl Into<Span>, function: Expr, argument: Expr) -> Expr {
+    wrapped(span, Expression::Apply(Apply { function, argument }))
 }
 
-pub fn infix(annotation: impl Into<Span>, operation: Operation, left: Expr, right: Expr) -> Expr {
-    Spanned {
-        span: annotation.into(),
-        value: Expression::Infix(Infix {
+pub fn infix(span: impl Into<Span>, operation: Operation, left: Expr, right: Expr) -> Expr {
+    wrapped(
+        span,
+        Expression::Infix(Infix {
             operation,
             left,
             right,
         }),
-    }
-    .into()
+    )
+}
+
+fn wrapped(span: impl Into<Span>, value: Expression) -> Expr {
+    Expr(
+        Spanned {
+            span: span.into(),
+            value,
+        }
+        .into(),
+    )
 }

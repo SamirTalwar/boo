@@ -23,13 +23,13 @@ peg::parser! {
                     Token::Identifier(parameter) => parameter,
                     _ => unreachable!(),
                 };
-                Spanned {
-                    span: fn_.annotation | body.span,
+                Expr(Spanned {
+                    span: fn_.annotation | body.0.span,
                     value: Expression::Function(Function {
                         parameter: p.clone(),
                         body,
                     }),
-                }.into()
+                }.into())
             }
             --
             let_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Let }] } / expected!("let"))
@@ -42,14 +42,14 @@ peg::parser! {
                     Token::Identifier(name) => name,
                     _ => unreachable!(),
                 };
-                Spanned {
-                    span: let_.annotation | inner.span,
+                Expr(Spanned {
+                    span: let_.annotation | inner.0.span,
                     value: Expression::Assign(Assign {
                         name: n.clone(),
                         value,
                         inner,
                     }),
-                }.into()
+                }.into())
             }
             --
             left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("+") }] } / expected!("'+'")) right:@ {
@@ -64,13 +64,13 @@ peg::parser! {
             }
             --
             function:(@) argument:expr() {
-                Spanned {
-                    span: argument.span,
+                Expr(Spanned {
+                    span: argument.0.span,
                     value: Expression::Apply(Apply {
                         function,
                         argument,
                     }),
-                }.into()
+                }.into())
             }
             --
             p:primitive() { p }
@@ -85,18 +85,18 @@ peg::parser! {
 
         rule primitive() -> Expr =
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
-                Spanned {
+                Expr(Spanned {
                     span: *annotation,
                     value: Expression::Primitive(Primitive::Integer(n.clone())),
-                }.into()
+                }.into())
             } } / expected!("an integer")
 
         rule identifier() -> Expr =
             quiet! { [AnnotatedToken { annotation, token: Token::Identifier(name) }] {
-                Spanned {
+                Expr(Spanned {
                     span: *annotation,
                     value: Expression::Identifier(name.clone()),
-                }.into()
+                }.into())
             } } / expected!("an identifier")
     }
 }
@@ -121,15 +121,17 @@ pub fn parse(input: &[AnnotatedToken<Span>]) -> Result<Expr> {
 }
 
 fn construct_infix(left: Expr, operation: Operation, right: Expr) -> Expr {
-    Spanned {
-        span: left.span | right.span,
-        value: Expression::Infix(Infix {
-            operation,
-            left,
-            right,
-        }),
-    }
-    .into()
+    Expr(
+        Spanned {
+            span: left.0.span | right.0.span,
+            value: Expression::Infix(Infix {
+                operation,
+                left,
+                right,
+            }),
+        }
+        .into(),
+    )
 }
 
 #[cfg(test)]

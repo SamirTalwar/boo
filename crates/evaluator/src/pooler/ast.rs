@@ -5,6 +5,6 @@ use super::pool::*;
 
 expr!((PoolRef<Spanned<_>>));
 
-pub type ExprPool = Pool<Spanned<Expression>>;
+impl Copy for Expr {}
 
-pub type ExprRef = PoolRef<Spanned<Expression>>;
+pub type ExprPool = Pool<Spanned<Expression>>;
