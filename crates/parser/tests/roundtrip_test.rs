@@ -25,7 +25,7 @@ fn test_rendering_and_parsing_an_expression() {
 }
 
 fn eq_ignoring_span(left: &Expr, right: &Expr) -> bool {
-    match (&left.0.value, &right.0.value) {
+    match (left.value(), right.value()) {
         (Expression::Primitive(left_value), Expression::Primitive(right_value)) => {
             left_value == right_value
         }

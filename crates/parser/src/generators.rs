@@ -140,13 +140,7 @@ fn gen_primitive(target_type: Option<Type>) -> Option<ExprStrategy> {
 
 fn make_primitive_expr(value: Primitive) -> (Expr, Type) {
     let value_type = value.get_type();
-    let expr = Expr(
-        Spanned {
-            span: 0.into(),
-            value: Expression::Primitive(value),
-        }
-        .into(),
-    );
+    let expr = Expr::new(0.into(), Expression::Primitive(value));
     (expr, value_type)
 }
 
@@ -172,13 +166,7 @@ fn gen_variable_reference(
                         .iter()
                         .nth(index.index(bindings_of_target_type.len()))
                         .unwrap();
-                    let expr = Expr(
-                        Spanned {
-                            span: 0.into(),
-                            value: Expression::Identifier(name.clone()),
-                        }
-                        .into(),
-                    );
+                    let expr = Expr::new(0.into(), Expression::Identifier(name.clone()));
                     (expr, typ.clone())
                 })
                 .boxed(),
@@ -209,16 +197,13 @@ fn gen_assignment(
                         bindings_.update(name.clone(), value_type),
                     )
                     .prop_map(move |(inner, inner_type)| {
-                        let expr = Expr(
-                            Spanned {
-                                span: 0.into(),
-                                value: Expression::Assign(Assign {
-                                    name: name_.clone(),
-                                    value: value_.clone(),
-                                    inner,
-                                }),
-                            }
-                            .into(),
+                        let expr = Expr::new(
+                            0.into(),
+                            Expression::Assign(Assign {
+                                name: name_.clone(),
+                                value: value_.clone(),
+                                inner,
+                            }),
                         );
                         (expr, inner_type)
                     })
@@ -253,15 +238,12 @@ fn gen_function(
                         bindings.update(parameter, *parameter_type.clone()),
                     )
                     .prop_map(move |(body, body_type)| {
-                        let expr = Expr(
-                            Spanned {
-                                span: 0.into(),
-                                value: Expression::Function(Function {
-                                    parameter: parameter_.clone(),
-                                    body,
-                                }),
-                            }
-                            .into(),
+                        let expr = Expr::new(
+                            0.into(),
+                            Expression::Function(Function {
+                                parameter: parameter_.clone(),
+                                body,
+                            }),
                         );
                         let expr_type = Type::Function {
                             parameter: Some(parameter_type_.clone()),
@@ -294,15 +276,12 @@ fn gen_apply(
                 bindings.clone(),
             )
             .prop_map(move |(function, function_type)| {
-                let expr = Expr(
-                    Spanned {
-                        span: 0.into(),
-                        value: Expression::Apply(Apply {
-                            function,
-                            argument: argument.clone(),
-                        }),
-                    }
-                    .into(),
+                let expr = Expr::new(
+                    0.into(),
+                    Expression::Apply(Apply {
+                        function,
+                        argument: argument.clone(),
+                    }),
                 );
                 let expr_type = match function_type {
                     Type::Function {
@@ -341,16 +320,13 @@ fn gen_infix(
                     ),
                 )
                     .prop_map(move |((left, _), (right, _))| {
-                        let expr = Expr(
-                            Spanned {
-                                span: 0.into(),
-                                value: Expression::Infix(Infix {
-                                    operation,
-                                    left,
-                                    right,
-                                }),
-                            }
-                            .into(),
+                        let expr = Expr::new(
+                            0.into(),
+                            Expression::Infix(Infix {
+                                operation,
+                                left,
+                                right,
+                            }),
                         );
                         (expr, Type::Integer)
                     })

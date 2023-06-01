@@ -31,12 +31,12 @@ pub struct Bindings(HashMap<Identifier, (Expr, Bindings)>);
 
 #[allow(clippy::boxed_local)]
 fn evaluate_(expr: Expr, bindings: Bindings) -> Result<Evaluated> {
-    match &expr.0.value {
+    match &expr.value() {
         Expression::Primitive(value) => Ok(Evaluated::Primitive(value.clone())),
         Expression::Identifier(name) => match bindings.0.get(name) {
             Some((value, lookup_bindings)) => evaluate_(value.clone(), lookup_bindings.clone()),
             None => Err(Error::UnknownVariable {
-                span: expr.0.span,
+                span: expr.span(),
                 name: name.to_string(),
             }),
         },
@@ -62,7 +62,7 @@ fn evaluate_(expr: Expr, bindings: Bindings) -> Result<Evaluated> {
                             .update(parameter, (argument.clone(), lookup_bindings)),
                     ),
                 ),
-                _ => Err(Error::InvalidFunctionApplication { span: expr.0.span }),
+                _ => Err(Error::InvalidFunctionApplication { span: expr.span() }),
             }
         }
         Expression::Infix(Infix {
