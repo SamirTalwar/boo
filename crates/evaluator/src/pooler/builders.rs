@@ -6,10 +6,9 @@ use boo_core::ast::*;
 use boo_core::identifier::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
-use boo_core::span::Spanned;
 
 pub fn primitive(pool: &mut ExprPool, value: Primitive) -> Expr {
-    Expr(pool.add(spanned(Expression::Primitive(value))))
+    Expr::insert(pool, 0.into(), Expression::Primitive(value))
 }
 
 pub fn primitive_integer(pool: &mut ExprPool, value: Integer) -> Expr {
@@ -17,7 +16,7 @@ pub fn primitive_integer(pool: &mut ExprPool, value: Integer) -> Expr {
 }
 
 pub fn identifier(pool: &mut ExprPool, name: Identifier) -> Expr {
-    Expr(pool.add(spanned(Expression::Identifier(name))))
+    Expr::insert(pool, 0.into(), Expression::Identifier(name))
 }
 
 pub fn identifier_string(pool: &mut ExprPool, name: String) -> Expr {
@@ -25,7 +24,11 @@ pub fn identifier_string(pool: &mut ExprPool, name: String) -> Expr {
 }
 
 pub fn assign(pool: &mut ExprPool, name: Identifier, value: Expr, inner: Expr) -> Expr {
-    Expr(pool.add(spanned(Expression::Assign(Assign { name, value, inner }))))
+    Expr::insert(
+        pool,
+        0.into(),
+        Expression::Assign(Assign { name, value, inner }),
+    )
 }
 
 pub fn assign_string(pool: &mut ExprPool, name: String, value: Expr, inner: Expr) -> Expr {
@@ -33,24 +36,29 @@ pub fn assign_string(pool: &mut ExprPool, name: String, value: Expr, inner: Expr
 }
 
 pub fn function(pool: &mut ExprPool, parameter: Identifier, body: Expr) -> Expr {
-    Expr(pool.add(spanned(Expression::Function(Function { parameter, body }))))
+    Expr::insert(
+        pool,
+        0.into(),
+        Expression::Function(Function { parameter, body }),
+    )
 }
 
 pub fn apply(pool: &mut ExprPool, function: Expr, argument: Expr) -> Expr {
-    Expr(pool.add(spanned(Expression::Apply(Apply { function, argument }))))
+    Expr::insert(
+        pool,
+        0.into(),
+        Expression::Apply(Apply { function, argument }),
+    )
 }
 
 pub fn infix(pool: &mut ExprPool, operation: Operation, left: Expr, right: Expr) -> Expr {
-    Expr(pool.add(spanned(Expression::Infix(Infix {
-        operation,
-        left,
-        right,
-    }))))
-}
-
-fn spanned(value: Expression<Expr>) -> Spanned<Expression<Expr>> {
-    Spanned {
-        span: 0.into(),
-        value,
-    }
+    Expr::insert(
+        pool,
+        0.into(),
+        Expression::Infix(Infix {
+            operation,
+            left,
+            right,
+        }),
+    )
 }

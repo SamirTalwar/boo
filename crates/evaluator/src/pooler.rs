@@ -3,7 +3,6 @@ pub mod builders;
 pub mod pool;
 
 use boo_core::ast::*;
-use boo_core::span::Spanned;
 use boo_parser as parser;
 
 use ast::*;
@@ -18,46 +17,43 @@ pub fn pool_exprs(ast: parser::Expr) -> ExprPool {
 pub fn add_expr(pool: &mut ExprPool, expr: parser::Expr) -> Expr {
     let span = expr.span();
     match expr.consume() {
-        Expression::Primitive(value) => Expr(pool.add(Spanned {
-            span,
-            value: Expression::Primitive(value),
-        })),
-        Expression::Identifier(name) => Expr(pool.add(Spanned {
-            span,
-            value: Expression::Identifier(name),
-        })),
+        Expression::Primitive(value) => Expr::insert(pool, span, Expression::Primitive(value)),
+        Expression::Identifier(name) => Expr::insert(pool, span, Expression::Identifier(name)),
         Expression::Assign(Assign { name, value, inner }) => {
             let value_ref = add_expr(pool, value);
             let inner_ref = add_expr(pool, inner);
-            Expr(pool.add(Spanned {
+            Expr::insert(
+                pool,
                 span,
-                value: Expression::Assign(Assign {
+                Expression::Assign(Assign {
                     name,
                     value: value_ref,
                     inner: inner_ref,
                 }),
-            }))
+            )
         }
         Expression::Function(Function { parameter, body }) => {
             let body_ref = add_expr(pool, body);
-            Expr(pool.add(Spanned {
+            Expr::insert(
+                pool,
                 span,
-                value: Expression::Function(Function {
+                Expression::Function(Function {
                     parameter,
                     body: body_ref,
                 }),
-            }))
+            )
         }
         Expression::Apply(Apply { function, argument }) => {
             let function_ref = add_expr(pool, function);
             let argument_ref = add_expr(pool, argument);
-            Expr(pool.add(Spanned {
+            Expr::insert(
+                pool,
                 span,
-                value: Expression::Apply(Apply {
+                Expression::Apply(Apply {
                     function: function_ref,
                     argument: argument_ref,
                 }),
-            }))
+            )
         }
         Expression::Infix(Infix {
             operation,
@@ -66,14 +62,15 @@ pub fn add_expr(pool: &mut ExprPool, expr: parser::Expr) -> Expr {
         }) => {
             let left_ref = add_expr(pool, left);
             let right_ref = add_expr(pool, right);
-            Expr(pool.add(Spanned {
+            Expr::insert(
+                pool,
                 span,
-                value: Expression::Infix(Infix {
+                Expression::Infix(Infix {
                     operation,
                     left: left_ref,
                     right: right_ref,
                 }),
-            }))
+            )
         }
     }
 }

@@ -80,7 +80,7 @@ impl<'a> Bindings<'a> {
 }
 
 pub fn evaluate(pool: &ExprPool) -> Result<Evaluated> {
-    let evaluated = evaluate_(pool, Expr(pool.root()), Bindings::new())?;
+    let evaluated = evaluate_(pool, Expr::from_root(pool), Bindings::new())?;
     Ok(evaluated.finish())
 }
 
@@ -89,7 +89,7 @@ fn evaluate_<'a>(
     expr_ref: Expr,
     bindings: Bindings<'a>,
 ) -> Result<EvaluationProgress<'a>> {
-    let expr = pool.get(expr_ref.0);
+    let expr = expr_ref.read_from(pool);
     match &expr.value {
         Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
         Expression::Identifier(name) => bindings.clone().resolve(name, |thunk| match thunk {
