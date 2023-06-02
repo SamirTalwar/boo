@@ -1,5 +1,3 @@
-// note that the spans generated are nonsense
-
 use std::rc::Rc;
 
 use im::HashMap;
@@ -7,9 +5,33 @@ use proptest::prelude::*;
 
 use boo_core::ast::*;
 use boo_core::identifier::Identifier;
+use boo_core::operation::Operation;
+use boo_core::primitive::Primitive;
 use boo_core::types::Type;
 
-use super::*;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Expr(Box<Expression<Expr>>);
+
+impl Expr {
+    pub fn new(expression: Expression<Expr>) -> Self {
+        Self(Box::new(expression))
+    }
+}
+
+impl ExpressionWrapper for Expr {
+    type Annotation = ();
+
+    fn map<Next>(self, f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next) -> Next {
+        let mapped = self.0.map(f);
+        f((), mapped)
+    }
+}
+
+impl std::fmt::Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 #[derive(Debug)]
 pub struct ExprGenConfig {
@@ -140,7 +162,7 @@ fn gen_primitive(target_type: Option<Type>) -> Option<ExprStrategy> {
 
 fn make_primitive_expr(value: Primitive) -> (Expr, Type) {
     let value_type = value.get_type();
-    let expr = Expr::new(0.into(), Expression::Primitive(value));
+    let expr = Expr::new(Expression::Primitive(value));
     (expr, value_type)
 }
 
@@ -166,7 +188,7 @@ fn gen_variable_reference(
                         .iter()
                         .nth(index.index(bindings_of_target_type.len()))
                         .unwrap();
-                    let expr = Expr::new(0.into(), Expression::Identifier(name.clone()));
+                    let expr = Expr::new(Expression::Identifier(name.clone()));
                     (expr, typ.clone())
                 })
                 .boxed(),
@@ -197,14 +219,11 @@ fn gen_assignment(
                         bindings_.update(name.clone(), value_type),
                     )
                     .prop_map(move |(inner, inner_type)| {
-                        let expr = Expr::new(
-                            0.into(),
-                            Expression::Assign(Assign {
-                                name: name_.clone(),
-                                value: value_.clone(),
-                                inner,
-                            }),
-                        );
+                        let expr = Expr::new(Expression::Assign(Assign {
+                            name: name_.clone(),
+                            value: value_.clone(),
+                            inner,
+                        }));
                         (expr, inner_type)
                     })
                 },
@@ -238,13 +257,10 @@ fn gen_function(
                         bindings.update(parameter, *parameter_type.clone()),
                     )
                     .prop_map(move |(body, body_type)| {
-                        let expr = Expr::new(
-                            0.into(),
-                            Expression::Function(Function {
-                                parameter: parameter_.clone(),
-                                body,
-                            }),
-                        );
+                        let expr = Expr::new(Expression::Function(Function {
+                            parameter: parameter_.clone(),
+                            body,
+                        }));
                         let expr_type = Type::Function {
                             parameter: Some(parameter_type_.clone()),
                             body: Some(Box::new(body_type)),
@@ -276,13 +292,10 @@ fn gen_apply(
                 bindings.clone(),
             )
             .prop_map(move |(function, function_type)| {
-                let expr = Expr::new(
-                    0.into(),
-                    Expression::Apply(Apply {
-                        function,
-                        argument: argument.clone(),
-                    }),
-                );
+                let expr = Expr::new(Expression::Apply(Apply {
+                    function,
+                    argument: argument.clone(),
+                }));
                 let expr_type = match function_type {
                     Type::Function {
                         body: Some(body_type),
@@ -320,14 +333,11 @@ fn gen_infix(
                     ),
                 )
                     .prop_map(move |((left, _), (right, _))| {
-                        let expr = Expr::new(
-                            0.into(),
-                            Expression::Infix(Infix {
-                                operation,
-                                left,
-                                right,
-                            }),
-                        );
+                        let expr = Expr::new(Expression::Infix(Infix {
+                            operation,
+                            left,
+                            right,
+                        }));
                         (expr, Type::Integer)
                     })
             })

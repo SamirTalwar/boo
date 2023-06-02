@@ -2,16 +2,17 @@ mod helpers;
 
 use proptest::prelude::*;
 
-use boo_parser::generators;
+use boo_core::ast::ExpressionWrapper;
 use boo_test_helpers::proptest::*;
 
 use crate::helpers::naive_evaluator;
 
 #[test]
 fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
-    check(&generators::arbitrary(), |expr| {
-        let expected = naive_evaluator::naively_evaluate(expr.clone()).unwrap();
-        let actual = boo_evaluator::evaluate(expr).unwrap();
+    check(&boo_generator::arbitrary(), |expr| {
+        let parsed = expr.map(&mut |_, expression| boo_parser::Expr::new(0.into(), expression));
+        let expected = naive_evaluator::naively_evaluate(parsed.clone()).unwrap();
+        let actual = boo_evaluator::evaluate(parsed).unwrap();
 
         match (expected, actual) {
             (

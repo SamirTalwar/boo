@@ -6,12 +6,12 @@ use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
 
 use boo::*;
+use boo_core::ast::ExpressionWrapper;
 use boo_core::identifier::*;
-use boo_parser::generators;
 
 fn main() -> anyhow::Result<()> {
-    let any_expr = generators::gen(
-        generators::ExprGenConfig {
+    let any_expr = boo_generator::gen(
+        boo_generator::ExprGenConfig {
             gen_identifier: Identifier::gen_ascii(1..=16).boxed().into(),
             ..Default::default()
         }
@@ -25,8 +25,9 @@ fn main() -> anyhow::Result<()> {
     let expr = tree.current();
     println!("Expression:\n{}\n", expr);
 
+    let parsed = expr.map(&mut |_, expression| boo_parser::Expr::new(0.into(), expression));
     let start_time = Instant::now();
-    let result = evaluate(expr).expect("Could not interpret the expression.");
+    let result = evaluate(parsed).expect("Could not interpret the expression.");
     let end_time = Instant::now();
     println!("Result:\n{}", result);
 

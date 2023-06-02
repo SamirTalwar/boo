@@ -157,6 +157,7 @@ dependencies = [
  "boo",
  "boo-core",
  "boo-evaluator",
+ "boo-generator",
  "boo-parser",
  "criterion",
  "num-bigint",
@@ -182,8 +183,19 @@ name = "boo-evaluator"
 version = "0.1.0"
 dependencies = [
  "boo-core",
+ "boo-generator",
  "boo-parser",
  "boo-test-helpers",
+ "im",
+ "proptest",
+ "proptest-derive",
+]
+
+[[package]]
+name = "boo-generator"
+version = "0.1.0"
+dependencies = [
+ "boo-core",
  "im",
  "proptest",
  "proptest-derive",
@@ -216,12 +228,11 @@ name = "boo-parser"
 version = "0.1.0"
 dependencies = [
  "boo-core",
+ "boo-generator",
  "boo-lexer",
  "boo-test-helpers",
- "im",
  "peg",
  "proptest",
- "proptest-derive",
 ]
 
 [[package]]
@@ -231,6 +242,7 @@ dependencies = [
  "anyhow",
  "boo",
  "boo-core",
+ "boo-generator",
  "boo-parser",
  "proptest",
 ]

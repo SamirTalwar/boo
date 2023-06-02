@@ -3,6 +3,7 @@
 members = [
   "crates/benchmarks",
   "crates/interpreter",
+  "crates/generator",
   "crates/lib",
   "crates/random-program",
   "crates/test-helpers",

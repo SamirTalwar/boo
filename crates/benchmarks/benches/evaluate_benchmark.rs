@@ -5,7 +5,7 @@ use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
 
 use boo::*;
-use boo_parser::generators;
+use boo_core::ast::ExpressionWrapper;
 use boo_parser::Expr;
 
 const BENCHMARK_COUNT: usize = 8;
@@ -31,8 +31,8 @@ fn main() {
 fn benchmarks() -> impl Iterator<Item = Expr> {
     let mut runner = TestRunner::deterministic();
     iter::from_fn(move || {
-        let tree = generators::gen(
-            generators::ExprGenConfig {
+        let tree = boo_generator::gen(
+            boo_generator::ExprGenConfig {
                 depth: 8..9,
                 ..Default::default()
             }
@@ -40,6 +40,8 @@ fn benchmarks() -> impl Iterator<Item = Expr> {
         )
         .new_tree(&mut runner)
         .unwrap();
-        Some(tree.current())
+        let expr = tree.current();
+        let parsed = expr.map(&mut |_, expression| boo_parser::Expr::new(0.into(), expression));
+        Some(parsed)
     })
 }

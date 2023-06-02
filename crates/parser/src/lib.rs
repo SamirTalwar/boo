@@ -1,6 +1,5 @@
 pub mod ast;
 pub mod builders;
-pub mod generators;
 
 use boo_core::ast::*;
 use boo_core::error::*;
