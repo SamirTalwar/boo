@@ -158,6 +158,7 @@ dependencies = [
  "boo-core",
  "boo-evaluator",
  "boo-generator",
+ "boo-naive-evaluator",
  "boo-parser",
  "criterion",
  "num-bigint",
@@ -184,6 +185,7 @@ version = "0.1.0"
 dependencies = [
  "boo-core",
  "boo-generator",
+ "boo-naive-evaluator",
  "boo-parser",
  "boo-test-helpers",
  "im",
@@ -221,6 +223,15 @@ dependencies = [
  "logos",
  "proptest",
  "proptest-derive",
+]
+
+[[package]]
+name = "boo-naive-evaluator"
+version = "0.1.0"
+dependencies = [
+ "boo-core",
+ "boo-parser",
+ "im",
 ]
 
 [[package]]
