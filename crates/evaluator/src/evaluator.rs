@@ -167,20 +167,25 @@ fn evaluate_infix<'a>(
 mod tests {
     use proptest::prelude::*;
 
+    use boo_core::ast::simple::builders;
     use boo_core::span::Spanned;
     use boo_test_helpers::proptest::*;
 
-    use crate::pooler::builders;
     use crate::pooler::pool::{leaky_pool_with, pool_with};
 
     use super::*;
 
+    fn pool_of(expr: simple::Expr) -> ExprPool {
+        pool_with(|pool| {
+            expr.map(&mut |_, expression| Expr::insert(pool, 0.into(), expression));
+        })
+    }
+
     #[test]
     fn test_evaluating_a_primitive() {
         check(&Primitive::arbitrary(), |value| {
-            let input = pool_with(|pool| {
-                builders::primitive(pool, value.clone());
-            });
+            // input: `value`
+            let input = pool_of(builders::primitive(value.clone()));
             let expected = Evaluated::Primitive(value);
 
             let actual = evaluate(&input);
@@ -195,11 +200,12 @@ mod tests {
         check(
             &(Identifier::arbitrary(), Primitive::arbitrary()),
             |(name, value)| {
-                let input = pool_with(|pool| {
-                    let value_ref = builders::primitive(pool, value.clone());
-                    let inner_ref = builders::identifier(pool, name.clone());
-                    builders::assign(pool, name.clone(), value_ref, inner_ref);
-                });
+                // input: let `name` = `value` in `name`
+                let input = pool_of(builders::assign(
+                    name.clone(),
+                    builders::primitive(value.clone()),
+                    builders::identifier(name),
+                ));
                 let expected = Evaluated::Primitive(value);
 
                 let actual = evaluate(&input);
@@ -220,13 +226,16 @@ mod tests {
             ),
             |(name, variable, constant)| {
                 let sum = &variable + &constant;
-                let input = pool_with(|pool| {
-                    let left_ref = builders::identifier(pool, name.clone());
-                    let right_ref = builders::primitive_integer(pool, constant);
-                    let value_ref = builders::primitive_integer(pool, variable);
-                    let inner_ref = builders::infix(pool, Operation::Add, left_ref, right_ref);
-                    builders::assign(pool, name.clone(), value_ref, inner_ref);
-                });
+                // input: let `name` = `variable` in `constant` + `name`
+                let input = pool_of(builders::assign(
+                    name.clone(),
+                    builders::primitive_integer(variable),
+                    builders::infix(
+                        Operation::Add,
+                        builders::identifier(name),
+                        builders::primitive_integer(constant),
+                    ),
+                ));
                 let expected = Evaluated::Primitive(Primitive::Integer(sum));
 
                 let actual = evaluate(&input);
@@ -263,9 +272,10 @@ mod tests {
     #[test]
     fn test_an_isolated_function() {
         check(&Identifier::arbitrary(), |parameter| {
+            // input: fn `parameter` -> `parameter`
             let (input, body_ref) = leaky_pool_with(|pool| {
-                let body_ref = builders::identifier(pool, parameter.clone());
-                builders::function(pool, parameter.clone(), body_ref);
+                let body_ref = crate::pooler::builders::identifier(pool, parameter.clone());
+                crate::pooler::builders::function(pool, parameter.clone(), body_ref);
                 body_ref
             });
             let expected = Evaluated::Function(Function {
@@ -285,12 +295,11 @@ mod tests {
         check(
             &(Identifier::arbitrary(), Integer::arbitrary()),
             |(parameter, argument)| {
-                let input = pool_with(|pool| {
-                    let body_ref = builders::identifier(pool, parameter.clone());
-                    let function_ref = builders::function(pool, parameter.clone(), body_ref);
-                    let argument_ref = builders::primitive_integer(pool, argument.clone());
-                    builders::apply(pool, function_ref, argument_ref);
-                });
+                // input: (fn `parameter` -> `parameter`) `argument`
+                let input = pool_of(builders::apply(
+                    builders::function(parameter.clone(), builders::identifier(parameter)),
+                    builders::primitive_integer(argument.clone()),
+                ));
                 let expected = Evaluated::Primitive(Primitive::Integer(argument));
 
                 let actual = evaluate(&input);
@@ -311,24 +320,24 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(parameter, multiplier, argument_left, argument_right)| {
-                let input = pool_with(|pool| {
-                    let body_left_ref = builders::identifier(pool, parameter.clone());
-                    let body_right_ref = builders::primitive_integer(pool, multiplier.clone());
-                    let body_ref =
-                        builders::infix(pool, Operation::Multiply, body_left_ref, body_right_ref);
-                    let function_ref = builders::function(pool, parameter.clone(), body_ref);
-                    let argument_left_ref =
-                        builders::primitive_integer(pool, argument_left.clone());
-                    let argument_right_ref =
-                        builders::primitive_integer(pool, argument_right.clone());
-                    let argument_ref = builders::infix(
-                        pool,
+                // input:
+                //   (fn `parameter` -> `parameter` * `multiplier`)
+                //     (`argument_left` + `argument_right`)
+                let input = pool_of(builders::apply(
+                    builders::function(
+                        parameter.clone(),
+                        builders::infix(
+                            Operation::Multiply,
+                            builders::identifier(parameter),
+                            builders::primitive_integer(multiplier.clone()),
+                        ),
+                    ),
+                    builders::infix(
                         Operation::Add,
-                        argument_left_ref,
-                        argument_right_ref,
-                    );
-                    builders::apply(pool, function_ref, argument_ref);
-                });
+                        builders::primitive_integer(argument_left.clone()),
+                        builders::primitive_integer(argument_right.clone()),
+                    ),
+                ));
                 let expected = Evaluated::Primitive(Primitive::Integer(
                     (argument_left + argument_right) * multiplier,
                 ));
@@ -351,23 +360,25 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(outer_variable_name, outer_variable_value, parameter, argument_value)| {
-                let input = pool_with(|pool| {
-                    let outer_variable_ref =
-                        builders::primitive_integer(pool, outer_variable_value.clone());
-                    let body_left_ref = builders::identifier(pool, outer_variable_name.clone());
-                    let body_right_ref = builders::identifier(pool, parameter.clone());
-                    let body_ref =
-                        builders::infix(pool, Operation::Add, body_left_ref, body_right_ref);
-                    let function_ref = builders::function(pool, parameter.clone(), body_ref);
-                    let assignment_ref = builders::assign(
-                        pool,
-                        outer_variable_name,
-                        outer_variable_ref,
-                        function_ref,
-                    );
-                    let argument_ref = builders::primitive_integer(pool, argument_value.clone());
-                    builders::apply(pool, assignment_ref, argument_ref);
-                });
+                // input:
+                //   (let `outer_variable_name` = `outer_variable_value`
+                //        in fn `parameter` -> `outer_variable_name` + `parameter`)
+                //     `argument_value
+                let input = pool_of(builders::apply(
+                    builders::assign(
+                        outer_variable_name.clone(),
+                        builders::primitive_integer(outer_variable_value.clone()),
+                        builders::function(
+                            parameter.clone(),
+                            builders::infix(
+                                Operation::Add,
+                                builders::identifier(outer_variable_name),
+                                builders::identifier(parameter),
+                            ),
+                        ),
+                    ),
+                    builders::primitive_integer(argument_value.clone()),
+                ));
                 let expected =
                     Evaluated::Primitive(Primitive::Integer(outer_variable_value + argument_value));
 
@@ -400,54 +411,38 @@ mod tests {
                 external_variable_value,
                 argument_value,
             )| {
-                let input = pool_with(|pool| {
-                    // let f = (let x = 1 in fn y -> x + y + z) in let z = 3 in f 2
-                    let outer_variable_ref =
-                        builders::primitive_integer(pool, outer_variable_value.clone());
-                    let function_body_x_ref =
-                        builders::identifier(pool, outer_variable_name.clone());
-                    let function_body_y_ref = builders::identifier(pool, parameter_name.clone());
-                    let function_body_z_ref =
-                        builders::identifier(pool, external_variable_name.clone());
-                    let function_body_yz_ref = builders::infix(
-                        pool,
-                        Operation::Add,
-                        function_body_y_ref,
-                        function_body_z_ref,
-                    );
-                    let function_body_ref = builders::infix(
-                        pool,
-                        Operation::Add,
-                        function_body_x_ref,
-                        function_body_yz_ref,
-                    );
-                    let function_inner_declaration_ref =
-                        builders::function(pool, parameter_name, function_body_ref);
-                    let function_outer_declaration_ref = builders::assign(
-                        pool,
-                        outer_variable_name,
-                        outer_variable_ref,
-                        function_inner_declaration_ref,
-                    );
-                    let external_variable_ref =
-                        builders::primitive_integer(pool, external_variable_value);
-                    let function_ref = builders::identifier(pool, function_name.clone());
-                    let argument_value_ref =
-                        builders::primitive_integer(pool, argument_value.clone());
-                    let apply_ref = builders::apply(pool, function_ref, argument_value_ref);
-                    let external_assignment_ref = builders::assign(
-                        pool,
-                        external_variable_name.clone(),
-                        external_variable_ref,
-                        apply_ref,
-                    );
+                // let `function_name` =
+                //   (let `outer_variable_name` = `outer_variable_value`
+                //        in fn `parameter_name` -> `outer_variable_name` + `parameter_name` + `external_variable_name`)
+                //     in let `external_variable_name` = `external_variable_value`
+                //            in `function_name` `argument_value`
+                let input = pool_of(builders::assign(
+                    function_name.clone(),
                     builders::assign(
-                        pool,
-                        function_name,
-                        function_outer_declaration_ref,
-                        external_assignment_ref,
-                    );
-                });
+                        outer_variable_name.clone(),
+                        builders::primitive_integer(outer_variable_value),
+                        builders::function(
+                            parameter_name.clone(),
+                            builders::infix(
+                                Operation::Add,
+                                builders::identifier(outer_variable_name),
+                                builders::infix(
+                                    Operation::Add,
+                                    builders::identifier(parameter_name),
+                                    builders::identifier(external_variable_name.clone()),
+                                ),
+                            ),
+                        ),
+                    ),
+                    builders::assign(
+                        external_variable_name.clone(),
+                        builders::primitive_integer(external_variable_value),
+                        builders::apply(
+                            builders::identifier(function_name),
+                            builders::primitive_integer(argument_value),
+                        ),
+                    ),
+                ));
 
                 let actual = evaluate(&input);
 
@@ -487,11 +482,12 @@ mod tests {
             |(left, right)| {
                 let expected =
                     Evaluated::Primitive(Primitive::Integer(implementation(&left, &right)));
-                let input = pool_with(|pool| {
-                    let left_ref = builders::primitive_integer(pool, left);
-                    let right_ref = builders::primitive_integer(pool, right);
-                    builders::infix(pool, operation, left_ref, right_ref);
-                });
+                // input: `left` `operation` `right`
+                let input = pool_of(builders::infix(
+                    operation,
+                    builders::primitive_integer(left),
+                    builders::primitive_integer(right),
+                ));
 
                 let actual = evaluate(&input);
 
