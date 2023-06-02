@@ -3,5 +3,8 @@ name = "boo-test-helpers"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+bench = false
+
 [dependencies]
 proptest = "1.1.0"

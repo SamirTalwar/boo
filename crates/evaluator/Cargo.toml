@@ -3,6 +3,9 @@ name = "boo-evaluator"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+bench = false
+
 [dependencies]
 boo-core = { path = "../core" }
 boo-parser = { path = "../parser" }
