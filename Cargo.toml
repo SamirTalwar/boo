@@ -2,9 +2,13 @@
 
 members = [
   "crates/benchmarks",
-  "crates/interpreter",
+  "crates/core",
+  "crates/evaluator",
   "crates/generator",
+  "crates/interpreter",
+  "crates/lexer",
   "crates/lib",
+  "crates/parser",
   "crates/random-program",
   "crates/test-helpers",
 ]
