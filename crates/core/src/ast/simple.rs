@@ -12,9 +12,14 @@ impl Expr {
 impl ExpressionWrapper for Expr {
     type Annotation = ();
 
-    fn map<Next>(self, f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next) -> Next {
-        let mapped = self.0.map(f);
-        f((), mapped)
+    fn new(_: (), expression: Expression<Expr>) -> Self {
+        Self::new(expression)
+    }
+
+    fn annotation(&self) -> Self::Annotation {}
+
+    fn expression(self) -> Expression<Self> {
+        *self.0
     }
 }
 

@@ -31,27 +31,23 @@ pub struct Bindings(HashMap<Identifier, (Expr, Bindings)>);
 
 #[allow(clippy::boxed_local)]
 fn evaluate_(expr: Expr, bindings: Bindings) -> Result<Evaluated> {
-    match &expr.value() {
-        Expression::Primitive(value) => Ok(Evaluated::Primitive(value.clone())),
-        Expression::Identifier(name) => match bindings.0.get(name) {
+    let span = expr.annotation();
+    match expr.expression() {
+        Expression::Primitive(value) => Ok(Evaluated::Primitive(value)),
+        Expression::Identifier(name) => match bindings.0.get(&name) {
             Some((value, lookup_bindings)) => evaluate_(value.clone(), lookup_bindings.clone()),
             None => Err(Error::UnknownVariable {
-                span: expr.span(),
+                span,
                 name: name.to_string(),
             }),
         },
         Expression::Assign(Assign { name, value, inner }) => evaluate_(
-            inner.clone(),
-            Bindings(
-                bindings
-                    .clone()
-                    .0
-                    .update(name.clone(), (value.clone(), bindings)),
-            ),
+            inner,
+            Bindings(bindings.clone().0.update(name, (value, bindings))),
         ),
-        Expression::Function(function) => Ok(Evaluated::Function(function.clone(), bindings)),
+        Expression::Function(function) => Ok(Evaluated::Function(function, bindings)),
         Expression::Apply(Apply { function, argument }) => {
-            let function_result = evaluate_(function.clone(), bindings)?;
+            let function_result = evaluate_(function, bindings)?;
             match function_result {
                 Evaluated::Function(Function { parameter, body }, lookup_bindings) => evaluate_(
                     body,
@@ -59,10 +55,10 @@ fn evaluate_(expr: Expr, bindings: Bindings) -> Result<Evaluated> {
                         lookup_bindings
                             .clone()
                             .0
-                            .update(parameter, (argument.clone(), lookup_bindings)),
+                            .update(parameter, (argument, lookup_bindings)),
                     ),
                 ),
-                _ => Err(Error::InvalidFunctionApplication { span: expr.span() }),
+                _ => Err(Error::InvalidFunctionApplication { span }),
             }
         }
         Expression::Infix(Infix {
@@ -70,9 +66,9 @@ fn evaluate_(expr: Expr, bindings: Bindings) -> Result<Evaluated> {
             left,
             right,
         }) => {
-            let left_result = evaluate_(left.clone(), bindings.clone())?;
-            let right_result = evaluate_(right.clone(), bindings)?;
-            Ok(evaluate_infix(*operation, &left_result, &right_result))
+            let left_result = evaluate_(left, bindings.clone())?;
+            let right_result = evaluate_(right, bindings)?;
+            Ok(evaluate_infix(operation, &left_result, &right_result))
         }
     }
 }

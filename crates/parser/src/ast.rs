@@ -7,23 +7,16 @@ pub struct Expr(Box<Spanned<Expression<Expr>>>);
 impl ExpressionWrapper for Expr {
     type Annotation = Span;
 
-    fn map<Next>(self, f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next) -> Next {
-        let mapped = self.0.value.map(f);
-        f(self.0.span, mapped)
-    }
-}
-
-impl Expr {
-    pub fn new(span: Span, value: Expression<Expr>) -> Self {
+    fn new(span: Self::Annotation, value: Expression<Self>) -> Self {
         Self(Spanned { span, value }.into())
     }
 
-    pub fn span(&self) -> Span {
+    fn annotation(&self) -> Self::Annotation {
         self.0.span
     }
 
-    pub fn value(&self) -> &Expression<Expr> {
-        &self.0.value
+    fn expression(self) -> Expression<Self> {
+        self.0.value
     }
 }
 

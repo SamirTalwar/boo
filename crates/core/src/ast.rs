@@ -42,10 +42,23 @@ pub struct Infix<Outer> {
     pub right: Outer,
 }
 
-pub trait ExpressionWrapper {
+pub trait ExpressionWrapper
+where
+    Self: Sized,
+{
     type Annotation;
 
-    fn map<Next>(self, f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next) -> Next;
+    fn new(anotation: Self::Annotation, expression: Expression<Self>) -> Self;
+
+    fn annotation(&self) -> Self::Annotation;
+
+    fn expression(self) -> Expression<Self>;
+
+    fn map<Next>(self, f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next) -> Next {
+        let annotation = self.annotation();
+        let mapped = self.expression().map(f);
+        f(annotation, mapped)
+    }
 }
 
 impl<Outer: ExpressionWrapper> Expression<Outer> {

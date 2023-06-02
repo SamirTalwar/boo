@@ -24,7 +24,7 @@ peg::parser! {
                     _ => unreachable!(),
                 };
                 Expr::new(
-                    fn_.annotation | body.span(),
+                    fn_.annotation | body.annotation(),
                     Expression::Function(Function {
                         parameter: p.clone(),
                         body,
@@ -43,7 +43,7 @@ peg::parser! {
                     _ => unreachable!(),
                 };
                 Expr::new(
-                    let_.annotation | inner.span(),
+                    let_.annotation | inner.annotation(),
                     Expression::Assign(Assign {
                         name: n.clone(),
                         value,
@@ -65,7 +65,7 @@ peg::parser! {
             --
             function:(@) argument:expr() {
                 Expr::new(
-                    argument.span(),
+                    argument.annotation(),
                     Expression::Apply(Apply {
                         function,
                         argument,
@@ -122,7 +122,7 @@ pub fn parse(input: &[AnnotatedToken<Span>]) -> Result<Expr> {
 
 fn construct_infix(left: Expr, operation: Operation, right: Expr) -> Expr {
     Expr::new(
-        left.span() | right.span(),
+        left.annotation() | right.annotation(),
         Expression::Infix(Infix {
             operation,
             left,
