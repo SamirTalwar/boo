@@ -1,7 +1,7 @@
 use proptest::prelude::*;
 
+use boo_core::ast::simple::Expr;
 use boo_core::ast::*;
-use boo_generator::Expr;
 use boo_lexer::lex;
 use boo_parser::parse;
 use boo_test_helpers::proptest::*;
