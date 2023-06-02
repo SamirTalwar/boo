@@ -40,6 +40,46 @@ pub struct Infix<Outer> {
     pub right: Outer,
 }
 
+pub trait ExpressionWrapper {
+    type Annotation;
+
+    fn map<Next>(self, f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next) -> Next;
+}
+
+impl<Outer: ExpressionWrapper> Expression<Outer> {
+    pub fn map<Next>(
+        self,
+        f: &mut impl FnMut(Outer::Annotation, Expression<Next>) -> Next,
+    ) -> Expression<Next> {
+        match self {
+            Expression::Primitive(x) => Expression::Primitive(x),
+            Expression::Identifier(x) => Expression::Identifier(x),
+            Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
+                name,
+                value: value.map(f),
+                inner: inner.map(f),
+            }),
+            Expression::Function(Function { parameter, body }) => Expression::Function(Function {
+                parameter,
+                body: body.map(f),
+            }),
+            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
+                function: function.map(f),
+                argument: argument.map(f),
+            }),
+            Expression::Infix(Infix {
+                operation,
+                left,
+                right,
+            }) => Expression::Infix(Infix {
+                operation,
+                left: left.map(f),
+                right: right.map(f),
+            }),
+        }
+    }
+}
+
 impl<Outer: Display> std::fmt::Display for Expression<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

@@ -1,8 +1,17 @@
-use boo_core::ast::Expression;
+use boo_core::ast::{Expression, ExpressionWrapper};
 use boo_core::span::{Span, Spanned};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr(Box<Spanned<Expression<Expr>>>);
+
+impl ExpressionWrapper for Expr {
+    type Annotation = Span;
+
+    fn map<Next>(self, f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next) -> Next {
+        let mapped = self.0.value.map(f);
+        f(self.0.span, mapped)
+    }
+}
 
 impl Expr {
     pub fn new(span: Span, value: Expression<Expr>) -> Self {

@@ -15,64 +15,7 @@ pub fn pool_exprs(ast: parser::Expr) -> ExprPool {
 }
 
 pub fn add_expr(pool: &mut ExprPool, expr: parser::Expr) -> Expr {
-    let span = expr.span();
-    match expr.consume() {
-        Expression::Primitive(value) => Expr::insert(pool, span, Expression::Primitive(value)),
-        Expression::Identifier(name) => Expr::insert(pool, span, Expression::Identifier(name)),
-        Expression::Assign(Assign { name, value, inner }) => {
-            let value_ref = add_expr(pool, value);
-            let inner_ref = add_expr(pool, inner);
-            Expr::insert(
-                pool,
-                span,
-                Expression::Assign(Assign {
-                    name,
-                    value: value_ref,
-                    inner: inner_ref,
-                }),
-            )
-        }
-        Expression::Function(Function { parameter, body }) => {
-            let body_ref = add_expr(pool, body);
-            Expr::insert(
-                pool,
-                span,
-                Expression::Function(Function {
-                    parameter,
-                    body: body_ref,
-                }),
-            )
-        }
-        Expression::Apply(Apply { function, argument }) => {
-            let function_ref = add_expr(pool, function);
-            let argument_ref = add_expr(pool, argument);
-            Expr::insert(
-                pool,
-                span,
-                Expression::Apply(Apply {
-                    function: function_ref,
-                    argument: argument_ref,
-                }),
-            )
-        }
-        Expression::Infix(Infix {
-            operation,
-            left,
-            right,
-        }) => {
-            let left_ref = add_expr(pool, left);
-            let right_ref = add_expr(pool, right);
-            Expr::insert(
-                pool,
-                span,
-                Expression::Infix(Infix {
-                    operation,
-                    left: left_ref,
-                    right: right_ref,
-                }),
-            )
-        }
-    }
+    expr.map(&mut |span, expression| Expr::insert(pool, span, expression))
 }
 
 #[cfg(test)]
