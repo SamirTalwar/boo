@@ -24,17 +24,17 @@ mod tests {
 
     use boo_test_helpers::proptest::*;
 
+    use boo_core::ast;
     use boo_core::identifier::*;
     use boo_core::operation::*;
     use boo_core::primitive::*;
-    use boo_parser as parser;
 
     use super::*;
 
     #[test]
     fn test_single_primitive() {
         check(&Integer::arbitrary(), |value| {
-            let input = parser::builders::primitive_integer(0..0, value.clone());
+            let input = ast::builders::primitive_integer(0..0, value.clone());
             let expected = pool_with(|pool| {
                 builders::primitive_integer(pool, value.clone());
             });
@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_single_identifier() {
         check(&Identifier::arbitrary(), |name| {
-            let input = parser::builders::identifier(0..0, name.clone());
+            let input = ast::builders::identifier(0..0, name.clone());
             let expected = pool_with(|pool| {
                 builders::identifier(pool, name.clone());
             });
@@ -70,11 +70,11 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(name, value, inner)| {
-                let input = parser::builders::assign(
+                let input = ast::builders::assign(
                     0..0,
                     name.clone(),
-                    parser::builders::primitive_integer(0..0, value.clone()),
-                    parser::builders::primitive_integer(0..0, inner.clone()),
+                    ast::builders::primitive_integer(0..0, value.clone()),
+                    ast::builders::primitive_integer(0..0, inner.clone()),
                 );
                 let expected = pool_with(|pool| {
                     let value_ref = builders::primitive_integer(pool, value.clone());
@@ -95,14 +95,14 @@ mod tests {
         check(
             &(Identifier::arbitrary(), Integer::arbitrary()),
             |(parameter, modifier)| {
-                let input = parser::builders::function(
+                let input = ast::builders::function(
                     0..0,
                     parameter.clone(),
-                    parser::builders::infix(
+                    ast::builders::infix(
                         0..0,
                         Operation::Add,
-                        parser::builders::identifier(0..0, parameter.clone()),
-                        parser::builders::primitive_integer(0..0, modifier.clone()),
+                        ast::builders::identifier(0..0, parameter.clone()),
+                        ast::builders::primitive_integer(0..0, modifier.clone()),
                     ),
                 );
                 let expected = pool_with(|pool| {
@@ -129,19 +129,19 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(parameter, modifier, value)| {
-                let input = parser::builders::apply(
+                let input = ast::builders::apply(
                     0..0,
-                    parser::builders::function(
+                    ast::builders::function(
                         0..0,
                         parameter.clone(),
-                        parser::builders::infix(
+                        ast::builders::infix(
                             0..0,
                             Operation::Add,
-                            parser::builders::identifier(0..0, parameter.clone()),
-                            parser::builders::primitive_integer(0..0, modifier.clone()),
+                            ast::builders::identifier(0..0, parameter.clone()),
+                            ast::builders::primitive_integer(0..0, modifier.clone()),
                         ),
                     ),
-                    parser::builders::primitive_integer(0..0, value.clone()),
+                    ast::builders::primitive_integer(0..0, value.clone()),
                 );
                 let expected = pool_with(|pool| {
                     let left_ref = builders::identifier(pool, parameter.clone());
@@ -169,11 +169,11 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(operation, left, right)| {
-                let input = parser::builders::infix(
+                let input = ast::builders::infix(
                     0..0,
                     operation,
-                    parser::builders::primitive_integer(0..0, left.clone()),
-                    parser::builders::primitive_integer(0..0, right.clone()),
+                    ast::builders::primitive_integer(0..0, left.clone()),
+                    ast::builders::primitive_integer(0..0, right.clone()),
                 );
                 let expected = pool_with(|pool| {
                     let left_ref = builders::primitive_integer(pool, left.clone());

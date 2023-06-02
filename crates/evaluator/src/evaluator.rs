@@ -167,7 +167,7 @@ fn evaluate_infix<'a>(
 mod tests {
     use proptest::prelude::*;
 
-    use boo_core::ast::simple::builders;
+    use boo_core::ast::builders;
     use boo_core::span::Spanned;
     use boo_test_helpers::proptest::*;
 
@@ -185,7 +185,7 @@ mod tests {
     fn test_evaluating_a_primitive() {
         check(&Primitive::arbitrary(), |value| {
             // input: `value`
-            let input = pool_of(builders::primitive(value.clone()));
+            let input = pool_of(builders::primitive((), value.clone()));
             let expected = Evaluated::Primitive(value);
 
             let actual = evaluate(&input);
@@ -202,9 +202,10 @@ mod tests {
             |(name, value)| {
                 // input: let `name` = `value` in `name`
                 let input = pool_of(builders::assign(
+                    (),
                     name.clone(),
-                    builders::primitive(value.clone()),
-                    builders::identifier(name),
+                    builders::primitive((), value.clone()),
+                    builders::identifier((), name),
                 ));
                 let expected = Evaluated::Primitive(value);
 
@@ -228,12 +229,14 @@ mod tests {
                 let sum = &variable + &constant;
                 // input: let `name` = `variable` in `constant` + `name`
                 let input = pool_of(builders::assign(
+                    (),
                     name.clone(),
-                    builders::primitive_integer(variable),
+                    builders::primitive_integer((), variable),
                     builders::infix(
+                        (),
                         Operation::Add,
-                        builders::identifier(name),
-                        builders::primitive_integer(constant),
+                        builders::identifier((), name),
+                        builders::primitive_integer((), constant),
                     ),
                 ));
                 let expected = Evaluated::Primitive(Primitive::Integer(sum));
@@ -297,8 +300,9 @@ mod tests {
             |(parameter, argument)| {
                 // input: (fn `parameter` -> `parameter`) `argument`
                 let input = pool_of(builders::apply(
-                    builders::function(parameter.clone(), builders::identifier(parameter)),
-                    builders::primitive_integer(argument.clone()),
+                    (),
+                    builders::function((), parameter.clone(), builders::identifier((), parameter)),
+                    builders::primitive_integer((), argument.clone()),
                 ));
                 let expected = Evaluated::Primitive(Primitive::Integer(argument));
 
@@ -324,18 +328,22 @@ mod tests {
                 //   (fn `parameter` -> `parameter` * `multiplier`)
                 //     (`argument_left` + `argument_right`)
                 let input = pool_of(builders::apply(
+                    (),
                     builders::function(
+                        (),
                         parameter.clone(),
                         builders::infix(
+                            (),
                             Operation::Multiply,
-                            builders::identifier(parameter),
-                            builders::primitive_integer(multiplier.clone()),
+                            builders::identifier((), parameter),
+                            builders::primitive_integer((), multiplier.clone()),
                         ),
                     ),
                     builders::infix(
+                        (),
                         Operation::Add,
-                        builders::primitive_integer(argument_left.clone()),
-                        builders::primitive_integer(argument_right.clone()),
+                        builders::primitive_integer((), argument_left.clone()),
+                        builders::primitive_integer((), argument_right.clone()),
                     ),
                 ));
                 let expected = Evaluated::Primitive(Primitive::Integer(
@@ -365,19 +373,23 @@ mod tests {
                 //        in fn `parameter` -> `outer_variable_name` + `parameter`)
                 //     `argument_value
                 let input = pool_of(builders::apply(
+                    (),
                     builders::assign(
+                        (),
                         outer_variable_name.clone(),
-                        builders::primitive_integer(outer_variable_value.clone()),
+                        builders::primitive_integer((), outer_variable_value.clone()),
                         builders::function(
+                            (),
                             parameter.clone(),
                             builders::infix(
+                                (),
                                 Operation::Add,
-                                builders::identifier(outer_variable_name),
-                                builders::identifier(parameter),
+                                builders::identifier((), outer_variable_name),
+                                builders::identifier((), parameter),
                             ),
                         ),
                     ),
-                    builders::primitive_integer(argument_value.clone()),
+                    builders::primitive_integer((), argument_value.clone()),
                 ));
                 let expected =
                     Evaluated::Primitive(Primitive::Integer(outer_variable_value + argument_value));
@@ -417,29 +429,36 @@ mod tests {
                 //     in let `external_variable_name` = `external_variable_value`
                 //            in `function_name` `argument_value`
                 let input = pool_of(builders::assign(
+                    (),
                     function_name.clone(),
                     builders::assign(
+                        (),
                         outer_variable_name.clone(),
-                        builders::primitive_integer(outer_variable_value),
+                        builders::primitive_integer((), outer_variable_value),
                         builders::function(
+                            (),
                             parameter_name.clone(),
                             builders::infix(
+                                (),
                                 Operation::Add,
-                                builders::identifier(outer_variable_name),
+                                builders::identifier((), outer_variable_name),
                                 builders::infix(
+                                    (),
                                     Operation::Add,
-                                    builders::identifier(parameter_name),
-                                    builders::identifier(external_variable_name.clone()),
+                                    builders::identifier((), parameter_name),
+                                    builders::identifier((), external_variable_name.clone()),
                                 ),
                             ),
                         ),
                     ),
                     builders::assign(
+                        (),
                         external_variable_name.clone(),
-                        builders::primitive_integer(external_variable_value),
+                        builders::primitive_integer((), external_variable_value),
                         builders::apply(
-                            builders::identifier(function_name),
-                            builders::primitive_integer(argument_value),
+                            (),
+                            builders::identifier((), function_name),
+                            builders::primitive_integer((), argument_value),
                         ),
                     ),
                 ));
@@ -484,9 +503,10 @@ mod tests {
                     Evaluated::Primitive(Primitive::Integer(implementation(&left, &right)));
                 // input: `left` `operation` `right`
                 let input = pool_of(builders::infix(
+                    (),
                     operation,
-                    builders::primitive_integer(left),
-                    builders::primitive_integer(right),
+                    builders::primitive_integer((), left),
+                    builders::primitive_integer((), right),
                 ));
 
                 let actual = evaluate(&input);
