@@ -19,6 +19,7 @@ boo = { path = "../lib" }
 boo-core = { path = "../core" }
 boo-evaluator = { path = "../evaluator" }
 boo-generator = { path = "../generator" }
+boo-naive-evaluator = { path = "../naive-evaluator" }
 boo-parser = { path = "../parser" }
 
 criterion = { version = "0.4.0", features = ["csv", "html_reports"] }

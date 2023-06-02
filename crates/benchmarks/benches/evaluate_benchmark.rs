@@ -4,7 +4,6 @@ use criterion::{black_box, BenchmarkId, Criterion};
 use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
 
-use boo::*;
 use boo_core::ast::ExpressionWrapper;
 use boo_parser::Expr;
 
@@ -14,7 +13,10 @@ pub fn evaluate_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("evaluate");
     for (i, expr) in benchmarks().take(BENCHMARK_COUNT).enumerate() {
         group.bench_with_input(BenchmarkId::new("evaluate", i), &expr, |b, expr| {
-            b.iter(|| evaluate(black_box(expr.clone())))
+            b.iter(|| boo_evaluator::evaluate(black_box(expr.clone())))
+        });
+        group.bench_with_input(BenchmarkId::new("naively evaluate", i), &expr, |b, expr| {
+            b.iter(|| boo_naive_evaluator::naively_evaluate(black_box(expr.clone())))
         });
     }
     group.finish();
