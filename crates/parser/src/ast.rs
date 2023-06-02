@@ -25,10 +25,6 @@ impl Expr {
     pub fn value(&self) -> &Expression<Expr> {
         &self.0.value
     }
-
-    pub fn consume(self) -> Expression<Expr> {
-        self.0.value
-    }
 }
 
 impl std::fmt::Display for Expr {
