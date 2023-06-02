@@ -15,7 +15,7 @@ pub fn pool_exprs(ast: parser::Expr) -> ExprPool {
 }
 
 pub fn add_expr(pool: &mut ExprPool, expr: parser::Expr) -> Expr {
-    expr.map(&mut |span, expression| Expr::insert(pool, span, expression))
+    expr.transform(&mut |span, expression| Expr::insert(pool, span, expression))
 }
 
 #[cfg(test)]

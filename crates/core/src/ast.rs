@@ -55,7 +55,10 @@ where
 
     fn expression(self) -> Expression<Self>;
 
-    fn map<Next>(self, f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next) -> Next {
+    fn transform<Next>(
+        self,
+        f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next,
+    ) -> Next {
         let annotation = self.annotation();
         let mapped = self.expression().map(f);
         f(annotation, mapped)
@@ -72,16 +75,16 @@ impl<Outer: ExpressionWrapper> Expression<Outer> {
             Expression::Identifier(x) => Expression::Identifier(x),
             Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
                 name,
-                value: value.map(f),
-                inner: inner.map(f),
+                value: value.transform(f),
+                inner: inner.transform(f),
             }),
             Expression::Function(Function { parameter, body }) => Expression::Function(Function {
                 parameter,
-                body: body.map(f),
+                body: body.transform(f),
             }),
             Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
-                function: function.map(f),
-                argument: argument.map(f),
+                function: function.transform(f),
+                argument: argument.transform(f),
             }),
             Expression::Infix(Infix {
                 operation,
@@ -89,8 +92,8 @@ impl<Outer: ExpressionWrapper> Expression<Outer> {
                 right,
             }) => Expression::Infix(Infix {
                 operation,
-                left: left.map(f),
-                right: right.map(f),
+                left: left.transform(f),
+                right: right.transform(f),
             }),
         }
     }

@@ -43,7 +43,8 @@ fn benchmarks() -> impl Iterator<Item = Expr> {
         .new_tree(&mut runner)
         .unwrap();
         let expr = tree.current();
-        let parsed = expr.map(&mut |_, expression| boo_parser::Expr::new(0.into(), expression));
+        let parsed =
+            expr.transform(&mut |_, expression| boo_parser::Expr::new(0.into(), expression));
         Some(parsed)
     })
 }

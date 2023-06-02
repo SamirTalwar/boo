@@ -177,7 +177,7 @@ mod tests {
 
     fn pool_of(expr: simple::Expr) -> ExprPool {
         pool_with(|pool| {
-            expr.map(&mut |_, expression| Expr::insert(pool, 0.into(), expression));
+            expr.transform(&mut |_, expression| Expr::insert(pool, 0.into(), expression));
         })
     }
 

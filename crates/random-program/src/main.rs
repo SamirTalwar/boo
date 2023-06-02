@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
     let expr = tree.current();
     println!("Expression:\n{}\n", expr);
 
-    let parsed = expr.map(&mut |_, expression| boo_parser::Expr::new(0.into(), expression));
+    let parsed = expr.transform(&mut |_, expression| boo_parser::Expr::new(0.into(), expression));
     let start_time = Instant::now();
     let result = evaluate(parsed).expect("Could not interpret the expression.");
     let end_time = Instant::now();
