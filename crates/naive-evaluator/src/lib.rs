@@ -1,3 +1,11 @@
+//! Evaluates a parsed AST as simply as possible.
+//!
+//! This evaluator is not used by the interpreter. It is meant as an
+//! implementation that is "so simple that there are obviously no deficiencies"
+//! (to quote Tony Hoare). We then use it as a reference implementation to
+//! validate that the real evaluator does the right thing when presented with an
+//! arbitrary program.
+
 use im::HashMap;
 
 use boo_core::ast::*;
@@ -7,25 +15,28 @@ use boo_core::operation::*;
 use boo_core::primitive::*;
 use boo_parser::ast::*;
 
+/// An evaluation result. This can be either a primitive value or a closure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Evaluated {
     Primitive(Primitive),
-    Function(Function<Expr>, Bindings),
+    Closure(Function<Expr>, Bindings),
 }
 
 impl std::fmt::Display for Evaluated {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Evaluated::Primitive(x) => x.fmt(f),
-            Evaluated::Function(x, _) => x.fmt(f),
+            Evaluated::Closure(x, _) => x.fmt(f),
         }
     }
 }
 
+/// Evaluate a parsed AST as simply as possible.
 pub fn naively_evaluate(expr: Expr) -> Result<Evaluated> {
     evaluate_(expr, Bindings(HashMap::new()))
 }
 
+/// The bound variables closed over by an expression.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Bindings(HashMap<Identifier, (Expr, Bindings)>);
 
@@ -45,11 +56,11 @@ fn evaluate_(expr: Expr, bindings: Bindings) -> Result<Evaluated> {
             inner,
             Bindings(bindings.clone().0.update(name, (value, bindings))),
         ),
-        Expression::Function(function) => Ok(Evaluated::Function(function, bindings)),
+        Expression::Function(function) => Ok(Evaluated::Closure(function, bindings)),
         Expression::Apply(Apply { function, argument }) => {
             let function_result = evaluate_(function, bindings)?;
             match function_result {
-                Evaluated::Function(Function { parameter, body }, lookup_bindings) => evaluate_(
+                Evaluated::Closure(Function { parameter, body }, lookup_bindings) => evaluate_(
                     body,
                     Bindings(
                         lookup_bindings
