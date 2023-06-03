@@ -1,9 +1,13 @@
+//! Primitive integer values.
+
 use num_bigint::BigInt;
 use proptest::strategy::Strategy;
 
 type Small = i32;
 type Large = BigInt;
 
+/// An arbitrary-precision integer value. Integers of 32 bits or smaller are
+/// treated specially for improved performance.
 #[derive(Debug, Clone)]
 pub enum Integer {
     Small(Small),

@@ -1,7 +1,13 @@
+//! Infix operations on integers.
+
+/// The set of valid infix operations on integers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, proptest_derive::Arbitrary)]
 pub enum Operation {
+    /// Adds two integers.
     Add,
+    /// Subtracts an integer from another.
     Subtract,
+    /// Multiplies two integers.
     Multiply,
 }
 

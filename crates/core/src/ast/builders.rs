@@ -1,3 +1,5 @@
+//! Builders for any valid [`ExpressionWrapper`].
+
 use crate::primitive::*;
 
 use super::*;

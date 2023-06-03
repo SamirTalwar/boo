@@ -1,3 +1,5 @@
+//! Identifiers, used for variable and parameter names.
+
 use std::collections::HashSet;
 use std::str::FromStr;
 
@@ -5,13 +7,20 @@ use lazy_static::lazy_static;
 use proptest::strategy::Strategy;
 use regex::Regex;
 
+/// An identifier is a valid name for a variable.
+///
+/// Valid identifiers start with a letter or underscore, and can then be
+/// followed by 0 or more letters, numbers, or underscores.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Identifier {
     name: String,
 }
 
+/// Errors that can happen when dealing with identifiers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IdentifierError {
+    /// Returned when attempting to construct a new [`Identifier`] with an
+    /// invalid name.
     InvalidIdentifier,
 }
 
@@ -32,6 +41,8 @@ lazy_static! {
 }
 
 impl Identifier {
+    /// Constructs a new identifier from a valid name. If the name is invalid,
+    /// returns [`IdentifierError::InvalidIdentifier`].
     pub fn new(name: String) -> Result<Self, IdentifierError> {
         if Self::is_valid(&name) {
             Ok(Identifier { name })
@@ -60,10 +71,13 @@ impl std::fmt::Display for Identifier {
 }
 
 impl Identifier {
+    /// A proptest strategy for constructing an arbitrary identifier.
     pub fn arbitrary() -> impl Strategy<Value = Identifier> {
         Self::arbitrary_of_length(1..=16)
     }
 
+    /// A proptest strategy for constructing an arbitrary identifier within
+    /// specific length bounds.
     pub fn arbitrary_of_length(
         length: std::ops::RangeInclusive<usize>,
     ) -> impl Strategy<Value = Identifier> {
@@ -82,6 +96,8 @@ impl Identifier {
         .prop_map(|x| Identifier::new(x).unwrap())
     }
 
+    /// A proptest strategy for constructing an arbitrary identifier within
+    /// specific length bounds, limited to lowercase ASCII characters.
     pub fn gen_ascii(length: std::ops::RangeInclusive<usize>) -> impl Strategy<Value = Identifier> {
         assert!(
             *length.start() > 0,

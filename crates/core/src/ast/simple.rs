@@ -1,5 +1,8 @@
+//! A simple expression wrapper.
+
 use super::*;
 
+/// A simple wrapper arond [`Expression`], mostly for testing.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr(Box<Expression<Expr>>);
 

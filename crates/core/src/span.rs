@@ -1,5 +1,8 @@
+//! Represents a span of text in the original source.
+
 use std::ops::{BitOr, Range};
 
+/// A range, representing a span of text in the original source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Span {
     pub start: usize,
@@ -7,6 +10,7 @@ pub struct Span {
 }
 
 impl Span {
+    /// Converts the span to a [`Range`].
     pub fn range(&self) -> Range<usize> {
         self.start..self.end
     }
@@ -15,6 +19,8 @@ impl Span {
 impl BitOr for Span {
     type Output = Span;
 
+    /// Combines two spans to provide a new span encompassing both of the
+    /// original ranges.
     fn bitor(self, rhs: Span) -> Self::Output {
         Self::Output {
             start: self.start.min(rhs.start),
@@ -47,6 +53,7 @@ impl From<Span> for miette::SourceSpan {
     }
 }
 
+/// A wrapper around `Value` that includes a [`Span`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Spanned<Value> {
     pub span: Span,

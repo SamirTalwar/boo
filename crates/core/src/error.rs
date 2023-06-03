@@ -1,7 +1,14 @@
+//! The set of possible interpretation errors.
+
 use crate::span::Span;
 
+/// An alias for [`Result`][std::result::Result] with the error type fixed to
+/// [`Error`].
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// The set of possible interpretation errors.
+///
+/// This can be used with [`thiserror`] and [`miette`].
 #[derive(Debug, Clone, PartialEq, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("Unexpected token: {token}")]
