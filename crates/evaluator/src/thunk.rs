@@ -29,19 +29,6 @@ impl<Unresolved, Resolved> Thunk<Unresolved, Resolved> {
         Self(Arc::new(RwLock::new(ThunkValue::Unresolved(value))))
     }
 
-    /// Resolves a thunk with a specific value.
-    pub fn resolve(&mut self, value: Resolved) {
-        match (*self.0).write() {
-            Ok(mut inner) => match *inner {
-                ThunkValue::Unresolved(_) => {
-                    *inner = ThunkValue::Resolved(value.into());
-                }
-                ThunkValue::Resolved(_) => {}
-            },
-            Err(err) => panic!("Poisoned mutex in thunk: {}", err),
-        }
-    }
-
     /// Resolves a thunk by computing something over the unresolved value.
     pub fn resolve_by(
         &mut self,
@@ -97,29 +84,14 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_a_thunk_with_a_value() {
-        let mut thunk = Thunk::<(), i32>::unresolved(());
-        thunk.resolve(7);
-        assert_eq!(thunk.value(), Some(7.into()));
-    }
-
-    #[test]
-    fn test_never_resolve_a_thunk_with_a_value_twice() {
-        let mut thunk = Thunk::<(), i32>::unresolved(());
-        thunk.resolve(1);
-        thunk.resolve(2);
-        assert_eq!(thunk.value(), Some(1.into()));
-    }
-
-    #[test]
-    fn test_resolve_a_thunk_with_a_computation() {
+    fn test_resolve_a_thunk() {
         let mut thunk = Thunk::<Box<dyn Fn() -> i32>, i32>::unresolved(Box::new(|| 1 + 1));
         assert_eq!(thunk.resolve_by(|f| f()), 2.into());
         assert_eq!(thunk.value(), Some(2.into()));
     }
 
     #[test]
-    fn test_never_resolve_a_thunk_with_a_compuation_twice() {
+    fn test_never_resolve_a_thunk_twice() {
         let mut thunk = Thunk::<Box<dyn Fn() -> i32>, i32>::unresolved(Box::new(|| 2 + 3));
         thunk.resolve_by(|f| f());
         thunk.resolve_by(|f| f() + 4);
