@@ -86,7 +86,13 @@ where
     type Annotation;
 
     /// Constructs a new wrapper.
-    fn new(anotation: Self::Annotation, expression: Expression<Self>) -> Self;
+    fn new(annotation: Self::Annotation, expression: Expression<Self>) -> Self;
+
+    /// Constructs a new wrapper with a default annotation value.
+    ///
+    /// This should not be used by the interpreter, but can be used by
+    /// synthesis.
+    fn new_unannotated(expression: Expression<Self>) -> Self;
 
     /// Acquires a copy of the annotation.
     fn annotation(&self) -> Self::Annotation;

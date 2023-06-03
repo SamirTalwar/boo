@@ -14,6 +14,16 @@ impl ExpressionWrapper for Expr {
         Self(Spanned { span, value }.into())
     }
 
+    fn new_unannotated(value: Expression<Self>) -> Self {
+        Self(
+            Spanned {
+                span: 0.into(),
+                value,
+            }
+            .into(),
+        )
+    }
+
     fn annotation(&self) -> Self::Annotation {
         self.0.span
     }

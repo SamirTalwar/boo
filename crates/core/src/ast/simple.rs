@@ -19,6 +19,10 @@ impl ExpressionWrapper for Expr {
         Self::new(expression)
     }
 
+    fn new_unannotated(expression: Expression<Self>) -> Self {
+        Self::new(expression)
+    }
+
     fn annotation(&self) -> Self::Annotation {}
 
     fn expression(self) -> Expression<Self> {

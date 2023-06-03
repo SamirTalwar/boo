@@ -1,16 +1,18 @@
 //! Generators for ASTs. Used for testing and program synthesis.
 
+use std::fmt::Debug;
 use std::rc::Rc;
 
 use im::HashMap;
 use proptest::prelude::*;
 
-use boo_core::ast::simple::*;
 use boo_core::ast::*;
 use boo_core::identifier::Identifier;
 use boo_core::operation::Operation;
 use boo_core::primitive::Primitive;
 use boo_core::types::Type;
+
+type ExprStrategy<Expr> = BoxedStrategy<(Expr, Type)>;
 
 /// The generator configuration.
 #[derive(Debug)]
@@ -34,12 +36,15 @@ impl Default for ExprGenConfig {
 }
 
 /// A strategy for generating expressions, using the default [`ExprGenConfig`].
-pub fn arbitrary() -> impl Strategy<Value = Expr> {
+pub fn arbitrary<Expr: ExpressionWrapper + Debug + Clone + 'static>() -> impl Strategy<Value = Expr>
+{
     gen(Rc::new(Default::default()))
 }
 
 /// Creates a strategy for generating expresions according to the configuration.
-pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
+pub fn gen<Expr: ExpressionWrapper + Debug + Clone + 'static>(
+    config: Rc<ExprGenConfig>,
+) -> impl Strategy<Value = Expr> {
     Just(Type::Integer)
         .prop_flat_map(move |target_type| {
             let start_depth = config.depth.clone();
@@ -53,17 +58,15 @@ pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
         .prop_map(|(expr, _)| expr)
 }
 
-type ExprStrategy = BoxedStrategy<(Expr, Type)>;
-
 /// Generates an expression of the target type (or any type, if it's not
 /// specified).
-fn gen_nested(
+fn gen_nested<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     depth: std::ops::Range<usize>,
     target_type: Option<Type>,
     bindings: HashMap<Identifier, Type>,
-) -> ExprStrategy {
-    let mut choices: Vec<ExprStrategy> = Vec::new();
+) -> ExprStrategy<Expr> {
+    let mut choices: Vec<ExprStrategy<Expr>> = Vec::new();
     let next_depth = {
         let next_start = if depth.start == 0 { 0 } else { depth.start - 1 };
         let next_end = if depth.end == 0 { 0 } else { depth.end - 1 };
@@ -153,25 +156,27 @@ fn gen_unused_identifier(
 
 /// Generates a primitive of the given type.
 /// Returns `None` if there are no primitives of the target type.
-fn gen_primitive(target_type: Option<Type>) -> Option<ExprStrategy> {
+fn gen_primitive<Expr: ExpressionWrapper + Debug + Clone + 'static>(
+    target_type: Option<Type>,
+) -> Option<ExprStrategy<Expr>> {
     match target_type {
         None => Some(Primitive::arbitrary().prop_map(make_primitive_expr).boxed()),
         Some(t) => Primitive::arbitrary_of_type(t).map(|s| s.prop_map(make_primitive_expr).boxed()),
     }
 }
 
-fn make_primitive_expr(value: Primitive) -> (Expr, Type) {
+fn make_primitive_expr<Expr: ExpressionWrapper>(value: Primitive) -> (Expr, Type) {
     let value_type = value.get_type();
-    let expr = Expr::new(Expression::Primitive(value));
+    let expr = Expr::new_unannotated(Expression::Primitive(value));
     (expr, value_type)
 }
 
 /// Generates a reference to a variable of the given type.
 /// Returns `None` if there are no variables of the target type.
-fn gen_variable_reference(
+fn gen_variable_reference<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     target_type: Option<Type>,
     bindings: HashMap<Identifier, Type>,
-) -> Option<ExprStrategy> {
+) -> Option<ExprStrategy<Expr>> {
     let bindings_of_target_type = target_type.map_or(bindings.clone(), |expected| {
         bindings
             .clone()
@@ -190,7 +195,7 @@ fn gen_variable_reference(
                         .iter()
                         .nth(index.index(bindings_of_target_type.len()))
                         .unwrap();
-                    let expr = Expr::new(Expression::Identifier(name.clone()));
+                    let expr = Expr::new_unannotated(Expression::Identifier(name.clone()));
                     (expr, typ.clone())
                 })
                 .boxed(),
@@ -199,12 +204,12 @@ fn gen_variable_reference(
 }
 
 /// Generates an assignment.
-fn gen_assignment(
+fn gen_assignment<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Option<Type>,
     bindings: HashMap<Identifier, Type>,
-) -> ExprStrategy {
+) -> ExprStrategy<Expr> {
     gen_unused_identifier(config.clone(), bindings.clone())
         .prop_flat_map(move |name| {
             let config_ = config.clone();
@@ -212,7 +217,7 @@ fn gen_assignment(
             let target_type_ = target_type.clone();
             let bindings_ = bindings.clone();
             gen_nested(config_.clone(), next_depth.clone(), None, bindings_.clone()).prop_flat_map(
-                move |(value, value_type)| {
+                move |(value, value_type): (Expr, Type)| {
                     let name_ = name.clone();
                     let value_ = value;
                     gen_nested(
@@ -222,7 +227,7 @@ fn gen_assignment(
                         bindings_.update(name.clone(), value_type),
                     )
                     .prop_map(move |(inner, inner_type)| {
-                        let expr = Expr::new(Expression::Assign(Assign {
+                        let expr = Expr::new_unannotated(Expression::Assign(Assign {
                             name: name_.clone(),
                             value: value_.clone(),
                             inner,
@@ -237,12 +242,12 @@ fn gen_assignment(
 
 /// Generates a function of the given type.
 /// If the target type is not a function type, returns `None`.
-fn gen_function(
+fn gen_function<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Option<Type>,
     bindings: HashMap<Identifier, Type>,
-) -> Option<ExprStrategy> {
+) -> Option<ExprStrategy<Expr>> {
     match target_type.unwrap_or(Type::Function {
         parameter: None,
         body: None,
@@ -263,7 +268,7 @@ fn gen_function(
                         bindings.update(parameter, *parameter_type.clone()),
                     )
                     .prop_map(move |(body, body_type)| {
-                        let expr = Expr::new(Expression::Function(Function {
+                        let expr = Expr::new_unannotated(Expression::Function(Function {
                             parameter: parameter_.clone(),
                             body,
                         }));
@@ -281,14 +286,14 @@ fn gen_function(
 }
 
 /// Generates a function application.
-fn gen_apply(
+fn gen_apply<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Option<Type>,
     bindings: HashMap<Identifier, Type>,
-) -> ExprStrategy {
+) -> ExprStrategy<Expr> {
     gen_nested(config.clone(), next_depth.clone(), None, bindings.clone())
-        .prop_flat_map(move |(argument, argument_type)| {
+        .prop_flat_map(move |(argument, argument_type): (Expr, Type)| {
             gen_nested(
                 config.clone(),
                 next_depth.clone(),
@@ -299,7 +304,7 @@ fn gen_apply(
                 bindings.clone(),
             )
             .prop_map(move |(function, function_type)| {
-                let expr = Expr::new(Expression::Apply(Apply {
+                let expr = Expr::new_unannotated(Expression::Apply(Apply {
                     function,
                     argument: argument.clone(),
                 }));
@@ -318,12 +323,12 @@ fn gen_apply(
 
 /// Generates an infix operation of the given type.
 /// If the type is not `Integer`, returns `None`.
-fn gen_infix(
+fn gen_infix<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Option<Type>,
     bindings: HashMap<Identifier, Type>,
-) -> Option<ExprStrategy> {
+) -> Option<ExprStrategy<Expr>> {
     target_type.filter(|t| *t == Type::Integer).map(|_| {
         proptest::arbitrary::any::<Operation>()
             .prop_flat_map(move |operation| {
@@ -342,7 +347,7 @@ fn gen_infix(
                     ),
                 )
                     .prop_map(move |((left, _), (right, _))| {
-                        let expr = Expr::new(Expression::Infix(Infix {
+                        let expr = Expr::new_unannotated(Expression::Infix(Infix {
                             operation,
                             left,
                             right,
