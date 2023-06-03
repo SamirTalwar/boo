@@ -1,6 +1,9 @@
+//! The AST produced by the parser.
+
 use boo_core::ast::{Expression, ExpressionWrapper};
 use boo_core::span::{Span, Spanned};
 
+/// An expression, annotated with the source location as a span.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr(Box<Spanned<Expression<Expr>>>);
 

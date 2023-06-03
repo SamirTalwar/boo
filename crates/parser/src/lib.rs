@@ -1,3 +1,5 @@
+//! Parses tokens into an AST.
+
 pub mod ast;
 
 use boo_core::ast::*;
@@ -100,6 +102,10 @@ peg::parser! {
     }
 }
 
+/// Parses a slice of [`Token`] values, annotated with a [`Span`], into an
+/// expression.
+///
+/// Returns an error if an unexpected token is found.
 pub fn parse(input: &[AnnotatedToken<Span>]) -> Result<Expr> {
     parser::root(&(input.iter().collect::<Vec<_>>())).map_err(|inner| {
         let span: Span = if inner.location < input.len() {
