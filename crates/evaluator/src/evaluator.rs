@@ -1,3 +1,5 @@
+//! Evaluates a [pooled `Expr`][super::pooler::ast::Expr].
+
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -12,6 +14,7 @@ use boo_core::primitive::*;
 use crate::pooler::ast::*;
 use crate::thunk::Thunk;
 
+/// An evaluation result. This can be either a primitive value or a closure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Evaluated {
     Primitive(Primitive),
@@ -27,17 +30,20 @@ impl std::fmt::Display for Evaluated {
     }
 }
 
+/// An interim evaluation result, with the same lifetime as the pool being
+/// evaluated.
 #[derive(Debug, Clone)]
 enum EvaluationProgress<'a> {
     Primitive(Cow<'a, Primitive>),
-    Function(&'a Function<Expr>, Bindings<'a>),
+    Closure(&'a Function<Expr>, Bindings<'a>),
 }
 
 impl<'a> EvaluationProgress<'a> {
+    /// Concludes evaluation.
     fn finish(self) -> Evaluated {
         match self {
             Self::Primitive(x) => Evaluated::Primitive(x.into_owned()),
-            Self::Function(x, _) => Evaluated::Function(x.clone()),
+            Self::Closure(x, _) => Evaluated::Function(x.clone()),
         }
     }
 }
@@ -45,16 +51,23 @@ impl<'a> EvaluationProgress<'a> {
 type UnevaluatedBinding<'a> = (Expr, Bindings<'a>);
 type EvaluatedBinding<'a> = Result<EvaluationProgress<'a>>;
 
+/// The set of bindings in a given scope.
+///
+/// The variables bound in a specific scope are a mapping from an identifier to
+/// the underlying expression. This expression is evaluated lazily, but only
+/// once, using [`Thunk`].
 #[derive(Debug, Clone)]
 struct Bindings<'a>(
     HashMap<Cow<'a, Identifier>, Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>>,
 );
 
 impl<'a> Bindings<'a> {
+    /// Constructs an empty set of bindings.
     pub fn new() -> Self {
         Self(HashMap::new())
     }
 
+    /// Resolves a given identifier by evaluating its binding.
     pub fn resolve(
         &mut self,
         identifier: &Identifier,
@@ -71,6 +84,7 @@ impl<'a> Bindings<'a> {
         }
     }
 
+    /// Adds a new binding to the set.
     pub fn with(&self, identifier: &'a Identifier, expression: Expr) -> Self {
         Self(self.0.update(
             Cow::Borrowed(identifier),
@@ -79,11 +93,17 @@ impl<'a> Bindings<'a> {
     }
 }
 
+/// Evaluate a [pooled `Expr`][super::pooler::ast::Expr].
 pub fn evaluate(pool: &ExprPool) -> Result<Evaluated> {
     let evaluated = evaluate_(pool, Expr::from_root(pool), Bindings::new())?;
     Ok(evaluated.finish())
 }
 
+/// Evaluates an expression from a pool in a given scope, with the associated
+/// bindings.
+///
+/// The bindings are modified by assignment, accessed when evaluating an
+/// identifier, and captured by closures when a function is evaluated.
 fn evaluate_<'a>(
     pool: &'a ExprPool,
     expr_ref: Expr,
@@ -105,7 +125,7 @@ fn evaluate_<'a>(
             inner: inner_ref,
         }) => evaluate_(pool, *inner_ref, bindings.with(name, *value_ref)),
         Expression::Function(function) => {
-            Ok(EvaluationProgress::Function(function, bindings.clone()))
+            Ok(EvaluationProgress::Closure(function, bindings.clone()))
         }
         Expression::Apply(Apply {
             function: function_ref,
@@ -113,7 +133,7 @@ fn evaluate_<'a>(
         }) => {
             let function_result = evaluate_(pool, *function_ref, bindings.clone())?;
             match function_result {
-                EvaluationProgress::Function(
+                EvaluationProgress::Closure(
                     Function {
                         parameter,
                         body: body_ref,

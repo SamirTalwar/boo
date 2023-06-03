@@ -1,3 +1,5 @@
+//! Flattens an expression tree into a [`pool::Pool`].
+
 pub mod ast;
 pub mod builders;
 pub mod pool;
@@ -8,12 +10,17 @@ use boo_parser as parser;
 use ast::*;
 use pool::pool_with;
 
+/// Flattens an expression tree into a [`pool::Pool`].
 pub fn pool_exprs(ast: parser::Expr) -> ExprPool {
     pool_with(|pool| {
         add_expr(pool, ast);
     })
 }
 
+/// Adds a single expression into the pool, recursively.
+///
+/// The leaf expressions will always be added before their parents, so that the
+/// references are always valid.
 pub fn add_expr(pool: &mut ExprPool, expr: parser::Expr) -> Expr {
     expr.transform(&mut |span, expression| Expr::insert(pool, span, expression))
 }

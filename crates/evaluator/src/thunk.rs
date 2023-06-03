@@ -1,8 +1,16 @@
+//! Provides infrastructure for thread-safe thunks.
+
 use std::sync::{Arc, RwLock};
 
+/// A thunk is a value that is left as unresolved until needed, and then
+/// resolved a single time when required. Subsequent accesses will get the same
+/// value that was resolved the first time.
+///
+/// Thunks are thread-safe.
 #[derive(Debug, Clone)]
 pub struct Thunk<Unresolved, Resolved>(Arc<RwLock<ThunkValue<Unresolved, Arc<Resolved>>>>);
 
+/// A thunk can be either unresolved or resolved.
 #[derive(Debug)]
 pub enum ThunkValue<Unresolved, Resolved> {
     Unresolved(Unresolved),
@@ -16,10 +24,12 @@ impl<Unresolved, Resolved> From<Unresolved> for Thunk<Unresolved, Resolved> {
 }
 
 impl<Unresolved, Resolved> Thunk<Unresolved, Resolved> {
+    /// Constructs a new unresolved thunk.
     pub fn unresolved(value: Unresolved) -> Self {
         Self(Arc::new(RwLock::new(ThunkValue::Unresolved(value))))
     }
 
+    /// Resolves a thunk with a specific value.
     pub fn resolve(&mut self, value: Resolved) {
         match (*self.0).write() {
             Ok(mut inner) => match *inner {
@@ -32,6 +42,7 @@ impl<Unresolved, Resolved> Thunk<Unresolved, Resolved> {
         }
     }
 
+    /// Resolves a thunk by computing something over the unresolved value.
     pub fn resolve_by(
         &mut self,
         compute: impl FnOnce(&mut Unresolved) -> Resolved,
@@ -59,6 +70,8 @@ impl<Unresolved, Resolved> Thunk<Unresolved, Resolved> {
         }
     }
 
+    /// Returns the resolve value if it has already been computed, or `None`
+    /// otherwise.
     pub fn value(&self) -> Option<Arc<Resolved>> {
         match (*self.0).read() {
             Ok(inner) => match *inner {

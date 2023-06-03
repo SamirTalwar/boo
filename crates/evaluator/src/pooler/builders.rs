@@ -1,3 +1,5 @@
+//! Builders that insert nodes into a [`Pool`].
+
 #![cfg(test)]
 
 use super::ast::*;
