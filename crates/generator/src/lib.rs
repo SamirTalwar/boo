@@ -1,3 +1,5 @@
+//! Generators for ASTs. Used for testing and program synthesis.
+
 use std::rc::Rc;
 
 use im::HashMap;
@@ -10,9 +12,15 @@ use boo_core::operation::Operation;
 use boo_core::primitive::Primitive;
 use boo_core::types::Type;
 
+/// The generator configuration.
 #[derive(Debug)]
 pub struct ExprGenConfig {
+    /// The minimum and maximum depth of each branch of the expression.
+    ///
+    /// Note that the maximum depth may be violated sometimes; consider it
+    /// best-effort.
     pub depth: std::ops::Range<usize>,
+    /// The specific strategy for generating identifiers.
     pub gen_identifier: Rc<BoxedStrategy<Identifier>>,
 }
 
@@ -25,10 +33,12 @@ impl Default for ExprGenConfig {
     }
 }
 
+/// A strategy for generating expressions, using the default [`ExprGenConfig`].
 pub fn arbitrary() -> impl Strategy<Value = Expr> {
     gen(Rc::new(Default::default()))
 }
 
+/// Creates a strategy for generating expresions according to the configuration.
 pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
     Just(Type::Integer)
         .prop_flat_map(move |target_type| {
@@ -45,6 +55,8 @@ pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
 
 type ExprStrategy = BoxedStrategy<(Expr, Type)>;
 
+/// Generates an expression of the target type (or any type, if it's not
+/// specified).
 fn gen_nested(
     config: Rc<ExprGenConfig>,
     depth: std::ops::Range<usize>,
@@ -58,17 +70,22 @@ fn gen_nested(
         next_start..next_end
     };
 
+    // if we are allowed to generate a leaf:
     if depth.start == 0 {
+        // generate primitives
         if let Some(strategy) = gen_primitive(target_type.clone()) {
             choices.push(strategy);
         }
 
+        // generate references to already-bound variables (in `bindings`)
         if let Some(strategy) = gen_variable_reference(target_type.clone(), bindings.clone()) {
             choices.push(strategy);
         }
     }
 
+    // if this node can have children:
     if depth.end > 0 {
+        // generate variable assignments
         choices.push(gen_assignment(
             config.clone(),
             next_depth.clone(),
@@ -76,6 +93,7 @@ fn gen_nested(
             bindings.clone(),
         ));
 
+        // generate functions
         if let Some(strategy) = gen_function(
             config.clone(),
             next_depth.clone(),
@@ -91,6 +109,7 @@ fn gen_nested(
     // nodes to depth (max_depth - 2) or higher, we try to avoid this (most of
     // the time).
     if depth.end > 1 {
+        // generate function application
         choices.push(gen_apply(
             config.clone(),
             next_depth.clone(),
@@ -98,6 +117,7 @@ fn gen_nested(
             bindings.clone(),
         ));
 
+        // generate infix computations
         if let Some(strategy) = gen_infix(
             config.clone(),
             next_depth,
@@ -116,6 +136,7 @@ fn gen_nested(
     }
 }
 
+/// Generates an identifier that has not already been bound.
 fn gen_unused_identifier(
     config: Rc<ExprGenConfig>,
     bindings: HashMap<Identifier, Type>,
@@ -130,6 +151,8 @@ fn gen_unused_identifier(
     })
 }
 
+/// Generates a primitive of the given type.
+/// Returns `None` if there are no primitives of the target type.
 fn gen_primitive(target_type: Option<Type>) -> Option<ExprStrategy> {
     match target_type {
         None => Some(Primitive::arbitrary().prop_map(make_primitive_expr).boxed()),
@@ -143,6 +166,8 @@ fn make_primitive_expr(value: Primitive) -> (Expr, Type) {
     (expr, value_type)
 }
 
+/// Generates a reference to a variable of the given type.
+/// Returns `None` if there are no variables of the target type.
 fn gen_variable_reference(
     target_type: Option<Type>,
     bindings: HashMap<Identifier, Type>,
@@ -173,6 +198,7 @@ fn gen_variable_reference(
     }
 }
 
+/// Generates an assignment.
 fn gen_assignment(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
@@ -209,6 +235,8 @@ fn gen_assignment(
         .boxed()
 }
 
+/// Generates a function of the given type.
+/// If the target type is not a function type, returns `None`.
 fn gen_function(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
@@ -220,7 +248,8 @@ fn gen_function(
         body: None,
     }) {
         Type::Function {
-            parameter: Some(parameter_type), // cannot generate functions for parameters of unknown type without some kind of unification
+            // cannot generate functions for parameters of unknown type without some kind of unification
+            parameter: Some(parameter_type),
             body: body_type,
         } => Some(
             gen_unused_identifier(config.clone(), bindings.clone())
@@ -251,6 +280,7 @@ fn gen_function(
     }
 }
 
+/// Generates a function application.
 fn gen_apply(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
@@ -286,6 +316,8 @@ fn gen_apply(
         .boxed()
 }
 
+/// Generates an infix operation of the given type.
+/// If the type is not `Integer`, returns `None`.
 fn gen_infix(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
