@@ -388,6 +388,8 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(outer_variable_name, outer_variable_value, parameter, argument_value)| {
+                prop_assume!(outer_variable_name != parameter);
+
                 // input:
                 //   (let `outer_variable_name` = `outer_variable_value`
                 //        in fn `parameter` -> `outer_variable_name` + `parameter`)
@@ -443,6 +445,17 @@ mod tests {
                 external_variable_value,
                 argument_value,
             )| {
+                prop_assume!(
+                    std::collections::HashSet::from([
+                        function_name.clone(),
+                        outer_variable_name.clone(),
+                        parameter_name.clone(),
+                        external_variable_name.clone(),
+                    ])
+                    .len()
+                        == 4
+                );
+
                 // let `function_name` =
                 //   (let `outer_variable_name` = `outer_variable_value`
                 //        in fn `parameter_name` -> `outer_variable_name` + `parameter_name` + `external_variable_name`)
