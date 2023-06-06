@@ -12,7 +12,10 @@ use boo_core::operation::Operation;
 use boo_core::primitive::Primitive;
 use boo_core::types::{KnownType, Type};
 
-type ExprStrategy<Expr> = BoxedStrategy<(Expr, KnownType)>;
+type ExprStrategyValue<Expr> = (Expr, Rc<KnownType>);
+type ExprStrategy<Expr> = BoxedStrategy<ExprStrategyValue<Expr>>;
+
+type Bindings = HashMap<Identifier, Rc<KnownType>>;
 
 /// The generator configuration.
 #[derive(Debug)]
@@ -64,7 +67,7 @@ fn gen_nested<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     depth: std::ops::Range<usize>,
     target_type: Type,
-    bindings: HashMap<Identifier, KnownType>,
+    bindings: Bindings,
 ) -> ExprStrategy<Expr> {
     let mut choices: Vec<ExprStrategy<Expr>> = Vec::new();
     let next_depth = {
@@ -142,7 +145,7 @@ fn gen_nested<Expr: ExpressionWrapper + Debug + Clone + 'static>(
 /// Generates an identifier that has not already been bound.
 fn gen_unused_identifier(
     config: Rc<ExprGenConfig>,
-    bindings: HashMap<Identifier, KnownType>,
+    bindings: Bindings,
 ) -> impl Strategy<Value = Identifier> {
     let conf = config.clone();
     config.gen_identifier.clone().prop_flat_map(move |name| {
@@ -162,23 +165,23 @@ fn gen_primitive<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     Primitive::arbitrary_of_type(target_type).map(|s| s.prop_map(make_primitive_expr).boxed())
 }
 
-fn make_primitive_expr<Expr: ExpressionWrapper>(value: Primitive) -> (Expr, KnownType) {
+fn make_primitive_expr<Expr: ExpressionWrapper>(value: Primitive) -> ExprStrategyValue<Expr> {
     let value_type = value.get_type();
     let expr = Expr::new_unannotated(Expression::Primitive(value));
-    (expr, value_type)
+    (expr, value_type.into())
 }
 
 /// Generates a reference to a variable of the given type.
 /// Returns `None` if there are no variables of the target type.
 fn gen_variable_reference<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     target_type: Type,
-    bindings: HashMap<Identifier, KnownType>,
+    bindings: Bindings,
 ) -> Option<ExprStrategy<Expr>> {
     let bindings_of_target_type = match target_type {
         Type::Unknown => bindings,
         Type::Known(expected) => bindings
             .iter()
-            .filter(|(_, actual)| **actual == *expected)
+            .filter(|(_, actual)| **actual == expected)
             .map(|(expr, expr_type)| (expr.clone(), expr_type.clone()))
             .collect(),
     };
@@ -205,7 +208,7 @@ fn gen_assignment<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Type,
-    bindings: HashMap<Identifier, KnownType>,
+    bindings: Bindings,
 ) -> ExprStrategy<Expr> {
     gen_unused_identifier(config.clone(), bindings.clone())
         .prop_flat_map(move |name| {
@@ -219,7 +222,7 @@ fn gen_assignment<Expr: ExpressionWrapper + Debug + Clone + 'static>(
                 Type::Unknown,
                 bindings_.clone(),
             )
-            .prop_flat_map(move |(value, value_type): (Expr, KnownType)| {
+            .prop_flat_map(move |(value, value_type): ExprStrategyValue<Expr>| {
                 let name_ = name.clone();
                 let value_ = value;
                 gen_nested(
@@ -247,41 +250,46 @@ fn gen_function<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Type,
-    bindings: HashMap<Identifier, KnownType>,
+    bindings: Bindings,
 ) -> Option<ExprStrategy<Expr>> {
     match target_type {
         // cannot generate functions for parameters of unknown type without some kind of unification
-        Type::Known(known) => match *known {
-            KnownType::Function {
+        Type::Known(known) => {
+            if let KnownType::Function {
                 parameter: Type::Known(parameter_type),
-                body: body_type,
-            } => Some(
-                gen_unused_identifier(config.clone(), bindings.clone())
-                    .prop_flat_map(move |parameter| {
-                        let parameter_ = parameter.clone();
-                        let parameter_type_ = parameter_type.clone();
-                        gen_nested(
-                            config.clone(),
-                            next_depth.clone(),
-                            body_type.clone(),
-                            bindings.update(parameter, *parameter_type_.clone()),
-                        )
-                        .prop_map(move |(body, body_type)| {
-                            let expr = Expr::new_unannotated(Expression::Function(Function {
-                                parameter: parameter_.clone(),
-                                body,
-                            }));
-                            let expr_type = KnownType::Function {
-                                parameter: Type::Known(parameter_type_.clone()),
-                                body: Type::Known(body_type.into()),
-                            };
-                            (expr, expr_type)
+                body: target_body_type,
+            } = (*known).clone()
+            {
+                Some(
+                    gen_unused_identifier(config.clone(), bindings.clone())
+                        .prop_flat_map(move |parameter| {
+                            let parameter_ = parameter.clone();
+                            let parameter_type_ = parameter_type.clone();
+                            gen_nested(
+                                config.clone(),
+                                next_depth.clone(),
+                                target_body_type.clone(),
+                                bindings.update(parameter, parameter_type_.clone()),
+                            )
+                            .prop_map(move |(body, body_type)| {
+                                let expr = Expr::new_unannotated(Expression::Function(Function {
+                                    parameter: parameter_.clone(),
+                                    body,
+                                }));
+                                let expr_type = KnownType::Function {
+                                    parameter: Type::Known(parameter_type_.clone()),
+                                    body: Type::Known(body_type),
+                                }
+                                .into();
+                                (expr, expr_type)
+                            })
                         })
-                    })
-                    .boxed(),
-            ),
-            _ => None,
-        },
+                        .boxed(),
+                )
+            } else {
+                None
+            }
+        }
         _ => None,
     }
 }
@@ -291,7 +299,7 @@ fn gen_apply<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Type,
-    bindings: HashMap<Identifier, KnownType>,
+    bindings: Bindings,
 ) -> ExprStrategy<Expr> {
     gen_nested(
         config.clone(),
@@ -299,13 +307,13 @@ fn gen_apply<Expr: ExpressionWrapper + Debug + Clone + 'static>(
         Type::Unknown,
         bindings.clone(),
     )
-    .prop_flat_map(move |(argument, argument_type): (Expr, KnownType)| {
+    .prop_flat_map(move |(argument, argument_type): ExprStrategyValue<Expr>| {
         gen_nested(
             config.clone(),
             next_depth.clone(),
             Type::Known(
                 KnownType::Function {
-                    parameter: Type::Known(argument_type.into()),
+                    parameter: Type::Known(argument_type),
                     body: target_type.clone(),
                 }
                 .into(),
@@ -317,11 +325,11 @@ fn gen_apply<Expr: ExpressionWrapper + Debug + Clone + 'static>(
                 function,
                 argument: argument.clone(),
             }));
-            let expr_type = match function_type {
+            let expr_type = match function_type.as_ref() {
                 KnownType::Function {
                     body: Type::Known(body_type),
                     ..
-                } => *body_type,
+                } => body_type.clone(),
                 _ => panic!("No function return type provided."),
             };
             (expr, expr_type)
@@ -336,7 +344,7 @@ fn gen_infix<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Type,
-    bindings: HashMap<Identifier, KnownType>,
+    bindings: Bindings,
 ) -> Option<ExprStrategy<Expr>> {
     match target_type {
         Type::Known(known) if *known == KnownType::Integer => Some(
@@ -362,7 +370,7 @@ fn gen_infix<Expr: ExpressionWrapper + Debug + Clone + 'static>(
                                 left,
                                 right,
                             }));
-                            (expr, KnownType::Integer)
+                            (expr, KnownType::Integer.into())
                         })
                 })
                 .boxed(),

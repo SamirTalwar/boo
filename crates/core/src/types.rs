@@ -1,11 +1,13 @@
 //! A representation of a value's type, for type-checking and valid program
 //! synthesis.
 
+use std::rc::Rc;
+
 /// Types can be known or unknown.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Unknown,
-    Known(Box<KnownType>),
+    Known(Rc<KnownType>),
 }
 
 impl Type {
