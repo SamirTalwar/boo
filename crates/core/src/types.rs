@@ -26,3 +26,17 @@ pub enum KnownType {
     Integer,
     Function { parameter: Type, body: Type },
 }
+
+/// A wrapper around `Value` that includes a [`Type`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Typed<Value> {
+    pub typ: Type,
+    pub value: Value,
+}
+
+// ignores the type
+impl<Value: std::fmt::Display> std::fmt::Display for Typed<Value> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.value.fmt(f)
+    }
+}

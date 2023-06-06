@@ -255,6 +255,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "boo-type-checker"
+version = "0.1.0"
+dependencies = [
+ "boo-core",
+ "boo-generator",
+ "boo-naive-evaluator",
+ "boo-parser",
+ "boo-test-helpers",
+ "im",
+ "proptest",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

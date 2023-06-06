@@ -1,0 +1,20 @@
+[package]
+name = "boo-type-checker"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+bench = false
+
+[dependencies]
+boo-core = { path = "../core" }
+boo-parser = { path = "../parser" }
+
+im = { version = "15.1.0", features = ["proptest"] }
+
+[dev-dependencies]
+boo-generator = { path = "../generator" }
+boo-naive-evaluator = { path = "../naive-evaluator" }
+boo-test-helpers = { path = "../test-helpers" }
+
+proptest = "1.1.0"
