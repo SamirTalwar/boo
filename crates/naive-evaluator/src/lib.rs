@@ -6,69 +6,48 @@
 //! validate that the real evaluator does the right thing when presented with an
 //! arbitrary program.
 
-use im::HashMap;
+use std::rc::Rc;
 
 use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::identifier::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
-use boo_parser::ast::*;
-
-/// An evaluation result. This can be either a primitive value or a closure.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Evaluated {
-    Primitive(Primitive),
-    Closure(Function<Expr>, Bindings),
-}
-
-impl std::fmt::Display for Evaluated {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Evaluated::Primitive(x) => x.fmt(f),
-            Evaluated::Closure(x, _) => x.fmt(f),
-        }
-    }
-}
+use boo_parser::Expr;
 
 /// Evaluate a parsed AST as simply as possible.
-pub fn naively_evaluate(expr: Expr) -> Result<Evaluated> {
-    evaluate_(expr, Bindings(HashMap::new()))
-}
-
-/// The bound variables closed over by an expression.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Bindings(HashMap<Identifier, (Expr, Bindings)>);
-
-#[allow(clippy::boxed_local)]
-fn evaluate_(expr: Expr, bindings: Bindings) -> Result<Evaluated> {
+pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
     let span = expr.annotation();
     match expr.expression() {
-        Expression::Primitive(value) => Ok(Evaluated::Primitive(value)),
-        Expression::Identifier(name) => match bindings.0.get(&name) {
-            Some((value, lookup_bindings)) => evaluate_(value.clone(), lookup_bindings.clone()),
-            None => Err(Error::UnknownVariable {
-                span,
-                name: name.to_string(),
-            }),
-        },
-        Expression::Assign(Assign { name, value, inner }) => evaluate_(
-            inner,
-            Bindings(bindings.clone().0.update(name, (value, bindings))),
-        ),
-        Expression::Function(function) => Ok(Evaluated::Closure(function, bindings)),
+        Expression::Primitive(value) => Ok(Expr::new(span, Expression::Primitive(value))),
+        Expression::Identifier(name) => Err(Error::UnknownVariable {
+            span,
+            name: name.to_string(),
+        }),
+        Expression::Assign(Assign { name, value, inner }) => {
+            let substituted_inner = substitute(
+                Substitution {
+                    name: name.into(),
+                    value: value.into(),
+                },
+                inner,
+            );
+            naively_evaluate(substituted_inner)
+        }
+        Expression::Function(function) => Ok(Expr::new(span, Expression::Function(function))),
         Expression::Apply(Apply { function, argument }) => {
-            let function_result = evaluate_(function, bindings)?;
-            match function_result {
-                Evaluated::Closure(Function { parameter, body }, lookup_bindings) => evaluate_(
-                    body,
-                    Bindings(
-                        lookup_bindings
-                            .clone()
-                            .0
-                            .update(parameter, (argument, lookup_bindings)),
-                    ),
-                ),
+            let function_result = naively_evaluate(function)?;
+            match function_result.expression() {
+                Expression::Function(Function { parameter, body }) => {
+                    let substituted_body = substitute(
+                        Substitution {
+                            name: parameter.into(),
+                            value: argument.into(),
+                        },
+                        body,
+                    );
+                    naively_evaluate(substituted_body)
+                }
                 _ => Err(Error::InvalidFunctionApplication { span }),
             }
         }
@@ -77,26 +56,79 @@ fn evaluate_(expr: Expr, bindings: Bindings) -> Result<Evaluated> {
             left,
             right,
         }) => {
-            let left_result = evaluate_(left, bindings.clone())?;
-            let right_result = evaluate_(right, bindings)?;
-            Ok(evaluate_infix(operation, &left_result, &right_result))
+            let left_result = naively_evaluate(left)?;
+            let right_result = naively_evaluate(right)?;
+            match (left_result.expression(), right_result.expression()) {
+                (
+                    Expression::Primitive(Primitive::Integer(left)),
+                    Expression::Primitive(Primitive::Integer(right)),
+                ) => Ok(Expr::new_unannotated(Expression::Primitive(
+                    match operation {
+                        Operation::Add => Primitive::Integer(left + right),
+                        Operation::Subtract => Primitive::Integer(left - right),
+                        Operation::Multiply => Primitive::Integer(left * right),
+                    },
+                ))),
+                (left_result, right_result) => panic!(
+                    "evaluate_infix branch is not implemented for:\n({}) {} ({})",
+                    left_result, operation, right_result
+                ),
+            }
         }
     }
 }
 
-fn evaluate_infix(operation: Operation, left: &Evaluated, right: &Evaluated) -> Evaluated {
-    match (left, right) {
-        (
-            Evaluated::Primitive(Primitive::Integer(left)),
-            Evaluated::Primitive(Primitive::Integer(right)),
-        ) => Evaluated::Primitive(match operation {
-            Operation::Add => Primitive::Integer(left + right),
-            Operation::Subtract => Primitive::Integer(left - right),
-            Operation::Multiply => Primitive::Integer(left * right),
-        }),
-        _ => panic!(
-            "evaluate_infix branch is not implemented for:\n({}) {} ({})",
-            left, operation, right
+#[derive(Debug, Clone)]
+struct Substitution {
+    name: Rc<Identifier>,
+    value: Rc<Expr>,
+}
+
+fn substitute(substitution: Substitution, expr: Expr) -> Expr {
+    let span = expr.annotation();
+    match expr.expression() {
+        expression @ Expression::Primitive(_) => Expr::new(span, expression),
+        Expression::Identifier(name) if name == *substitution.name => (*substitution.value).clone(),
+        expression @ Expression::Identifier(_) => Expr::new(span, expression),
+        Expression::Assign(Assign { name, value, inner }) if name != *substitution.name => {
+            Expr::new(
+                span,
+                Expression::Assign(Assign {
+                    name,
+                    value: substitute(substitution.clone(), value),
+                    inner: substitute(substitution, inner),
+                }),
+            )
+        }
+        expression @ Expression::Assign(_) => Expr::new(span, expression),
+        Expression::Function(Function { parameter, body }) if parameter != *substitution.name => {
+            Expr::new(
+                span,
+                Expression::Function(Function {
+                    parameter,
+                    body: substitute(substitution, body),
+                }),
+            )
+        }
+        expression @ Expression::Function(_) => Expr::new(span, expression),
+        Expression::Apply(Apply { function, argument }) => Expr::new(
+            span,
+            Expression::Apply(Apply {
+                function: substitute(substitution.clone(), function),
+                argument: substitute(substitution, argument),
+            }),
+        ),
+        Expression::Infix(Infix {
+            operation,
+            left,
+            right,
+        }) => Expr::new(
+            span,
+            Expression::Infix(Infix {
+                operation,
+                left: substitute(substitution.clone(), left),
+                right: substitute(substitution, right),
+            }),
         ),
     }
 }

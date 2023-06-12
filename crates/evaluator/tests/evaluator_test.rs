@@ -1,23 +1,34 @@
 use proptest::prelude::*;
 
+use boo_core::ast::*;
 use boo_test_helpers::proptest::*;
 
 #[test]
 fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
     check(&boo_generator::arbitrary::<boo_parser::Expr>(), |expr| {
-        let expected = boo_naive_evaluator::naively_evaluate(expr.clone()).unwrap();
-        let actual = boo_evaluator::evaluate(expr).unwrap();
+        let expected = boo_naive_evaluator::naively_evaluate(expr.clone());
+        let actual = boo_evaluator::evaluate(expr.clone());
 
-        match (expected, actual) {
+        match (expected.map(|e| e.expression()), actual) {
             (
-                boo_naive_evaluator::Evaluated::Primitive(expected),
-                boo_evaluator::Evaluated::Primitive(actual),
+                Ok(Expression::Primitive(expected)),
+                Ok(boo_evaluator::Evaluated::Primitive(actual)),
             ) => {
                 prop_assert_eq!(expected, actual);
             }
-            (expected, actual) => panic!(
-                "Test failed: assertion failed: `(left == right)`\n  left:   `{}`,\n  right:  `{}`",
-                expected, actual
+            (Ok(expected), Ok(actual)) => prop_assert!(
+                false,
+                "did not finish evaluation\n  left:   `{}`,\n  right:  `{}`\n  input:  {}\n",
+                expected,
+                actual,
+                expr
+            ),
+            (expected, actual) => prop_assert!(
+                false,
+                "evaulation failed\n  left:   `{:?}`,\n  right:  `{:?}`\n  input:  {}\n",
+                expected,
+                actual,
+                expr
             ),
         }
         Ok(())
