@@ -15,11 +15,32 @@ use boo_core::operation::*;
 use boo_core::primitive::*;
 use boo_parser::Expr;
 
+enum Progress<T> {
+    Next(T),
+    Complete(T),
+}
+
 /// Evaluate a parsed AST as simply as possible.
 pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
+    let mut progress = expr;
+    loop {
+        match step(progress)? {
+            Progress::Next(next) => {
+                progress = next;
+            }
+            Progress::Complete(complete) => {
+                return Ok(complete);
+            }
+        }
+    }
+}
+
+fn step(expr: Expr) -> Result<Progress<Expr>> {
     let span = expr.annotation();
     match expr.expression() {
-        Expression::Primitive(value) => Ok(Expr::new(span, Expression::Primitive(value))),
+        expression @ Expression::Primitive(_) | expression @ Expression::Function(_) => {
+            Ok(Progress::Complete(Expr::new(span, expression)))
+        }
         Expression::Identifier(name) => Err(Error::UnknownVariable {
             span,
             name: name.to_string(),
@@ -32,9 +53,8 @@ pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
                 },
                 inner,
             );
-            naively_evaluate(substituted_inner)
+            Ok(Progress::Next(substituted_inner))
         }
-        Expression::Function(function) => Ok(Expr::new(span, Expression::Function(function))),
         Expression::Apply(Apply { function, argument }) => {
             let function_result = naively_evaluate(function)?;
             match function_result.expression() {
@@ -46,7 +66,7 @@ pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
                         },
                         body,
                     );
-                    naively_evaluate(substituted_body)
+                    Ok(Progress::Next(substituted_body))
                 }
                 _ => Err(Error::InvalidFunctionApplication { span }),
             }
@@ -55,26 +75,42 @@ pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
             operation,
             left,
             right,
-        }) => {
-            let left_result = naively_evaluate(left)?;
-            let right_result = naively_evaluate(right)?;
-            match (left_result.expression(), right_result.expression()) {
-                (
-                    Expression::Primitive(Primitive::Integer(left)),
-                    Expression::Primitive(Primitive::Integer(right)),
-                ) => Ok(Expr::new_unannotated(Expression::Primitive(
-                    match operation {
-                        Operation::Add => Primitive::Integer(left + right),
-                        Operation::Subtract => Primitive::Integer(left - right),
-                        Operation::Multiply => Primitive::Integer(left * right),
-                    },
+        }) => match step(left)? {
+            Progress::Next(left_next) => Ok(Progress::Next(Expr::new(
+                span,
+                Expression::Infix(Infix {
+                    operation,
+                    left: left_next,
+                    right,
+                }),
+            ))),
+            Progress::Complete(left) => match step(right)? {
+                Progress::Next(right_next) => Ok(Progress::Next(Expr::new(
+                    span,
+                    Expression::Infix(Infix {
+                        operation,
+                        left,
+                        right: right_next,
+                    }),
                 ))),
-                (left_result, right_result) => panic!(
-                    "evaluate_infix branch is not implemented for:\n({}) {} ({})",
-                    left_result, operation, right_result
-                ),
-            }
-        }
+                Progress::Complete(right) => match (left.expression(), right.expression()) {
+                    (
+                        Expression::Primitive(Primitive::Integer(left)),
+                        Expression::Primitive(Primitive::Integer(right)),
+                    ) => Ok(Progress::Next(Expr::new_unannotated(
+                        Expression::Primitive(match operation {
+                            Operation::Add => Primitive::Integer(left + right),
+                            Operation::Subtract => Primitive::Integer(left - right),
+                            Operation::Multiply => Primitive::Integer(left * right),
+                        }),
+                    ))),
+                    (left_result, right_result) => panic!(
+                        "evaluate_infix branch is not implemented for:\n({}) {} ({})",
+                        left_result, operation, right_result
+                    ),
+                },
+            },
+        },
     }
 }
 
