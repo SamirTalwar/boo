@@ -35,6 +35,10 @@ pub enum Error {
         name: String,
     },
 
+    #[error("Unexpected type error during evaluation")]
+    #[diagnostic(code(boo::evaluator::type_error))]
+    TypeError,
+
     #[error("Could not apply the function")]
     #[diagnostic(code(boo::evaluator::unknown_variable))]
     InvalidFunctionApplication {

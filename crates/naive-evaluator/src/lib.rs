@@ -104,10 +104,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
                             Operation::Multiply => Primitive::Integer(left * right),
                         }),
                     ))),
-                    (left_result, right_result) => panic!(
-                        "evaluate_infix branch is not implemented for:\n({}) {} ({})",
-                        left_result, operation, right_result
-                    ),
+                    _ => Err(Error::TypeError),
                 },
             },
         },

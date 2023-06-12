@@ -154,32 +154,21 @@ fn evaluate_<'a>(
         }) => {
             let left_result = evaluate_(pool, *left_ref, bindings.clone())?;
             let right_result = evaluate_(pool, *right_ref, bindings)?;
-            Ok(evaluate_infix(*operation, left_result, right_result))
-        }
-    }
-}
-
-fn evaluate_infix<'a>(
-    operation: Operation,
-    left: EvaluationProgress<'a>,
-    right: EvaluationProgress<'a>,
-) -> EvaluationProgress<'a> {
-    match (&left, &right) {
-        (EvaluationProgress::Primitive(left), EvaluationProgress::Primitive(right)) => {
-            match (left.as_ref(), right.as_ref()) {
-                (Primitive::Integer(left), Primitive::Integer(right)) => {
-                    EvaluationProgress::Primitive(Cow::Owned(match operation {
-                        Operation::Add => Primitive::Integer(left + right),
-                        Operation::Subtract => Primitive::Integer(left - right),
-                        Operation::Multiply => Primitive::Integer(left * right),
-                    }))
+            match (&left_result, &right_result) {
+                (EvaluationProgress::Primitive(left), EvaluationProgress::Primitive(right)) => {
+                    match (left.as_ref(), right.as_ref()) {
+                        (Primitive::Integer(left), Primitive::Integer(right)) => {
+                            Ok(EvaluationProgress::Primitive(Cow::Owned(match operation {
+                                Operation::Add => Primitive::Integer(left + right),
+                                Operation::Subtract => Primitive::Integer(left - right),
+                                Operation::Multiply => Primitive::Integer(left * right),
+                            })))
+                        }
+                    }
                 }
+                _ => Err(Error::TypeError),
             }
         }
-        _ => panic!(
-            "evaluate_infix branch is not implemented for:\n  left:   {:?}\nright:  {:?}",
-            left, right
-        ),
     }
 }
 
