@@ -12,7 +12,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Clone, PartialEq, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("Unexpected token: {token}")]
-    #[diagnostic(code(boo::lex::unexpected_token))]
+    #[diagnostic(code(boo::lexer::unexpected_token))]
     UnexpectedToken {
         #[label("unexpected token")]
         span: Span,
@@ -20,7 +20,7 @@ pub enum Error {
     },
 
     #[error("Parse error: expected one of {expected_tokens:?}")]
-    #[diagnostic(code(boo::parse::error))]
+    #[diagnostic(code(boo::parser::error))]
     ParseError {
         #[label("{}", expected_one_of(expected_tokens))]
         span: Span,
@@ -28,7 +28,7 @@ pub enum Error {
     },
 
     #[error("Unknown variable: {name:?}")]
-    #[diagnostic(code(boo::interpret::unknown_variable))]
+    #[diagnostic(code(boo::evaluator::unknown_variable))]
     UnknownVariable {
         #[label("unknown variable")]
         span: Span,
@@ -36,7 +36,7 @@ pub enum Error {
     },
 
     #[error("Could not apply the function")]
-    #[diagnostic(code(boo::interpret::unknown_variable))]
+    #[diagnostic(code(boo::evaluator::unknown_variable))]
     InvalidFunctionApplication {
         #[label("invalid function")]
         span: Span,
