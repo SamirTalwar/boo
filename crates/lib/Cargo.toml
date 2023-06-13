@@ -8,5 +8,4 @@ bench = false
 
 [dependencies]
 boo-evaluator = { path = "../evaluator" }
-boo-lexer = { path = "../lexer" }
 boo-parser = { path = "../parser" }

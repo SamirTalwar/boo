@@ -6,7 +6,6 @@ members = [
   "crates/evaluator",
   "crates/generator",
   "crates/interpreter",
-  "crates/lexer",
   "crates/lib",
   "crates/naive-evaluator",
   "crates/parser",

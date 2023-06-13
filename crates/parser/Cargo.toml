@@ -8,8 +8,8 @@ bench = false
 
 [dependencies]
 boo-core = { path = "../core" }
-boo-lexer = { path = "../lexer" }
 
+logos = "0.13.0"
 peg = "0.8.1"
 
 [dev-dependencies]
@@ -17,3 +17,4 @@ boo-generator = { path = "../generator" }
 boo-test-helpers = { path = "../test-helpers" }
 
 proptest = "1.1.0"
+proptest-derive = "0.3.0"
