@@ -37,7 +37,7 @@ lazy_static! {
     static ref VALID_IDENTIFIER_CHARACTER_REGEX: &'static str =
         r"[_\p{Letter}\p{Number}]";
     // ensure that the set of keywords matches the keywords defined in lexer.rs
-    static ref KEYWORDS: HashSet<&'static str> = ["in", "let"].into();
+    static ref KEYWORDS: HashSet<&'static str> = ["in", "let", "false", "true"].into();
 }
 
 impl Identifier {

@@ -44,11 +44,11 @@ pub fn arbitrary<Expr: ExpressionWrapper + Debug + Clone + 'static>() -> impl St
     gen(Rc::new(Default::default()))
 }
 
-/// Creates a strategy for generating expresions according to the configuration.
+/// Creates a strategy for generating expressions according to the configuration.
 pub fn gen<Expr: ExpressionWrapper + Debug + Clone + 'static>(
     config: Rc<ExprGenConfig>,
 ) -> impl Strategy<Value = Expr> {
-    Just(KnownType::Integer)
+    Type::arbitrary_primitive()
         .prop_flat_map(move |target_type| {
             let start_depth = config.depth.clone();
             gen_nested(

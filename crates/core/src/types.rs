@@ -3,6 +3,8 @@
 
 use std::rc::Rc;
 
+use proptest::prelude::*;
+
 /// Types can be known or unknown.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
@@ -23,6 +25,13 @@ impl Type {
 /// The set of known types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KnownType {
+    Boolean,
     Integer,
     Function { parameter: Type, body: Type },
+}
+
+impl Type {
+    pub fn arbitrary_primitive() -> impl Strategy<Value = KnownType> {
+        prop_oneof![Just(KnownType::Boolean), Just(KnownType::Integer)]
+    }
 }

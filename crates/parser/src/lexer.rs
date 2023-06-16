@@ -27,6 +27,10 @@ pub enum Token<'a> {
     Assign,
     #[token(r"->")]
     Arrow,
+    #[token(r"false")]
+    BooleanFalse,
+    #[token(r"true")]
+    BooleanTrue,
     #[regex(r"-?[0-9](_?[0-9])*", |token|
         str::replace(token.slice(), "_", "").parse::<Integer>().ok()
     )]
@@ -81,6 +85,34 @@ mod tests {
         let tokens = lex(input);
 
         assert_eq!(tokens, Ok(vec![]));
+    }
+
+    #[test]
+    fn test_lexing_a_boolean_false() {
+        let input = "false";
+        let tokens = lex(input);
+
+        assert_eq!(
+            tokens,
+            Ok(vec![AnnotatedToken {
+                annotation: (0..5).into(),
+                token: Token::BooleanFalse,
+            }])
+        );
+    }
+
+    #[test]
+    fn test_lexing_a_boolean_true() {
+        let input = "true";
+        let tokens = lex(input);
+
+        assert_eq!(
+            tokens,
+            Ok(vec![AnnotatedToken {
+                annotation: (0..4).into(),
+                token: Token::BooleanTrue,
+            }])
+        );
     }
 
     #[test]

@@ -11,6 +11,13 @@ pub fn primitive<Expr: ExpressionWrapper>(
     Expr::new(annotation.into(), Expression::Primitive(value))
 }
 
+pub fn primitive_boolean<Expr: ExpressionWrapper>(
+    annotation: impl Into<Expr::Annotation>,
+    value: bool,
+) -> Expr {
+    primitive(annotation, Primitive::Boolean(value))
+}
+
 pub fn primitive_integer<Expr: ExpressionWrapper>(
     annotation: impl Into<Expr::Annotation>,
     value: Integer,

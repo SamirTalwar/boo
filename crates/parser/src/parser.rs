@@ -82,7 +82,24 @@ peg::parser! {
             }
         }
 
-        rule primitive() -> Expr =
+        rule primitive() -> Expr = boolean() / integer()
+
+        rule boolean() -> Expr =
+            quiet! { [AnnotatedToken { annotation, token: Token::BooleanFalse }] {
+                Expr::new(
+                    *annotation,
+                    Expression::Primitive(Primitive::Boolean(false)),
+                )
+            } }
+            / quiet! { [AnnotatedToken { annotation, token: Token::BooleanTrue }] {
+                Expr::new(
+                    *annotation,
+                    Expression::Primitive(Primitive::Boolean(true)),
+                )
+            } }
+            / expected!("a boolean value")
+
+        rule integer() -> Expr =
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
                 Expr::new(
                     *annotation,
@@ -143,6 +160,32 @@ mod tests {
 
     use super::builders::*;
     use super::*;
+
+    #[test]
+    fn test_parsing_a_boolean_false() {
+        let expected = primitive_boolean(0..5, false);
+        let tokens = vec![AnnotatedToken {
+            annotation: (0..5).into(),
+            token: Token::BooleanFalse,
+        }];
+
+        let actual = parse_tokens(&tokens);
+
+        assert_eq!(actual, Ok(expected));
+    }
+
+    #[test]
+    fn test_parsing_a_boolean_true() {
+        let expected = primitive_boolean(0..4, true);
+        let tokens = vec![AnnotatedToken {
+            annotation: (0..4).into(),
+            token: Token::BooleanTrue,
+        }];
+
+        let actual = parse_tokens(&tokens);
+
+        assert_eq!(actual, Ok(expected));
+    }
 
     #[test]
     fn test_parsing_an_integer() {
@@ -689,7 +732,15 @@ mod tests {
                 actual,
                 Err(Error::ParseError {
                     span: (0..1).into(),
-                    expected_tokens: ["'('", "an identifier", "an integer", "fn", "let"].into(),
+                    expected_tokens: [
+                        "'('",
+                        "a boolean value",
+                        "an identifier",
+                        "an integer",
+                        "fn",
+                        "let"
+                    ]
+                    .into(),
                 })
             );
             Ok(())
@@ -715,7 +766,15 @@ mod tests {
                 actual,
                 Err(Error::ParseError {
                     span: (3..3).into(),
-                    expected_tokens: ["'('", "an identifier", "an integer", "fn", "let"].into(),
+                    expected_tokens: [
+                        "'('",
+                        "a boolean value",
+                        "an identifier",
+                        "an integer",
+                        "fn",
+                        "let"
+                    ]
+                    .into(),
                 })
             );
             Ok(())

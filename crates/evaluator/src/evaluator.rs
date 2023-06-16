@@ -164,6 +164,7 @@ fn evaluate_<'a>(
                                 Operation::Multiply => Primitive::Integer(left * right),
                             })))
                         }
+                        _ => Err(Error::TypeError),
                     }
                 }
                 _ => Err(Error::TypeError),
