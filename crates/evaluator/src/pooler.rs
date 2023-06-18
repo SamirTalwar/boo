@@ -5,13 +5,16 @@ pub mod builders;
 pub mod pool;
 
 use boo_core::ast::*;
-use boo_parser as parser;
+use boo_core::span::*;
 
 use ast::*;
 use pool::pool_with;
 
 /// Flattens an expression tree into a [`pool::Pool`].
-pub fn pool_exprs(ast: parser::Expr) -> ExprPool {
+pub fn pool_exprs<InputExpr>(ast: InputExpr) -> ExprPool
+where
+    InputExpr: ExpressionWrapper<Annotation = Span>,
+{
     pool_with(|pool| {
         add_expr(pool, ast);
     })
@@ -21,7 +24,10 @@ pub fn pool_exprs(ast: parser::Expr) -> ExprPool {
 ///
 /// The leaf expressions will always be added before their parents, so that the
 /// references are always valid.
-pub fn add_expr(pool: &mut ExprPool, expr: parser::Expr) -> Expr {
+pub fn add_expr<InputExpr>(pool: &mut ExprPool, expr: InputExpr) -> Expr
+where
+    InputExpr: ExpressionWrapper<Annotation = Span>,
+{
     expr.transform(&mut |span, expression| Expr::insert(pool, span, expression))
 }
 
@@ -38,10 +44,12 @@ mod tests {
 
     use super::*;
 
+    type TestInputExpr = boo_parser::Expr;
+
     #[test]
     fn test_single_primitive() {
         check(&Integer::arbitrary(), |value| {
-            let input = ast::builders::primitive_integer(0..0, value.clone());
+            let input: TestInputExpr = ast::builders::primitive_integer(0..0, value.clone());
             let expected = pool_with(|pool| {
                 builders::primitive_integer(pool, value.clone());
             });
@@ -56,7 +64,7 @@ mod tests {
     #[test]
     fn test_single_identifier() {
         check(&Identifier::arbitrary(), |name| {
-            let input = ast::builders::identifier(0..0, name.clone());
+            let input: TestInputExpr = ast::builders::identifier(0..0, name.clone());
             let expected = pool_with(|pool| {
                 builders::identifier(pool, name.clone());
             });
@@ -77,7 +85,7 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(name, value, inner)| {
-                let input = ast::builders::assign(
+                let input: TestInputExpr = ast::builders::assign(
                     0..0,
                     name.clone(),
                     ast::builders::primitive_integer(0..0, value.clone()),
@@ -102,7 +110,7 @@ mod tests {
         check(
             &(Identifier::arbitrary(), Integer::arbitrary()),
             |(parameter, modifier)| {
-                let input = ast::builders::function(
+                let input: TestInputExpr = ast::builders::function(
                     0..0,
                     parameter.clone(),
                     ast::builders::infix(
@@ -136,7 +144,7 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(parameter, modifier, value)| {
-                let input = ast::builders::apply(
+                let input: TestInputExpr = ast::builders::apply(
                     0..0,
                     ast::builders::function(
                         0..0,
@@ -176,7 +184,7 @@ mod tests {
                 Integer::arbitrary(),
             ),
             |(operation, left, right)| {
-                let input = ast::builders::infix(
+                let input: TestInputExpr = ast::builders::infix(
                     0..0,
                     operation,
                     ast::builders::primitive_integer(0..0, left.clone()),

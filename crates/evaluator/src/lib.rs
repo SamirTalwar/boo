@@ -12,10 +12,15 @@ pub mod thunk;
 
 pub use evaluator::Evaluated;
 
+use boo_core::ast::ExpressionWrapper;
 use boo_core::error::Result;
+use boo_core::span::Span;
 
 /// Evaluates a parsed expression.
-pub fn evaluate(expr: boo_parser::Expr) -> Result<evaluator::Evaluated> {
+pub fn evaluate<Expr>(expr: Expr) -> Result<evaluator::Evaluated>
+where
+    Expr: ExpressionWrapper<Annotation = Span> + Clone,
+{
     let pool = pooler::pool_exprs(expr);
     evaluator::evaluate(&pool)
 }

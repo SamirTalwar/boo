@@ -13,7 +13,7 @@ use boo_core::error::*;
 use boo_core::identifier::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
-use boo_parser::Expr;
+use boo_core::span::HasSpan;
 
 enum Progress<T> {
     Next(T),
@@ -21,7 +21,10 @@ enum Progress<T> {
 }
 
 /// Evaluate a parsed AST as simply as possible.
-pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
+pub fn naively_evaluate<Expr>(expr: Expr) -> Result<Expr>
+where
+    Expr: ExpressionWrapper + HasSpan + Clone,
+{
     let mut progress = expr;
     loop {
         match step(progress)? {
@@ -35,11 +38,15 @@ pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
     }
 }
 
-fn step(expr: Expr) -> Result<Progress<Expr>> {
-    let span = expr.annotation();
+fn step<Expr>(expr: Expr) -> Result<Progress<Expr>>
+where
+    Expr: ExpressionWrapper + HasSpan + Clone,
+{
+    let annotation = expr.annotation();
+    let span = expr.span();
     match expr.expression() {
         expression @ Expression::Primitive(_) | expression @ Expression::Function(_) => {
-            Ok(Progress::Complete(Expr::new(span, expression)))
+            Ok(Progress::Complete(Expr::new(annotation, expression)))
         }
         Expression::Identifier(name) => Err(Error::UnknownVariable {
             span,
@@ -77,7 +84,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
             right,
         }) => match step(left)? {
             Progress::Next(left_next) => Ok(Progress::Next(Expr::new(
-                span,
+                annotation,
                 Expression::Infix(Infix {
                     operation,
                     left: left_next,
@@ -86,7 +93,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
             ))),
             Progress::Complete(left) => match step(right)? {
                 Progress::Next(right_next) => Ok(Progress::Next(Expr::new(
-                    span,
+                    annotation,
                     Expression::Infix(Infix {
                         operation,
                         left,
@@ -112,12 +119,15 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
 }
 
 #[derive(Debug, Clone)]
-struct Substitution {
+struct Substitution<Expr: ExpressionWrapper + HasSpan> {
     name: Rc<Identifier>,
     value: Rc<Expr>,
 }
 
-fn substitute(substitution: Substitution, expr: Expr) -> Expr {
+fn substitute<Expr>(substitution: Substitution<Expr>, expr: Expr) -> Expr
+where
+    Expr: ExpressionWrapper + HasSpan + Clone,
+{
     let span = expr.annotation();
     match expr.expression() {
         expression @ Expression::Primitive(_) => Expr::new(span, expression),

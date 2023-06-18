@@ -8,6 +8,5 @@ bench = false
 
 [dependencies]
 boo-core = { path = "../core" }
-boo-parser = { path = "../parser" }
 
 im = { version = "15.1.0", features = ["proptest"] }

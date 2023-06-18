@@ -1,7 +1,7 @@
 //! The AST produced by the parser.
 
 use boo_core::ast::{Expression, ExpressionWrapper};
-use boo_core::span::{Span, Spanned};
+use boo_core::span::{HasSpan, Span, Spanned};
 
 /// An expression, annotated with the source location as a span.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -30,6 +30,12 @@ impl ExpressionWrapper for Expr {
 
     fn expression(self) -> Expression<Self> {
         self.0.value
+    }
+}
+
+impl HasSpan for Expr {
+    fn span(&self) -> Span {
+        self.0.span
     }
 }
 
