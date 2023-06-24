@@ -36,18 +36,12 @@
       devShells.default = pkgs.mkShell {
         buildInputs = [
           # build
+          pkgs.cargo
           pkgs.clippy
           pkgs.rust-analyzer
-          pkgs.rustPlatform.rust.cargo
-          pkgs.rustPlatform.rust.rustc
           pkgs.rustPlatform.rustcSrc
-          (if pkgs.stdenv.isDarwin
-            then
-              pkgs.writeShellScriptBin "rustfmt" ''
-                export DYLD_LIBRARY_PATH="${pkgs.rustPlatform.rust.rustc}/lib/rustlib/aarch64-apple-darwin/lib:$DYLD_LIBRARY_PATH"
-                ${pkgs.rustfmt}/bin/rustfmt "$@"
-              ''
-            else pkgs.rustfmt)
+          pkgs.rustc
+          pkgs.rustfmt
 
           # runtime
           pkgs.libiconv
