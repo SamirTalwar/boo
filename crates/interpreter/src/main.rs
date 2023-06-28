@@ -1,7 +1,13 @@
+use std::str::FromStr;
+use std::sync::Arc;
+
 use clap::Parser;
 use miette::IntoDiagnostic;
 use reedline::*;
 
+use boo::ast::*;
+use boo::identifier::*;
+use boo::native::*;
 use boo::*;
 use boo_naive_evaluator::naively_evaluate;
 
@@ -55,7 +61,38 @@ fn repl(args: &Args) {
 }
 
 fn interpret(args: &Args, buffer: &str) -> miette::Result<()> {
-    let expr = parse(buffer)?;
+    let builtins: Vec<(Identifier, boo::parser::Expr)> =
+        vec![(Identifier::from_str("trace").unwrap(), {
+            let parameter = Identifier::from_str("param").unwrap();
+            boo::parser::Expr::new(
+                0.into(),
+                Expression::Function(Function {
+                    parameter: parameter.clone(),
+                    body: boo::parser::Expr::new(
+                        0.into(),
+                        Expression::Native(Native {
+                            unique_name: Identifier::from_str("trace").unwrap(),
+                            implementation: Arc::new(move |context| {
+                                let value = context.lookup_value(&parameter)?;
+                                eprintln!("trace: {}", value);
+                                Ok(value)
+                            }),
+                        }),
+                    ),
+                }),
+            )
+        })];
+    let mut expr = parse(buffer)?;
+    for (name, builtin) in builtins.into_iter().rev() {
+        expr = boo::parser::Expr::new(
+            0.into(),
+            Expression::Assign(Assign {
+                name,
+                value: builtin,
+                inner: expr,
+            }),
+        );
+    }
     if args.naive {
         let result = naively_evaluate(expr)?;
         println!("{}", result);

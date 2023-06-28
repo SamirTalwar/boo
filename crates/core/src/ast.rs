@@ -6,6 +6,7 @@ pub mod simple;
 use std::fmt::Display;
 
 use crate::identifier::Identifier;
+use crate::native::Native;
 use crate::operation::Operation;
 use crate::primitive::Primitive;
 
@@ -27,6 +28,7 @@ use crate::primitive::Primitive;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression<Outer> {
     Primitive(Primitive),
+    Native(Native),
     Identifier(Identifier),
     Assign(Assign<Outer>),
     Function(Function<Outer>),
@@ -120,6 +122,7 @@ impl<Outer: ExpressionWrapper> Expression<Outer> {
     ) -> Expression<Next> {
         match self {
             Expression::Primitive(x) => Expression::Primitive(x),
+            Expression::Native(x) => Expression::Native(x),
             Expression::Identifier(x) => Expression::Identifier(x),
             Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
                 name,
@@ -151,6 +154,7 @@ impl<Outer: Display> std::fmt::Display for Expression<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expression::Primitive(x) => x.fmt(f),
+            Expression::Native(x) => x.fmt(f),
             Expression::Identifier(x) => x.fmt(f),
             Expression::Assign(x) => x.fmt(f),
             Expression::Function(x) => x.fmt(f),

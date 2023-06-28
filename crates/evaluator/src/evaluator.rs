@@ -8,6 +8,7 @@ use im::HashMap;
 use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::identifier::*;
+use boo_core::native::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
 
@@ -117,6 +118,10 @@ fn evaluate_<'a>(
     let expr = expr_ref.read_from(pool);
     match &expr.value {
         Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
+        Expression::Native(Native {
+            unique_name,
+            implementation,
+        }) => todo!("evaluate Native"),
         Expression::Identifier(name) => bindings.clone().resolve(name, |thunk| match thunk {
             Some((value_ref, thunk_bindings)) => evaluate_(pool, value_ref, thunk_bindings),
             None => Err(Error::UnknownVariable {

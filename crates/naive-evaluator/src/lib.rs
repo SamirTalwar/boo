@@ -7,10 +7,12 @@
 //! arbitrary program.
 
 use std::rc::Rc;
+use std::sync::Arc;
 
 use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::identifier::*;
+use boo_core::native::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
 use boo_core::span::HasSpan;
@@ -20,10 +22,43 @@ enum Progress<T> {
     Complete(T),
 }
 
+struct EmptyContext {}
+
+impl NativeContext for EmptyContext {
+    fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
+        Err(Error::UnknownVariable {
+            span: 0.into(),
+            name: identifier.to_string(),
+        })
+    }
+}
+
+struct AdditionalContext<Expr> {
+    name: Rc<Identifier>,
+    value: Rc<Expr>,
+    rest: Box<dyn NativeContext>,
+}
+
+impl<Expr> NativeContext for AdditionalContext<Expr>
+where
+    Expr: ExpressionWrapper + Clone,
+{
+    fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
+        if identifier == self.name.as_ref() {
+            match (*self.value).clone().expression() {
+                Expression::Primitive(primitive) => Ok(primitive),
+                _ => Err(Error::TypeError),
+            }
+        } else {
+            self.rest.lookup_value(identifier)
+        }
+    }
+}
+
 /// Evaluate a parsed AST as simply as possible.
 pub fn naively_evaluate<Expr>(expr: Expr) -> Result<Expr>
 where
-    Expr: ExpressionWrapper + HasSpan + Clone,
+    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
 {
     let mut progress = expr;
     loop {
@@ -40,13 +75,17 @@ where
 
 fn step<Expr>(expr: Expr) -> Result<Progress<Expr>>
 where
-    Expr: ExpressionWrapper + HasSpan + Clone,
+    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
 {
     let annotation = expr.annotation();
     let span = expr.span();
     match expr.expression() {
         expression @ Expression::Primitive(_) | expression @ Expression::Function(_) => {
             Ok(Progress::Complete(Expr::new(annotation, expression)))
+        }
+        Expression::Native(Native { implementation, .. }) => {
+            implementation(Box::new(EmptyContext {}))
+                .map(|x| Progress::Complete(Expr::new(annotation, Expression::Primitive(x))))
         }
         Expression::Identifier(name) => Err(Error::UnknownVariable {
             span,
@@ -119,23 +158,39 @@ where
 }
 
 #[derive(Debug, Clone)]
-struct Substitution<Expr: ExpressionWrapper + HasSpan> {
+struct Substitution<Expr: ExpressionWrapper> {
     name: Rc<Identifier>,
     value: Rc<Expr>,
 }
 
 fn substitute<Expr>(substitution: Substitution<Expr>, expr: Expr) -> Expr
 where
-    Expr: ExpressionWrapper + HasSpan + Clone,
+    Expr: ExpressionWrapper + Clone + 'static,
 {
-    let span = expr.annotation();
+    let annotation = expr.annotation();
     match expr.expression() {
-        expression @ Expression::Primitive(_) => Expr::new(span, expression),
+        expression @ Expression::Primitive(_) => Expr::new(annotation, expression),
+        Expression::Native(Native {
+            unique_name,
+            implementation,
+        }) => Expr::new(
+            annotation,
+            Expression::Native(Native {
+                unique_name,
+                implementation: Arc::new(move |context| {
+                    implementation(Box::new(AdditionalContext {
+                        name: substitution.name.clone(),
+                        value: substitution.value.clone(),
+                        rest: context,
+                    }))
+                }),
+            }),
+        ),
         Expression::Identifier(name) if name == *substitution.name => (*substitution.value).clone(),
-        expression @ Expression::Identifier(_) => Expr::new(span, expression),
+        expression @ Expression::Identifier(_) => Expr::new(annotation, expression),
         Expression::Assign(Assign { name, value, inner }) if name != *substitution.name => {
             Expr::new(
-                span,
+                annotation,
                 Expression::Assign(Assign {
                     name,
                     value: substitute(substitution.clone(), value),
@@ -143,19 +198,19 @@ where
                 }),
             )
         }
-        expression @ Expression::Assign(_) => Expr::new(span, expression),
+        expression @ Expression::Assign(_) => Expr::new(annotation, expression),
         Expression::Function(Function { parameter, body }) if parameter != *substitution.name => {
             Expr::new(
-                span,
+                annotation,
                 Expression::Function(Function {
                     parameter,
                     body: substitute(substitution, body),
                 }),
             )
         }
-        expression @ Expression::Function(_) => Expr::new(span, expression),
+        expression @ Expression::Function(_) => Expr::new(annotation, expression),
         Expression::Apply(Apply { function, argument }) => Expr::new(
-            span,
+            annotation,
             Expression::Apply(Apply {
                 function: substitute(substitution.clone(), function),
                 argument: substitute(substitution, argument),
@@ -166,7 +221,7 @@ where
             left,
             right,
         }) => Expr::new(
-            span,
+            annotation,
             Expression::Infix(Infix {
                 operation,
                 left: substitute(substitution.clone(), left),

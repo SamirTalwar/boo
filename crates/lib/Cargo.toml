@@ -7,5 +7,6 @@ edition = "2021"
 bench = false
 
 [dependencies]
+boo-core = { path = "../core" }
 boo-evaluator = { path = "../evaluator" }
 boo-parser = { path = "../parser" }

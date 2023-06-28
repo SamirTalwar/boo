@@ -194,6 +194,7 @@ dependencies = [
 name = "boo"
 version = "0.1.0"
 dependencies = [
+ "boo-core",
  "boo-evaluator",
  "boo-parser",
 ]
@@ -260,6 +261,7 @@ dependencies = [
  "boo",
  "boo-naive-evaluator",
  "clap 4.3.9",
+ "im",
  "miette",
  "reedline",
 ]
