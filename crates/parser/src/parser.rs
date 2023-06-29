@@ -146,6 +146,7 @@ mod tests {
 
     #[test]
     fn test_parsing_an_integer() {
+        // value
         check(&Integer::arbitrary(), |value| {
             let expected = primitive_integer(0..10, value.clone());
             let tokens = vec![AnnotatedToken {
@@ -162,6 +163,7 @@ mod tests {
 
     #[test]
     fn test_variables() {
+        // let name = variable in name * constant
         check(
             &(
                 Identifier::arbitrary(),
@@ -225,6 +227,7 @@ mod tests {
 
     #[test]
     fn test_parsing_a_function() {
+        // fn argument -> argument
         check(&Identifier::arbitrary(), |argument| {
             let expected = function(0..9, argument.clone(), identifier(8..9, argument.clone()));
             let tokens = vec![
@@ -255,6 +258,7 @@ mod tests {
 
     #[test]
     fn test_parsing_a_more_complicated_function() {
+        // fn argument -> argument + argument
         check(&Identifier::arbitrary(), |argument| {
             let expected = function(
                 0..13,
@@ -302,6 +306,7 @@ mod tests {
 
     #[test]
     fn test_parsing_function_application() {
+        // (fn argument -> argument + argument) input
         check(
             &(Identifier::arbitrary(), Integer::arbitrary()),
             |(argument, input)| {
@@ -368,6 +373,7 @@ mod tests {
 
     #[test]
     fn test_parsing_named_function_application() {
+        // let function_name = fn argument -> (argument + argument) in function_name input
         check(
             &(
                 Identifier::arbitrary(),
@@ -477,6 +483,7 @@ mod tests {
     }
 
     fn test_parsing_an_operation(text: &str, operation: Operation) {
+        // left `operation` right
         check(
             &(Integer::arbitrary(), Integer::arbitrary()),
             |(left, right)| {
@@ -511,6 +518,7 @@ mod tests {
 
     #[test]
     fn test_parsing_two_operations_with_higher_precedence_to_the_right() {
+        // a + b * c
         check(
             &(
                 Integer::arbitrary(),
@@ -562,6 +570,7 @@ mod tests {
 
     #[test]
     fn test_parsing_two_operations_with_higher_precedence_to_the_left() {
+        // a * b - c
         check(
             &(
                 Integer::arbitrary(),
@@ -613,6 +622,7 @@ mod tests {
 
     #[test]
     fn test_parentheses() {
+        // a * (b + c)
         check(
             &(
                 Integer::arbitrary(),
@@ -672,6 +682,7 @@ mod tests {
 
     #[test]
     fn test_fails_to_parse_gracefully() {
+        // + value
         check(&Integer::arbitrary(), |value| {
             let tokens = vec![
                 AnnotatedToken {
@@ -698,6 +709,7 @@ mod tests {
 
     #[test]
     fn test_fails_to_parse_at_the_end() {
+        // value +
         check(&Integer::arbitrary(), |value| {
             let tokens = vec![
                 AnnotatedToken {
