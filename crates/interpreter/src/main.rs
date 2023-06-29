@@ -1,26 +1,36 @@
+use clap::Parser;
 use miette::IntoDiagnostic;
 use reedline::*;
 
 use boo::*;
+use boo_naive_evaluator::naively_evaluate;
+
+#[derive(Debug, Parser)]
+struct Args {
+    /// Use the naive evaluator instead of the optimized one
+    #[arg(long)]
+    naive: bool,
+}
 
 fn main() {
+    let args = Args::parse();
     if atty::is(atty::Stream::Stdin) {
-        repl();
+        repl(&args);
     } else {
-        match read_and_interpret(std::io::stdin()) {
+        match read_and_interpret(&args, std::io::stdin()) {
             Ok(()) => (),
             Err(report) => eprintln!("{:?}", report),
         }
     }
 }
 
-fn read_and_interpret(mut input: impl std::io::Read) -> miette::Result<()> {
+fn read_and_interpret(args: &Args, mut input: impl std::io::Read) -> miette::Result<()> {
     let mut buffer = String::new();
     input.read_to_string(&mut buffer).into_diagnostic()?;
-    interpret(&buffer).map_err(|report| report.with_source_code(buffer))
+    interpret(args, &buffer).map_err(|report| report.with_source_code(buffer))
 }
 
-fn repl() {
+fn repl(args: &Args) {
     let mut line_editor = Reedline::create();
     let prompt = DefaultPrompt {
         left_prompt: DefaultPromptSegment::Empty,
@@ -30,7 +40,7 @@ fn repl() {
     loop {
         let sig = line_editor.read_line(&prompt);
         match sig {
-            Ok(Signal::Success(buffer)) => match interpret(&buffer) {
+            Ok(Signal::Success(buffer)) => match interpret(args, &buffer) {
                 Ok(()) => (),
                 Err(report) => eprintln!("{:?}", report.with_source_code(buffer)),
             },
@@ -44,9 +54,14 @@ fn repl() {
     }
 }
 
-fn interpret(buffer: &str) -> miette::Result<()> {
+fn interpret(args: &Args, buffer: &str) -> miette::Result<()> {
     let expr = parse(buffer)?;
-    let result = evaluate(expr)?;
-    println!("{}", result);
+    if args.naive {
+        let result = naively_evaluate(expr)?;
+        println!("{}", result);
+    } else {
+        let result = evaluate(expr)?;
+        println!("{}", result);
+    }
     Ok(())
 }
