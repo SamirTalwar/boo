@@ -20,11 +20,6 @@ impl Expr {
         Self(pool.add(Spanned { span, value }))
     }
 
-    /// Wraps the root node.
-    pub fn from_root(pool: &ExprPool) -> Self {
-        Self(pool.root())
-    }
-
     /// Reads the entry from the pool.
     pub fn read_from<'a>(&self, pool: &'a ExprPool) -> &'a Inner {
         pool.get(self.0)

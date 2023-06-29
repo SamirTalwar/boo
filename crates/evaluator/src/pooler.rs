@@ -11,13 +11,11 @@ use ast::*;
 use pool::pool_with;
 
 /// Flattens an expression tree into a [`pool::Pool`].
-pub fn pool_exprs<InputExpr>(ast: InputExpr) -> ExprPool
+pub fn pool_exprs<InputExpr>(ast: InputExpr) -> (ExprPool, Expr)
 where
     InputExpr: ExpressionWrapper<Annotation = Span>,
 {
-    pool_with(|pool| {
-        add_expr(pool, ast);
-    })
+    pool_with(|pool| add_expr(pool, ast))
 }
 
 /// Adds a single expression into the pool, recursively.
@@ -42,6 +40,7 @@ mod tests {
     use boo_core::operation::*;
     use boo_core::primitive::*;
 
+    use super::pool::pool_with;
     use super::*;
 
     type TestInputExpr = boo_parser::Expr;
@@ -50,9 +49,7 @@ mod tests {
     fn test_single_primitive() {
         check(&Integer::arbitrary(), |value| {
             let input: TestInputExpr = ast::builders::primitive_integer(0..0, value.clone());
-            let expected = pool_with(|pool| {
-                builders::primitive_integer(pool, value.clone());
-            });
+            let expected = pool_with(|pool| builders::primitive_integer(pool, value.clone()));
 
             let actual = pool_exprs(input);
 
@@ -65,9 +62,7 @@ mod tests {
     fn test_single_identifier() {
         check(&Identifier::arbitrary(), |name| {
             let input: TestInputExpr = ast::builders::identifier(0..0, name.clone());
-            let expected = pool_with(|pool| {
-                builders::identifier(pool, name.clone());
-            });
+            let expected = pool_with(|pool| builders::identifier(pool, name.clone()));
 
             let actual = pool_exprs(input);
 
@@ -94,7 +89,7 @@ mod tests {
                 let expected = pool_with(|pool| {
                     let value_ref = builders::primitive_integer(pool, value.clone());
                     let inner_ref = builders::primitive_integer(pool, inner.clone());
-                    builders::assign(pool, name.clone(), value_ref, inner_ref);
+                    builders::assign(pool, name.clone(), value_ref, inner_ref)
                 });
 
                 let actual = pool_exprs(input);
@@ -124,7 +119,7 @@ mod tests {
                     let left_ref = builders::identifier(pool, parameter.clone());
                     let right_ref = builders::primitive_integer(pool, modifier.clone());
                     let add_ref = builders::infix(pool, Operation::Add, left_ref, right_ref);
-                    builders::function(pool, parameter.clone(), add_ref);
+                    builders::function(pool, parameter.clone(), add_ref)
                 });
 
                 let actual = pool_exprs(input);
@@ -164,7 +159,7 @@ mod tests {
                     let add_ref = builders::infix(pool, Operation::Add, left_ref, right_ref);
                     let function_ref = builders::function(pool, parameter.clone(), add_ref);
                     let argument_ref = builders::primitive_integer(pool, value.clone());
-                    builders::apply(pool, function_ref, argument_ref);
+                    builders::apply(pool, function_ref, argument_ref)
                 });
 
                 let actual = pool_exprs(input);
@@ -193,7 +188,7 @@ mod tests {
                 let expected = pool_with(|pool| {
                     let left_ref = builders::primitive_integer(pool, left.clone());
                     let right_ref = builders::primitive_integer(pool, right.clone());
-                    builders::infix(pool, operation, left_ref, right_ref);
+                    builders::infix(pool, operation, left_ref, right_ref)
                 });
 
                 let actual = pool_exprs(input);

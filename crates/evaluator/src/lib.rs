@@ -21,6 +21,6 @@ pub fn evaluate<Expr>(expr: Expr) -> Result<evaluator::Evaluated>
 where
     Expr: ExpressionWrapper<Annotation = Span> + Clone,
 {
-    let pool = pooler::pool_exprs(expr);
-    evaluator::evaluate(&pool)
+    let (pool, root) = pooler::pool_exprs(expr);
+    evaluator::evaluate(&pool, root)
 }

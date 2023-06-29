@@ -47,24 +47,6 @@ impl<T> Pool<T> {
         Pool(Vec::new())
     }
 
-    /// The reference to the root of the tree in the pool.
-    ///
-    /// Panics if the pool is empty.
-    pub fn root(&self) -> PoolRef<T> {
-        if self.0.is_empty() {
-            panic!("Tried to get the root of an empty pool.");
-        }
-        PoolRef {
-            index: self.0.len() - 1,
-            marker: PhantomData,
-        }
-    }
-
-    /// Gets the root node from the pool.
-    pub fn get_root(&self) -> &T {
-        self.get(self.root())
-    }
-
     /// Gets a specific value from the pool by reference.
     pub fn get(&self, value_ref: PoolRef<T>) -> &T {
         self.0.get(value_ref.index).unwrap()
@@ -87,18 +69,8 @@ impl<T> Default for Pool<T> {
     }
 }
 
-/// Constructs a new pool in a functional style.
-pub fn pool_with<T>(f: impl FnOnce(&mut Pool<T>)) -> Pool<T> {
-    let mut new_pool = Pool::new();
-    f(&mut new_pool);
-    new_pool
-}
-
 /// Constructs a new pool in a functional style, leaking data.
-///
-/// Intended only for testing.
-#[cfg(test)]
-pub fn leaky_pool_with<T, Leak>(f: impl FnOnce(&mut Pool<T>) -> Leak) -> (Pool<T>, Leak) {
+pub fn pool_with<T, Leak>(f: impl FnOnce(&mut Pool<T>) -> Leak) -> (Pool<T>, Leak) {
     let mut new_pool = Pool::new();
     let leak = f(&mut new_pool);
     (new_pool, leak)

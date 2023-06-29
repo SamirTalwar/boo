@@ -94,8 +94,8 @@ impl<'a> Bindings<'a> {
 }
 
 /// Evaluate a [pooled `Expr`][super::pooler::ast::Expr].
-pub fn evaluate(pool: &ExprPool) -> Result<Evaluated> {
-    let evaluated = evaluate_(pool, Expr::from_root(pool), Bindings::new())?;
+pub fn evaluate(pool: &ExprPool, root: Expr) -> Result<Evaluated> {
+    let evaluated = evaluate_(pool, root, Bindings::new())?;
     Ok(evaluated.finish())
 }
 
@@ -177,16 +177,15 @@ mod tests {
     use proptest::prelude::*;
 
     use boo_core::ast::builders;
-    use boo_core::span::Spanned;
     use boo_test_helpers::proptest::*;
 
-    use crate::pooler::pool::{leaky_pool_with, pool_with};
+    use crate::pooler::pool::pool_with;
 
     use super::*;
 
-    fn pool_of(expr: simple::Expr) -> ExprPool {
+    fn pool_of(expr: simple::Expr) -> (ExprPool, Expr) {
         pool_with(|pool| {
-            expr.transform(&mut |_, expression| Expr::insert(pool, 0.into(), expression));
+            expr.transform(&mut |_, expression| Expr::insert(pool, 0.into(), expression))
         })
     }
 
@@ -194,10 +193,10 @@ mod tests {
     fn test_evaluating_a_primitive() {
         check(&Primitive::arbitrary(), |value| {
             // input: `value`
-            let input = pool_of(builders::primitive((), value.clone()));
+            let (input, root) = pool_of(builders::primitive((), value.clone()));
             let expected = Evaluated::Primitive(value);
 
-            let actual = evaluate(&input);
+            let actual = evaluate(&input, root);
 
             prop_assert_eq!(actual, Ok(expected));
             Ok(())
@@ -210,7 +209,7 @@ mod tests {
             &(Identifier::arbitrary(), Primitive::arbitrary()),
             |(name, value)| {
                 // input: let `name` = `value` in `name`
-                let input = pool_of(builders::assign(
+                let (input, root) = pool_of(builders::assign(
                     (),
                     name.clone(),
                     builders::primitive((), value.clone()),
@@ -218,7 +217,7 @@ mod tests {
                 ));
                 let expected = Evaluated::Primitive(value);
 
-                let actual = evaluate(&input);
+                let actual = evaluate(&input, root);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())
@@ -237,7 +236,7 @@ mod tests {
             |(name, variable, constant)| {
                 let sum = &variable + &constant;
                 // input: let `name` = `variable` in `constant` + `name`
-                let input = pool_of(builders::assign(
+                let (input, root) = pool_of(builders::assign(
                     (),
                     name.clone(),
                     builders::primitive_integer((), variable),
@@ -250,7 +249,7 @@ mod tests {
                 ));
                 let expected = Evaluated::Primitive(Primitive::Integer(sum));
 
-                let actual = evaluate(&input);
+                let actual = evaluate(&input, root);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())
@@ -261,14 +260,11 @@ mod tests {
     #[test]
     fn test_evaluating_an_unknown_variable() {
         check(&Identifier::arbitrary(), |name| {
-            let input = pool_with(|pool| {
-                pool.add(Spanned {
-                    span: (5..10).into(),
-                    value: Expression::Identifier(name.clone()),
-                });
+            let (input, root) = pool_with(|pool| {
+                Expr::insert(pool, (5..10).into(), Expression::Identifier(name.clone()))
             });
 
-            let actual = evaluate(&input);
+            let actual = evaluate(&input, root);
 
             prop_assert_eq!(
                 actual,
@@ -285,17 +281,17 @@ mod tests {
     fn test_an_isolated_function() {
         check(&Identifier::arbitrary(), |parameter| {
             // input: fn `parameter` -> `parameter`
-            let (input, body_ref) = leaky_pool_with(|pool| {
+            let (input, (root, body_ref)) = pool_with(|pool| {
                 let body_ref = crate::pooler::builders::identifier(pool, parameter.clone());
-                crate::pooler::builders::function(pool, parameter.clone(), body_ref);
-                body_ref
+                let root = crate::pooler::builders::function(pool, parameter.clone(), body_ref);
+                (root, body_ref)
             });
             let expected = Evaluated::Function(Function {
                 parameter,
                 body: body_ref,
             });
 
-            let actual = evaluate(&input);
+            let actual = evaluate(&input, root);
 
             prop_assert_eq!(actual, Ok(expected));
             Ok(())
@@ -308,14 +304,14 @@ mod tests {
             &(Identifier::arbitrary(), Integer::arbitrary()),
             |(parameter, argument)| {
                 // input: (fn `parameter` -> `parameter`) `argument`
-                let input = pool_of(builders::apply(
+                let (input, root) = pool_of(builders::apply(
                     (),
                     builders::function((), parameter.clone(), builders::identifier((), parameter)),
                     builders::primitive_integer((), argument.clone()),
                 ));
                 let expected = Evaluated::Primitive(Primitive::Integer(argument));
 
-                let actual = evaluate(&input);
+                let actual = evaluate(&input, root);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())
@@ -336,7 +332,7 @@ mod tests {
                 // input:
                 //   (fn `parameter` -> `parameter` * `multiplier`)
                 //     (`argument_left` + `argument_right`)
-                let input = pool_of(builders::apply(
+                let (input, root) = pool_of(builders::apply(
                     (),
                     builders::function(
                         (),
@@ -359,7 +355,7 @@ mod tests {
                     (argument_left + argument_right) * multiplier,
                 ));
 
-                let actual = evaluate(&input);
+                let actual = evaluate(&input, root);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())
@@ -383,7 +379,7 @@ mod tests {
                 //   (let `outer_variable_name` = `outer_variable_value`
                 //        in fn `parameter` -> `outer_variable_name` + `parameter`)
                 //     `argument_value
-                let input = pool_of(builders::apply(
+                let (input, root) = pool_of(builders::apply(
                     (),
                     builders::assign(
                         (),
@@ -405,7 +401,7 @@ mod tests {
                 let expected =
                     Evaluated::Primitive(Primitive::Integer(outer_variable_value + argument_value));
 
-                let actual = evaluate(&input);
+                let actual = evaluate(&input, root);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())
@@ -450,7 +446,7 @@ mod tests {
                 //        in fn `parameter_name` -> `outer_variable_name` + `parameter_name` + `external_variable_name`)
                 //     in let `external_variable_name` = `external_variable_value`
                 //            in `function_name` `argument_value`
-                let input = pool_of(builders::assign(
+                let (input, root) = pool_of(builders::assign(
                     (),
                     function_name.clone(),
                     builders::assign(
@@ -485,7 +481,7 @@ mod tests {
                     ),
                 ));
 
-                let actual = evaluate(&input);
+                let actual = evaluate(&input, root);
 
                 prop_assert_eq!(
                     actual,
@@ -524,14 +520,14 @@ mod tests {
                 let expected =
                     Evaluated::Primitive(Primitive::Integer(implementation(&left, &right)));
                 // input: `left` `operation` `right`
-                let input = pool_of(builders::infix(
+                let (input, root) = pool_of(builders::infix(
                     (),
                     operation,
                     builders::primitive_integer((), left),
                     builders::primitive_integer((), right),
                 ));
 
-                let actual = evaluate(&input);
+                let actual = evaluate(&input, root);
 
                 prop_assert_eq!(actual, Ok(expected));
                 Ok(())
