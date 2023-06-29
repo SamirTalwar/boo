@@ -85,10 +85,15 @@ impl<'a> Bindings<'a> {
     }
 
     /// Adds a new binding to the set.
-    pub fn with(&self, identifier: &'a Identifier, expression: Expr) -> Self {
+    pub fn with(
+        &self,
+        identifier: &'a Identifier,
+        expression: Expr,
+        expression_bindings: Self,
+    ) -> Self {
         Self(self.0.update(
             Cow::Borrowed(identifier),
-            Thunk::unresolved((expression, self.clone())),
+            Thunk::unresolved((expression, expression_bindings)),
         ))
     }
 }
@@ -123,7 +128,11 @@ fn evaluate_<'a>(
             name,
             value: value_ref,
             inner: inner_ref,
-        }) => evaluate_(pool, *inner_ref, bindings.with(name, *value_ref)),
+        }) => evaluate_(
+            pool,
+            *inner_ref,
+            bindings.with(name, *value_ref, bindings.clone()),
+        ),
         Expression::Function(function) => {
             Ok(EvaluationProgress::Closure(function, bindings.clone()))
         }
@@ -142,7 +151,9 @@ fn evaluate_<'a>(
                 ) => evaluate_(
                     pool,
                     *body_ref,
-                    function_bindings.with(parameter, *argument_ref),
+                    // the body is executed in the context of the function,
+                    // but the argument must be evaluated in the outer context
+                    function_bindings.with(parameter, *argument_ref, bindings.clone()),
                 ),
                 _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
             }
@@ -353,6 +364,217 @@ mod tests {
                 ));
                 let expected = Evaluated::Primitive(Primitive::Integer(
                     (argument_left + argument_right) * multiplier,
+                ));
+
+                let actual = evaluate(&input, root);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_function_application_with_named_argument() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Identifier::arbitrary(),
+            ),
+            |(argument_name, argument, parameter)| {
+                // input: let `argument_name` = `argument` in (fn `parameter` -> `parameter`) `argument_name`
+                let (input, root) = pool_of(builders::assign(
+                    (),
+                    argument_name.clone(),
+                    builders::primitive_integer((), argument.clone()),
+                    builders::apply(
+                        (),
+                        builders::function(
+                            (),
+                            parameter.clone(),
+                            builders::identifier((), parameter),
+                        ),
+                        builders::identifier((), argument_name),
+                    ),
+                ));
+                let expected = Evaluated::Primitive(Primitive::Integer(argument));
+
+                let actual = evaluate(&input, root);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_named_function_application() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(function_name, parameter, multiplier, argument)| {
+                // input:
+                //   let `function_name` = (fn `parameter` -> `parameter` * `multiplier`)
+                //     in (`function_name` `argument`)
+                let (input, root) = pool_of(builders::assign(
+                    (),
+                    function_name.clone(),
+                    builders::function(
+                        (),
+                        parameter.clone(),
+                        builders::infix(
+                            (),
+                            Operation::Multiply,
+                            builders::identifier((), parameter),
+                            builders::primitive_integer((), multiplier.clone()),
+                        ),
+                    ),
+                    builders::apply(
+                        (),
+                        builders::identifier((), function_name),
+                        builders::primitive_integer((), argument.clone()),
+                    ),
+                ));
+                let expected = Evaluated::Primitive(Primitive::Integer(argument * multiplier));
+
+                let actual = evaluate(&input, root);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_named_function_application_with_named_argument() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(function_name, parameter, argument_name, argument)| {
+                // input: let `function_name` = (fn `parameter` -> `parameter`) in let `argument_name` = `argument` in `function_name` `argument_name`
+                let (input, root) = pool_of(builders::assign(
+                    (),
+                    function_name.clone(),
+                    builders::function((), parameter.clone(), builders::identifier((), parameter)),
+                    builders::assign(
+                        (),
+                        argument_name.clone(),
+                        builders::primitive_integer((), argument.clone()),
+                        builders::apply(
+                            (),
+                            builders::identifier((), function_name),
+                            builders::identifier((), argument_name),
+                        ),
+                    ),
+                ));
+                let expected = Evaluated::Primitive(Primitive::Integer(argument));
+
+                let actual = evaluate(&input, root);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_named_function_application_with_multiple_parameters() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(function_name, left, right, a, b)| {
+                // input:
+                //   let `function_name` = (fn `left` -> fn `right` -> `left` * `right`)
+                //     in (`function_name` `a` `b`)
+                let (input, root) = pool_of(builders::assign(
+                    (),
+                    function_name.clone(),
+                    builders::function(
+                        (),
+                        left.clone(),
+                        builders::function(
+                            (),
+                            right.clone(),
+                            builders::infix(
+                                (),
+                                Operation::Multiply,
+                                builders::identifier((), left),
+                                builders::identifier((), right),
+                            ),
+                        ),
+                    ),
+                    builders::apply(
+                        (),
+                        builders::apply(
+                            (),
+                            builders::identifier((), function_name),
+                            builders::primitive_integer((), a.clone()),
+                        ),
+                        builders::primitive_integer((), b.clone()),
+                    ),
+                ));
+                let expected = Evaluated::Primitive(Primitive::Integer(a * b));
+
+                let actual = evaluate(&input, root);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_named_function_application_nested() {
+        check(
+            &(
+                Identifier::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(function_name, parameter, multiplier, argument)| {
+                // input:
+                //   let `function_name` = (fn `parameter` -> `parameter` * `multiplier`)
+                //     in (`function_name` (`function_name` `argument`))
+                let (input, root) = pool_of(builders::assign(
+                    (),
+                    function_name.clone(),
+                    builders::function(
+                        (),
+                        parameter.clone(),
+                        builders::infix(
+                            (),
+                            Operation::Multiply,
+                            builders::identifier((), parameter),
+                            builders::primitive_integer((), multiplier.clone()),
+                        ),
+                    ),
+                    builders::apply(
+                        (),
+                        builders::identifier((), function_name.clone()),
+                        builders::apply(
+                            (),
+                            builders::identifier((), function_name),
+                            builders::primitive_integer((), argument.clone()),
+                        ),
+                    ),
+                ));
+                let expected = Evaluated::Primitive(Primitive::Integer(
+                    argument * multiplier.clone() * multiplier,
                 ));
 
                 let actual = evaluate(&input, root);
