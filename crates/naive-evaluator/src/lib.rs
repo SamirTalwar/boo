@@ -41,11 +41,11 @@ struct AdditionalContext<Expr> {
 
 impl<Expr> NativeContext for AdditionalContext<Expr>
 where
-    Expr: ExpressionWrapper + Clone,
+    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
 {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         if identifier == self.name.as_ref() {
-            match (*self.value).clone().expression() {
+            match naively_evaluate((*self.value).clone())?.expression() {
                 Expression::Primitive(primitive) => Ok(primitive),
                 _ => Err(Error::TypeError),
             }
@@ -158,14 +158,14 @@ where
 }
 
 #[derive(Debug, Clone)]
-struct Substitution<Expr: ExpressionWrapper> {
+struct Substitution<Expr: ExpressionWrapper + HasSpan> {
     name: Rc<Identifier>,
     value: Rc<Expr>,
 }
 
 fn substitute<Expr>(substitution: Substitution<Expr>, expr: Expr) -> Expr
 where
-    Expr: ExpressionWrapper + Clone + 'static,
+    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
 {
     let annotation = expr.annotation();
     match expr.expression() {
