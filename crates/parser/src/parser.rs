@@ -62,9 +62,9 @@ peg::parser! {
                 construct_infix(left, Operation::Multiply, right)
             }
             --
-            function:(@) argument:expr() {
+            function:(identifier() / group()) argument:@ {
                 Expr::new(
-                    argument.annotation(),
+                    function.annotation() | argument.annotation(),
                     Expression::Apply(Apply {
                         function,
                         argument,
@@ -75,12 +75,15 @@ peg::parser! {
             p:primitive() { p }
             i:identifier() { i }
             --
+            e:group() { e }
+        }
+
+        rule group() -> Expr =
             (quiet! { [AnnotatedToken { annotation: _, token: Token::StartGroup }] } / expected!("'('"))
             e:expr()
             (quiet! { [AnnotatedToken { annotation: _, token: Token::EndGroup }] } / expected!(")'")) {
                 e
             }
-        }
 
         rule primitive() -> Expr =
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
@@ -311,7 +314,7 @@ mod tests {
             &(Identifier::arbitrary(), Integer::arbitrary()),
             |(argument, input)| {
                 let expected = apply(
-                    16..19,
+                    1..19,
                     function(
                         1..14,
                         argument.clone(),
@@ -395,7 +398,7 @@ mod tests {
                         ),
                     ),
                     apply(
-                        29..32,
+                        27..32,
                         identifier(27..28, function_name.clone()),
                         primitive_integer(29..32, input.clone()),
                     ),
@@ -504,6 +507,62 @@ mod tests {
                     },
                     AnnotatedToken {
                         annotation: (4..5).into(),
+                        token: Token::Integer(right),
+                    },
+                ];
+
+                let actual = parse_tokens(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_parsing_an_operation_on_function_calls() {
+        // f left + g right
+        check(
+            &(
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(f, left, g, right)| {
+                let expected = infix(
+                    0..9,
+                    Operation::Add,
+                    apply(
+                        0..3,
+                        identifier(0..1, f.clone()),
+                        primitive_integer(2..3, left.clone()),
+                    ),
+                    apply(
+                        6..9,
+                        identifier(6..7, g.clone()),
+                        primitive_integer(8..9, right.clone()),
+                    ),
+                );
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Identifier(f),
+                    },
+                    AnnotatedToken {
+                        annotation: (2..3).into(),
+                        token: Token::Integer(left),
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Operator("+"),
+                    },
+                    AnnotatedToken {
+                        annotation: (6..7).into(),
+                        token: Token::Identifier(g),
+                    },
+                    AnnotatedToken {
+                        annotation: (8..9).into(),
                         token: Token::Integer(right),
                     },
                 ];
