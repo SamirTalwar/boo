@@ -62,7 +62,7 @@ peg::parser! {
                 construct_infix(left, Operation::Multiply, right)
             }
             --
-            function:(identifier() / group()) argument:@ {
+            function:(@) argument:atomic_expr() {
                 Expr::new(
                     function.annotation() | argument.annotation(),
                     Expression::Apply(Apply {
@@ -72,11 +72,11 @@ peg::parser! {
                 )
             }
             --
-            p:primitive() { p }
-            i:identifier() { i }
-            --
-            e:group() { e }
+            a:atomic_expr() { a }
         }
+
+        rule atomic_expr() -> Expr =
+            e:(primitive() / identifier() / group()) { e }
 
         rule group() -> Expr =
             (quiet! { [AnnotatedToken { annotation: _, token: Token::StartGroup }] } / expected!("'('"))
@@ -376,6 +376,87 @@ mod tests {
 
     #[test]
     fn test_parsing_named_function_application() {
+        // function_name input
+        check(
+            &(Identifier::arbitrary(), Integer::arbitrary()),
+            |(function_name, input)| {
+                let expected = apply(
+                    0..5,
+                    identifier(0..1, function_name.clone()),
+                    primitive_integer(2..5, input.clone()),
+                );
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Identifier(function_name),
+                    },
+                    AnnotatedToken {
+                        annotation: (2..5).into(),
+                        token: Token::Integer(input),
+                    },
+                ];
+
+                let actual = parse_tokens(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_parsing_named_function_application_with_multiple_arguments() {
+        // function_name a b c
+        check(
+            &(
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+                Identifier::arbitrary(),
+                Integer::arbitrary(),
+            ),
+            |(function_name, a, b, c)| {
+                let expected = apply(
+                    0..7,
+                    apply(
+                        0..5,
+                        apply(
+                            0..3,
+                            identifier(0..1, function_name.clone()),
+                            primitive_integer(2..3, a.clone()),
+                        ),
+                        identifier(4..5, b.clone()),
+                    ),
+                    primitive_integer(6..7, c.clone()),
+                );
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..1).into(),
+                        token: Token::Identifier(function_name),
+                    },
+                    AnnotatedToken {
+                        annotation: (2..3).into(),
+                        token: Token::Integer(a),
+                    },
+                    AnnotatedToken {
+                        annotation: (4..5).into(),
+                        token: Token::Identifier(b),
+                    },
+                    AnnotatedToken {
+                        annotation: (6..7).into(),
+                        token: Token::Integer(c),
+                    },
+                ];
+
+                let actual = parse_tokens(&tokens);
+
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
+    }
+
+    #[test]
+    fn test_parsing_assigned_function_application() {
         // let function_name = fn argument -> (argument + argument) in function_name input
         check(
             &(
