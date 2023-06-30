@@ -8,10 +8,12 @@ pub trait NativeContext {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive>;
 }
 
+type Implementation = Arc<dyn Fn(&dyn NativeContext) -> Result<Primitive>>;
+
 #[derive(Clone)]
 pub struct Native {
     pub unique_name: Identifier,
-    pub implementation: Arc<dyn Fn(Box<dyn NativeContext>) -> Result<Primitive>>,
+    pub implementation: Implementation,
 }
 
 impl std::fmt::Debug for Native {

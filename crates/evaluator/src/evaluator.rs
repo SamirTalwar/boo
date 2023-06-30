@@ -116,10 +116,9 @@ impl<'a> Evaluator<'a> {
         let expr = expr_ref.read_from(self.pool);
         match &expr.value {
             Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
-            Expression::Native(Native {
-                unique_name,
-                implementation,
-            }) => todo!("evaluate Native"),
+            Expression::Native(Native { implementation, .. }) => {
+                implementation(self).map(|value| EvaluationProgress::Primitive(Cow::Owned(value)))
+            }
             Expression::Identifier(name) => self.resolve(name, expr.span),
             Expression::Assign(Assign {
                 name,
@@ -205,6 +204,15 @@ impl<'a> Evaluator<'a> {
         Self {
             pool: self.pool,
             bindings: new_bindings,
+        }
+    }
+}
+
+impl<'a> NativeContext for Evaluator<'a> {
+    fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
+        match self.resolve(identifier, 0.into())?.finish() {
+            Evaluated::Primitive(primitive) => Ok(primitive),
+            Evaluated::Function(_) => Err(Error::TypeError),
         }
     }
 }

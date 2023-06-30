@@ -33,13 +33,13 @@ impl NativeContext for EmptyContext {
     }
 }
 
-struct AdditionalContext<Expr> {
+struct AdditionalContext<'a, Expr> {
     name: Rc<Identifier>,
     value: Rc<Expr>,
-    rest: Box<dyn NativeContext>,
+    rest: &'a dyn NativeContext,
 }
 
-impl<Expr> NativeContext for AdditionalContext<Expr>
+impl<'a, Expr> NativeContext for AdditionalContext<'a, Expr>
 where
     Expr: ExpressionWrapper + HasSpan + Clone + 'static,
 {
@@ -83,10 +83,8 @@ where
         expression @ Expression::Primitive(_) | expression @ Expression::Function(_) => {
             Ok(Progress::Complete(Expr::new(annotation, expression)))
         }
-        Expression::Native(Native { implementation, .. }) => {
-            implementation(Box::new(EmptyContext {}))
-                .map(|x| Progress::Complete(Expr::new(annotation, Expression::Primitive(x))))
-        }
+        Expression::Native(Native { implementation, .. }) => implementation(&EmptyContext {})
+            .map(|x| Progress::Complete(Expr::new(annotation, Expression::Primitive(x)))),
         Expression::Identifier(name) => Err(Error::UnknownVariable {
             span,
             name: name.to_string(),
@@ -178,11 +176,11 @@ where
             Expression::Native(Native {
                 unique_name,
                 implementation: Arc::new(move |context| {
-                    implementation(Box::new(AdditionalContext {
+                    implementation(&AdditionalContext {
                         name: substitution.name.clone(),
                         value: substitution.value.clone(),
                         rest: context,
-                    }))
+                    })
                 }),
             }),
         ),
