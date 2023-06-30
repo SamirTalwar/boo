@@ -11,9 +11,20 @@ use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
+use boo_core::span::Span;
 
 use crate::pooler::ast::*;
 use crate::thunk::Thunk;
+
+/// Evaluate a [pooled `Expr`][super::pooler::ast::Expr].
+pub fn evaluate(pool: &ExprPool, root: Expr) -> Result<Evaluated> {
+    Evaluator {
+        pool,
+        bindings: Bindings::new(),
+    }
+    .evaluate(root)
+    .map(|progress| progress.finish())
+}
 
 /// An evaluation result. This can be either a primitive value or a closure.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,21 +79,11 @@ impl<'a> Bindings<'a> {
         Self(HashMap::new())
     }
 
-    /// Resolves a given identifier by evaluating its binding.
-    pub fn resolve(
+    pub fn read(
         &mut self,
         identifier: &Identifier,
-        resolver: impl Fn(Option<UnevaluatedBinding<'a>>) -> EvaluatedBinding<'a>,
-    ) -> EvaluatedBinding<'a> {
-        match self.0.get_mut(identifier) {
-            Some(thunk) => {
-                let result = thunk.resolve_by(move |(pool_ref, bindings)| {
-                    resolver(Some((*pool_ref, bindings.clone())))
-                });
-                Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
-            }
-            None => resolver(None),
-        }
+    ) -> Option<&mut Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>> {
+        self.0.get_mut(identifier)
     }
 
     /// Adds a new binding to the set.
@@ -99,91 +100,111 @@ impl<'a> Bindings<'a> {
     }
 }
 
-/// Evaluate a [pooled `Expr`][super::pooler::ast::Expr].
-pub fn evaluate(pool: &ExprPool, root: Expr) -> Result<Evaluated> {
-    let evaluated = evaluate_(pool, root, Bindings::new())?;
-    Ok(evaluated.finish())
+/// An expression pool together with the current bound context, which can
+/// evaluate a given expression reference from the pool.
+struct Evaluator<'a> {
+    pool: &'a ExprPool,
+    bindings: Bindings<'a>,
 }
 
-/// Evaluates an expression from a pool in a given scope, with the associated
-/// bindings.
-///
-/// The bindings are modified by assignment, accessed when evaluating an
-/// identifier, and captured by closures when a function is evaluated.
-fn evaluate_<'a>(
-    pool: &'a ExprPool,
-    expr_ref: Expr,
-    bindings: Bindings<'a>,
-) -> Result<EvaluationProgress<'a>> {
-    let expr = expr_ref.read_from(pool);
-    match &expr.value {
-        Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
-        Expression::Native(Native {
-            unique_name,
-            implementation,
-        }) => todo!("evaluate Native"),
-        Expression::Identifier(name) => bindings.clone().resolve(name, |thunk| match thunk {
-            Some((value_ref, thunk_bindings)) => evaluate_(pool, value_ref, thunk_bindings),
-            None => Err(Error::UnknownVariable {
-                span: expr.span,
-                name: name.to_string(),
-            }),
-        }),
-        Expression::Assign(Assign {
-            name,
-            value: value_ref,
-            inner: inner_ref,
-        }) => evaluate_(
-            pool,
-            *inner_ref,
-            bindings.with(name, *value_ref, bindings.clone()),
-        ),
-        Expression::Function(function) => {
-            Ok(EvaluationProgress::Closure(function, bindings.clone()))
-        }
-        Expression::Apply(Apply {
-            function: function_ref,
-            argument: argument_ref,
-        }) => {
-            let function_result = evaluate_(pool, *function_ref, bindings.clone())?;
-            match function_result {
-                EvaluationProgress::Closure(
-                    Function {
-                        parameter,
-                        body: body_ref,
-                    },
-                    function_bindings,
-                ) => evaluate_(
-                    pool,
-                    *body_ref,
-                    // the body is executed in the context of the function,
-                    // but the argument must be evaluated in the outer context
-                    function_bindings.with(parameter, *argument_ref, bindings.clone()),
-                ),
-                _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
+impl<'a> Evaluator<'a> {
+    /// Evaluates an expression from a pool in a given scope.
+    ///
+    /// The bindings are modified by assignment, accessed when evaluating an
+    /// identifier, and captured by closures when a function is evaluated.
+    pub fn evaluate(&self, expr_ref: Expr) -> Result<EvaluationProgress<'a>> {
+        let expr = expr_ref.read_from(self.pool);
+        match &expr.value {
+            Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
+            Expression::Native(Native {
+                unique_name,
+                implementation,
+            }) => todo!("evaluate Native"),
+            Expression::Identifier(name) => self.resolve(name, expr.span),
+            Expression::Assign(Assign {
+                name,
+                value: value_ref,
+                inner: inner_ref,
+            }) => self.with(name, *value_ref).evaluate(*inner_ref),
+            Expression::Function(function) => {
+                Ok(EvaluationProgress::Closure(function, self.bindings.clone()))
             }
-        }
-        Expression::Infix(Infix {
-            operation,
-            left: left_ref,
-            right: right_ref,
-        }) => {
-            let left_result = evaluate_(pool, *left_ref, bindings.clone())?;
-            let right_result = evaluate_(pool, *right_ref, bindings)?;
-            match (&left_result, &right_result) {
-                (EvaluationProgress::Primitive(left), EvaluationProgress::Primitive(right)) => {
-                    match (left.as_ref(), right.as_ref()) {
-                        (Primitive::Integer(left), Primitive::Integer(right)) => {
-                            Ok(EvaluationProgress::Primitive(Cow::Owned(match operation {
-                                Operation::Add => Primitive::Integer(left + right),
-                                Operation::Subtract => Primitive::Integer(left - right),
-                                Operation::Multiply => Primitive::Integer(left * right),
-                            })))
+            Expression::Apply(Apply {
+                function: function_ref,
+                argument: argument_ref,
+            }) => {
+                let function_result = self.evaluate(*function_ref)?;
+                match function_result {
+                    EvaluationProgress::Closure(
+                        Function {
+                            parameter,
+                            body: body_ref,
+                        },
+                        function_bindings,
+                    ) => self
+                        // the body is executed in the context of the function,
+                        // but the argument must be evaluated in the outer context
+                        .switch(function_bindings.with(
+                            parameter,
+                            *argument_ref,
+                            self.bindings.clone(),
+                        ))
+                        .evaluate(*body_ref),
+                    _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
+                }
+            }
+            Expression::Infix(Infix {
+                operation,
+                left: left_ref,
+                right: right_ref,
+            }) => {
+                let left_result = self.evaluate(*left_ref)?;
+                let right_result = self.evaluate(*right_ref)?;
+                match (&left_result, &right_result) {
+                    (EvaluationProgress::Primitive(left), EvaluationProgress::Primitive(right)) => {
+                        match (left.as_ref(), right.as_ref()) {
+                            (Primitive::Integer(left), Primitive::Integer(right)) => {
+                                Ok(EvaluationProgress::Primitive(Cow::Owned(match operation {
+                                    Operation::Add => Primitive::Integer(left + right),
+                                    Operation::Subtract => Primitive::Integer(left - right),
+                                    Operation::Multiply => Primitive::Integer(left * right),
+                                })))
+                            }
                         }
                     }
+                    _ => Err(Error::TypeError),
                 }
-                _ => Err(Error::TypeError),
             }
+        }
+    }
+
+    /// Resolves a given identifier by evaluating its binding.
+    fn resolve(&self, identifier: &Identifier, span: Span) -> EvaluatedBinding<'a> {
+        match self.bindings.clone().read(identifier) {
+            Some(thunk) => {
+                let result = thunk.resolve_by(move |(value_ref, thunk_bindings)| {
+                    self.switch(thunk_bindings.clone()).evaluate(*value_ref)
+                });
+                Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
+            }
+            None => Err(Error::UnknownVariable {
+                span,
+                name: identifier.to_string(),
+            }),
+        }
+    }
+
+    fn with(&self, identifier: &'a Identifier, expression: Expr) -> Self {
+        self.switch(
+            self.bindings
+                .with(identifier, expression, self.bindings.clone()),
+        )
+    }
+
+    fn switch(&self, new_bindings: Bindings<'a>) -> Self {
+        Self {
+            pool: self.pool,
+            bindings: new_bindings,
         }
     }
 }
