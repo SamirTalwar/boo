@@ -1,6 +1,7 @@
 //! Core types and data structures used throughout Boo.
 
 pub mod ast;
+pub mod builtins;
 pub mod error;
 pub mod identifier;
 pub mod native;
