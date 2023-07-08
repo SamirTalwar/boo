@@ -22,7 +22,7 @@ pub fn identifier(pool: &mut ExprPool, name: Identifier) -> Expr {
 }
 
 pub fn identifier_string(pool: &mut ExprPool, name: String) -> Expr {
-    identifier(pool, Identifier::new(name).unwrap())
+    identifier(pool, Identifier::name(name).unwrap())
 }
 
 pub fn assign(pool: &mut ExprPool, name: Identifier, value: Expr, inner: Expr) -> Expr {
@@ -34,7 +34,7 @@ pub fn assign(pool: &mut ExprPool, name: Identifier, value: Expr, inner: Expr) -
 }
 
 pub fn assign_string(pool: &mut ExprPool, name: String, value: Expr, inner: Expr) -> Expr {
-    assign(pool, Identifier::new(name).unwrap(), value, inner)
+    assign(pool, Identifier::name(name).unwrap(), value, inner)
 }
 
 pub fn function(pool: &mut ExprPool, parameter: Identifier, body: Expr) -> Expr {

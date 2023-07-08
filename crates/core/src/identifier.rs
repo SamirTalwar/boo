@@ -12,8 +12,8 @@ use regex::Regex;
 /// Valid identifiers start with a letter or underscore, and can then be
 /// followed by 0 or more letters, numbers, or underscores.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Identifier {
-    name: String,
+pub enum Identifier {
+    Name(String),
 }
 
 /// Errors that can happen when dealing with identifiers.
@@ -43,9 +43,9 @@ lazy_static! {
 impl Identifier {
     /// Constructs a new identifier from a valid name. If the name is invalid,
     /// returns [`IdentifierError::InvalidIdentifier`].
-    pub fn new(name: String) -> Result<Self, IdentifierError> {
+    pub fn name(name: String) -> Result<Self, IdentifierError> {
         if Self::is_valid(&name) {
-            Ok(Identifier { name })
+            Ok(Self::Name(name))
         } else {
             Err(IdentifierError::InvalidIdentifier)
         }
@@ -60,13 +60,15 @@ impl FromStr for Identifier {
     type Err = IdentifierError;
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
-        Self::new(name.to_string())
+        Self::name(name.to_string())
     }
 }
 
 impl std::fmt::Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.name.fmt(f)
+        match self {
+            Identifier::Name(name) => name.fmt(f),
+        }
     }
 }
 
@@ -93,7 +95,7 @@ impl Identifier {
             length.end() - 1,
         ))
         .unwrap()
-        .prop_map(|x| Identifier::new(x).unwrap())
+        .prop_map(|x| Identifier::name(x).unwrap())
     }
 
     /// A proptest strategy for constructing an arbitrary identifier within
@@ -109,7 +111,7 @@ impl Identifier {
             length.end() - 1,
         ))
         .unwrap()
-        .prop_map(|x| Identifier::new(x).unwrap())
+        .prop_map(|x| Identifier::name(x).unwrap())
     }
 }
 
@@ -121,9 +123,7 @@ mod tests {
     fn test_alphabetic_names_are_allowed() {
         assert_eq!(
             Identifier::from_str("name"),
-            Ok(Identifier {
-                name: "name".to_string()
-            })
+            Ok(Identifier::Name("name".to_string()))
         );
     }
 
@@ -131,9 +131,7 @@ mod tests {
     fn test_numbers_are_allowed() {
         assert_eq!(
             Identifier::from_str("name123"),
-            Ok(Identifier {
-                name: "name123".to_string()
-            })
+            Ok(Identifier::Name("name123".to_string()))
         );
     }
 
@@ -141,9 +139,7 @@ mod tests {
     fn test_underscores_are_allowed() {
         assert_eq!(
             Identifier::from_str("x_y_z"),
-            Ok(Identifier {
-                name: "x_y_z".to_string()
-            })
+            Ok(Identifier::Name("x_y_z".to_string()))
         );
     }
 
