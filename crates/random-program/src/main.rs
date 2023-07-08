@@ -24,8 +24,9 @@ fn main() -> anyhow::Result<()> {
     let expr = tree.current();
     println!("Expression:\n{}\n", expr);
 
+    let prepared = builtins::prepare(expr);
     let start_time = Instant::now();
-    let result = evaluate(expr).expect("Could not interpret the expression.");
+    let result = evaluate(prepared).expect("Could not interpret the expression.");
     let end_time = Instant::now();
     println!("Result:\n{}", result);
 
