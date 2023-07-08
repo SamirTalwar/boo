@@ -8,12 +8,12 @@ bench = false
 
 [dependencies]
 lazy_static = "1.4.0"
-miette = { version = "5.8.0" }
-num-bigint = "0.4.0"
-proptest = "1.1.0"
+miette = "5.9.0"
+num-bigint = "0.4.3"
+proptest = "1.2.0"
 proptest-derive = "0.3.0"
-regex = "1.8.1"
-thiserror = "1.0.40"
+regex = "1.9.1"
+thiserror = "1.0.43"
 
 [dev-dependencies]
 boo-test-helpers = { path = "../test-helpers" }
