@@ -13,6 +13,7 @@ use regex::Regex;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Identifier {
     Name(String),
+    Operator(String),
 }
 
 /// Errors that can happen when dealing with identifiers.
@@ -35,6 +36,9 @@ lazy_static! {
         r"[_\p{Letter}]";
     static ref VALID_IDENTIFIER_NAME_CHARACTER_REGEX: &'static str =
         r"[_\p{Letter}\p{Number}]";
+
+    static ref VALID_OPERATORS: HashSet<&'static str> = ["+", "-", "*"].into();
+
     // ensure that the set of keywords matches the keywords defined in lexer.rs
     static ref KEYWORDS: HashSet<&'static str> = ["in", "let"].into();
 }
@@ -60,8 +64,22 @@ impl Identifier {
         }
     }
 
+    /// Constructs a new identifier from a valid name. If the name is invalid,
+    /// returns [`IdentifierError::InvalidIdentifier`].
+    pub fn operator_from_str(operator: &str) -> Result<Self, IdentifierError> {
+        if Self::is_valid_operator(operator) {
+            Ok(Self::Operator(operator.to_string()))
+        } else {
+            Err(IdentifierError::InvalidIdentifier)
+        }
+    }
+
     fn is_valid_name(name: &str) -> bool {
         !KEYWORDS.contains(name) && VALID_IDENTIFIER_NAME_REGEX.is_match(name)
+    }
+
+    fn is_valid_operator(operator: &str) -> bool {
+        VALID_OPERATORS.contains(operator)
     }
 }
 
@@ -69,6 +87,7 @@ impl std::fmt::Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Identifier::Name(name) => name.fmt(f),
+            Identifier::Operator(operator) => operator.fmt(f),
         }
     }
 }
