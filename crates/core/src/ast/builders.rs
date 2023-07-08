@@ -32,6 +32,13 @@ pub fn identifier_string<Expr: ExpressionWrapper>(
     identifier(annotation, Identifier::name_from_string(name).unwrap())
 }
 
+pub fn operator<Expr: ExpressionWrapper>(
+    annotation: impl Into<Expr::Annotation>,
+    name: &str,
+) -> Expr {
+    identifier(annotation, Identifier::operator_from_str(name).unwrap())
+}
+
 pub fn assign<Expr: ExpressionWrapper>(
     annotation: impl Into<Expr::Annotation>,
     name: Identifier,

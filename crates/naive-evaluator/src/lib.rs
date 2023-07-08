@@ -13,7 +13,6 @@ use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::identifier::*;
 use boo_core::native::*;
-use boo_core::operation::*;
 use boo_core::primitive::*;
 use boo_core::span::HasSpan;
 
@@ -115,43 +114,7 @@ where
                 _ => Err(Error::InvalidFunctionApplication { span }),
             }
         }
-        Expression::Infix(Infix {
-            operation,
-            left,
-            right,
-        }) => match step(left)? {
-            Progress::Next(left_next) => Ok(Progress::Next(Expr::new(
-                annotation,
-                Expression::Infix(Infix {
-                    operation,
-                    left: left_next,
-                    right,
-                }),
-            ))),
-            Progress::Complete(left) => match step(right)? {
-                Progress::Next(right_next) => Ok(Progress::Next(Expr::new(
-                    annotation,
-                    Expression::Infix(Infix {
-                        operation,
-                        left,
-                        right: right_next,
-                    }),
-                ))),
-                Progress::Complete(right) => match (left.expression(), right.expression()) {
-                    (
-                        Expression::Primitive(Primitive::Integer(left)),
-                        Expression::Primitive(Primitive::Integer(right)),
-                    ) => Ok(Progress::Next(Expr::new_unannotated(
-                        Expression::Primitive(match operation {
-                            Operation::Add => Primitive::Integer(left + right),
-                            Operation::Subtract => Primitive::Integer(left - right),
-                            Operation::Multiply => Primitive::Integer(left * right),
-                        }),
-                    ))),
-                    _ => Err(Error::TypeError),
-                },
-            },
-        },
+        Expression::Infix(_) => unreachable!("infix"),
     }
 }
 
