@@ -1,7 +1,6 @@
 //! The core Boo AST, represented as a wrapped [`Expression`].
 
 pub mod builders;
-pub mod simple;
 
 use std::fmt::Display;
 
