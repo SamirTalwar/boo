@@ -25,13 +25,6 @@ pub fn identifier<Expr: ExpressionWrapper>(
     Expr::new(annotation.into(), Expression::Identifier(name))
 }
 
-pub fn identifier_string<Expr: ExpressionWrapper>(
-    annotation: impl Into<Expr::Annotation>,
-    name: String,
-) -> Expr {
-    identifier(annotation, Identifier::name_from_string(name).unwrap())
-}
-
 pub fn operator<Expr: ExpressionWrapper>(
     annotation: impl Into<Expr::Annotation>,
     name: &str,
@@ -48,20 +41,6 @@ pub fn assign<Expr: ExpressionWrapper>(
     Expr::new(
         annotation.into(),
         Expression::Assign(Assign { name, value, inner }),
-    )
-}
-
-pub fn assign_string<Expr: ExpressionWrapper>(
-    annotation: impl Into<Expr::Annotation>,
-    name: String,
-    value: Expr,
-    inner: Expr,
-) -> Expr {
-    assign(
-        annotation,
-        Identifier::name_from_string(name).unwrap(),
-        value,
-        inner,
     )
 }
 

@@ -21,24 +21,11 @@ pub fn identifier(pool: &mut ExprPool, name: Identifier) -> Expr {
     Expr::insert(pool, 0.into(), Expression::Identifier(name))
 }
 
-pub fn identifier_string(pool: &mut ExprPool, name: String) -> Expr {
-    identifier(pool, Identifier::name_from_string(name).unwrap())
-}
-
 pub fn assign(pool: &mut ExprPool, name: Identifier, value: Expr, inner: Expr) -> Expr {
     Expr::insert(
         pool,
         0.into(),
         Expression::Assign(Assign { name, value, inner }),
-    )
-}
-
-pub fn assign_string(pool: &mut ExprPool, name: String, value: Expr, inner: Expr) -> Expr {
-    assign(
-        pool,
-        Identifier::name_from_string(name).unwrap(),
-        value,
-        inner,
     )
 }
 
