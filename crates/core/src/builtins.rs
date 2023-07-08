@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::sync::Arc;
 
 use crate::ast::*;
@@ -18,15 +17,15 @@ pub fn prepare<E: ExpressionWrapper>(expr: E) -> E {
 }
 
 pub fn all<E: ExpressionWrapper>() -> Vec<(Identifier, E)> {
-    vec![(Identifier::from_str("trace").unwrap(), builtin_trace())]
+    vec![(Identifier::name_from_str("trace").unwrap(), builtin_trace())]
 }
 
 fn builtin_trace<E: ExpressionWrapper>() -> E {
-    let parameter = Identifier::from_str("param").unwrap();
+    let parameter = Identifier::name_from_str("param").unwrap();
     E::new_unannotated(Expression::Function(Function {
         parameter: parameter.clone(),
         body: E::new_unannotated(Expression::Native(Native {
-            unique_name: Identifier::from_str("trace").unwrap(),
+            unique_name: Identifier::name_from_str("trace").unwrap(),
             implementation: Arc::new(move |context| {
                 let value = context.lookup_value(&parameter)?;
                 eprintln!("trace: {}", value);

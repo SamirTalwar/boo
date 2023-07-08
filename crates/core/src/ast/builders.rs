@@ -29,7 +29,7 @@ pub fn identifier_string<Expr: ExpressionWrapper>(
     annotation: impl Into<Expr::Annotation>,
     name: String,
 ) -> Expr {
-    identifier(annotation, Identifier::name(name).unwrap())
+    identifier(annotation, Identifier::name_from_string(name).unwrap())
 }
 
 pub fn assign<Expr: ExpressionWrapper>(
@@ -50,7 +50,12 @@ pub fn assign_string<Expr: ExpressionWrapper>(
     value: Expr,
     inner: Expr,
 ) -> Expr {
-    assign(annotation, Identifier::name(name).unwrap(), value, inner)
+    assign(
+        annotation,
+        Identifier::name_from_string(name).unwrap(),
+        value,
+        inner,
+    )
 }
 
 pub fn function<Expr: ExpressionWrapper>(

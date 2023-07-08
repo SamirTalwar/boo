@@ -1,7 +1,5 @@
 //! The lexer for the Boo language.
 
-use std::str::FromStr;
-
 use logos::Logos;
 
 use boo_core::error::*;
@@ -35,7 +33,7 @@ pub enum Token<'a> {
     Operator(&'a str),
     // note that the following regex is duplicated from identifier.rs
     #[regex(r"[_\p{Letter}][_\p{Number}\p{Letter}]*", |token|
-        Identifier::from_str(token.slice()).map_err(|_| ())
+        Identifier::name_from_str(token.slice()).map_err(|_| ())
     )]
     Identifier(Identifier),
 }
@@ -244,7 +242,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..9).into(),
-                    token: Token::Identifier(Identifier::from_str("thing").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("thing").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
@@ -268,7 +266,7 @@ mod tests {
             Ok(vec![
                 AnnotatedToken {
                     annotation: (0..3).into(),
-                    token: Token::Identifier(Identifier::from_str("foo").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("foo").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (4..5).into(),
@@ -276,7 +274,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (6..9).into(),
-                    token: Token::Identifier(Identifier::from_str("bar").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("bar").unwrap()),
                 },
             ])
         );
@@ -296,7 +294,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (4..9).into(),
-                    token: Token::Identifier(Identifier::from_str("price").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("price").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
@@ -316,7 +314,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (21..29).into(),
-                    token: Token::Identifier(Identifier::from_str("quantity").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("quantity").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (30..31).into(),
@@ -332,7 +330,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (37..42).into(),
-                    token: Token::Identifier(Identifier::from_str("price").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("price").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (43..44).into(),
@@ -340,7 +338,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (45..53).into(),
-                    token: Token::Identifier(Identifier::from_str("quantity").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("quantity").unwrap()),
                 },
             ])
         );
@@ -360,7 +358,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (3..4).into(),
-                    token: Token::Identifier(Identifier::from_str("x").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("x").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (5..7).into(),
@@ -368,7 +366,7 @@ mod tests {
                 },
                 AnnotatedToken {
                     annotation: (8..9).into(),
-                    token: Token::Identifier(Identifier::from_str("x").unwrap()),
+                    token: Token::Identifier(Identifier::name_from_str("x").unwrap()),
                 },
                 AnnotatedToken {
                     annotation: (10..11).into(),
