@@ -1,3 +1,5 @@
+use std::io::IsTerminal;
+
 use clap::Parser;
 use miette::IntoDiagnostic;
 use reedline::*;
@@ -14,10 +16,11 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    if atty::is(atty::Stream::Stdin) {
+    let stdin = std::io::stdin();
+    if stdin.is_terminal() {
         repl(&args);
     } else {
-        match read_and_interpret(&args, std::io::stdin()) {
+        match read_and_interpret(&args, stdin) {
             Ok(()) => (),
             Err(report) => eprintln!("{:?}", report),
         }

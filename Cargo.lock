@@ -257,7 +257,6 @@ name = "boo-interpreter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "atty",
  "boo",
  "boo-naive-evaluator",
  "clap 4.3.9",
