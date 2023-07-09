@@ -4,7 +4,7 @@ use criterion::{black_box, BenchmarkId, Criterion};
 use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
 
-use boo_parser::Expr;
+use boo_core::expr::Expr;
 
 const BENCHMARK_COUNT: usize = 8;
 

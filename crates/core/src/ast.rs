@@ -1,4 +1,4 @@
-//! The core Boo AST, represented as a wrapped [`Expression`].
+//! Structures that make up the core Boo AST.
 
 pub mod builders;
 
