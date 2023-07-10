@@ -12,6 +12,7 @@ bench = false
 boo = { path = "../lib" }
 boo-core = { path = "../core" }
 boo-generator = { path = "../generator" }
+boo-language = { path = "../language" }
 boo-parser = { path = "../parser" }
 
 anyhow = "1.0.71"

@@ -5,8 +5,8 @@ use boo_core::error::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
 use boo_core::span::*;
+use boo_language::*;
 
-use crate::ast::*;
 use crate::lexer::*;
 
 peg::parser! {

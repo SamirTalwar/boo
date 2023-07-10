@@ -8,6 +8,7 @@ bench = false
 
 [dependencies]
 boo-core = { path = "../core" }
+boo-language = { path = "../language" }
 
 logos = "0.13.0"
 peg = "0.8.1"

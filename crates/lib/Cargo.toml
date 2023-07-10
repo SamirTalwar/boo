@@ -9,4 +9,5 @@ bench = false
 [dependencies]
 boo-core = { path = "../core" }
 boo-evaluator = { path = "../evaluator" }
+boo-language = { path = "../language" }
 boo-parser = { path = "../parser" }

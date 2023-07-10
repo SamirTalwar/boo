@@ -2,7 +2,8 @@ use proptest::prelude::*;
 
 use boo_core::ast::*;
 use boo_core::span::Span;
-use boo_parser::{lex, parse_tokens, Expr};
+use boo_language::Expr;
+use boo_parser::{lex, parse_tokens};
 use boo_test_helpers::proptest::*;
 
 // Replacement span to ensure they don't interfere with testing.
