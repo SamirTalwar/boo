@@ -1,6 +1,6 @@
 //! Infix operations on integers.
 
-use crate::identifier::Identifier;
+use boo_core::identifier::Identifier;
 
 /// The set of valid infix operations on integers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, proptest_derive::Arbitrary)]

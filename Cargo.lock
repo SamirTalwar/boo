@@ -294,6 +294,8 @@ name = "boo-language"
 version = "0.1.0"
 dependencies = [
  "boo-core",
+ "proptest",
+ "proptest-derive",
 ]
 
 [[package]]

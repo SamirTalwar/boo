@@ -1,11 +1,13 @@
 //! The AST produced by the parser.
 
 pub mod builders;
+pub mod operation;
 
 use boo_core::identifier::Identifier;
-use boo_core::operation::Operation;
 use boo_core::primitive::Primitive;
 use boo_core::span::{HasSpan, Span, Spanned};
+
+pub use crate::operation::Operation;
 
 /// An expression wrapper, annotated with the source location as a span.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

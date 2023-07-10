@@ -1,7 +1,6 @@
 //! Parses tokens into an AST.
 
 use boo_core::error::*;
-use boo_core::operation::*;
 use boo_core::primitive::*;
 use boo_core::span::*;
 use boo_language::*;

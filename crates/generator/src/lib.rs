@@ -7,7 +7,6 @@ use im::HashMap;
 use proptest::prelude::*;
 
 use boo_core::identifier::Identifier;
-use boo_core::operation::Operation;
 use boo_core::primitive::Primitive;
 use boo_core::types::{KnownType, Type};
 use boo_language::*;

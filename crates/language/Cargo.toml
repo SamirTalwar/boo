@@ -8,3 +8,6 @@ bench = false
 
 [dependencies]
 boo-core = { path = "../core" }
+
+proptest = "1.2.0"
+proptest-derive = "0.3.0"
