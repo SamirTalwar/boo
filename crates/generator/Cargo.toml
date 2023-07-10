@@ -8,6 +8,7 @@ bench = false
 
 [dependencies]
 boo-core = { path = "../core" }
+boo-language = { path = "../language" }
 
 im = { version = "15.1.0", features = ["proptest"] }
 proptest = "1.2.0"

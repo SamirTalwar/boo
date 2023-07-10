@@ -9,7 +9,7 @@ use boo::*;
 use boo_core::identifier::*;
 
 fn main() -> anyhow::Result<()> {
-    let any_expr = boo_generator::gen::<Expr>(
+    let any_expr = boo_generator::gen(
         boo_generator::ExprGenConfig {
             gen_identifier: Identifier::gen_ascii(1..=16).boxed().into(),
             ..Default::default()

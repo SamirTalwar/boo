@@ -5,6 +5,7 @@ use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
 
 use boo_core::expr::Expr;
+use boo_parser::rewrite;
 
 const BENCHMARK_COUNT: usize = 8;
 
@@ -32,7 +33,7 @@ fn main() {
 fn benchmarks() -> impl Iterator<Item = Expr> {
     let mut runner = TestRunner::deterministic();
     iter::from_fn(move || {
-        let tree = boo_generator::gen::<Expr>(
+        let tree = boo_generator::gen(
             boo_generator::ExprGenConfig {
                 depth: 8..9,
                 ..Default::default()
@@ -41,6 +42,6 @@ fn benchmarks() -> impl Iterator<Item = Expr> {
         )
         .new_tree(&mut runner)
         .unwrap();
-        Some(tree.current())
+        Some(rewrite(tree.current()))
     })
 }

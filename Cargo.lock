@@ -270,6 +270,7 @@ name = "boo-generator"
 version = "0.1.0"
 dependencies = [
  "boo-core",
+ "boo-language",
  "im",
  "proptest",
  "proptest-derive",

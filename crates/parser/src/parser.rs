@@ -1,6 +1,5 @@
 //! Parses tokens into an AST.
 
-use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::operation::*;
 use boo_core::primitive::*;
@@ -23,7 +22,7 @@ peg::parser! {
                     _ => unreachable!(),
                 };
                 Expr::new(
-                    fn_.annotation | body.annotation(),
+                    fn_.annotation | body.span(),
                     Expression::Function(Function {
                         parameter: p.clone(),
                         body,
@@ -42,7 +41,7 @@ peg::parser! {
                     _ => unreachable!(),
                 };
                 Expr::new(
-                    let_.annotation | inner.annotation(),
+                    let_.annotation | inner.span(),
                     Expression::Assign(Assign {
                         name: n.clone(),
                         value,
@@ -64,7 +63,7 @@ peg::parser! {
             --
             function:(@) argument:atomic_expr() {
                 Expr::new(
-                    function.annotation() | argument.annotation(),
+                    function.span() | argument.span(),
                     Expression::Apply(Apply {
                         function,
                         argument,
@@ -128,7 +127,7 @@ pub fn parse_tokens(input: &[AnnotatedToken<Span>]) -> Result<Expr> {
 
 fn construct_infix(left: Expr, operation: Operation, right: Expr) -> Expr {
     Expr::new(
-        left.annotation() | right.annotation(),
+        left.span() | right.span(),
         Expression::Infix(Infix {
             operation,
             left,
@@ -142,9 +141,9 @@ mod tests {
     use proptest::prelude::*;
 
     use boo_core::identifier::*;
+    use boo_language::builders::*;
     use boo_test_helpers::proptest::*;
 
-    use super::builders::*;
     use super::*;
 
     #[test]

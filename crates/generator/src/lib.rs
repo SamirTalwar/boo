@@ -1,4 +1,4 @@
-//! Generators for ASTs. Used for testing and program synthesis.
+//! generators for asts. used for testing and program synthesis.
 
 use std::fmt::Debug;
 use std::rc::Rc;
@@ -6,14 +6,14 @@ use std::rc::Rc;
 use im::HashMap;
 use proptest::prelude::*;
 
-use boo_core::ast::*;
 use boo_core::identifier::Identifier;
 use boo_core::operation::Operation;
 use boo_core::primitive::Primitive;
 use boo_core::types::{KnownType, Type};
+use boo_language::*;
 
-type ExprStrategyValue<Expr> = (Expr, Rc<KnownType>);
-type ExprStrategy<Expr> = BoxedStrategy<ExprStrategyValue<Expr>>;
+type ExprStrategyValue = (Expr, Rc<KnownType>);
+type ExprStrategy = BoxedStrategy<ExprStrategyValue>;
 
 type Bindings = HashMap<Identifier, Rc<KnownType>>;
 
@@ -39,15 +39,12 @@ impl Default for ExprGenConfig {
 }
 
 /// A strategy for generating expressions, using the default [`ExprGenConfig`].
-pub fn arbitrary<Expr: ExpressionWrapper + Debug + Clone + 'static>() -> impl Strategy<Value = Expr>
-{
+pub fn arbitrary() -> impl Strategy<Value = Expr> {
     gen(Rc::new(Default::default()))
 }
 
 /// Creates a strategy for generating expresions according to the configuration.
-pub fn gen<Expr: ExpressionWrapper + Debug + Clone + 'static>(
-    config: Rc<ExprGenConfig>,
-) -> impl Strategy<Value = Expr> {
+pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
     Just(KnownType::Integer)
         .prop_flat_map(move |target_type| {
             let start_depth = config.depth.clone();
@@ -63,13 +60,13 @@ pub fn gen<Expr: ExpressionWrapper + Debug + Clone + 'static>(
 
 /// Generates an expression of the target type (or any type, if it's not
 /// specified).
-fn gen_nested<Expr: ExpressionWrapper + Debug + Clone + 'static>(
+fn gen_nested(
     config: Rc<ExprGenConfig>,
     depth: std::ops::Range<usize>,
     target_type: Type,
     bindings: Bindings,
-) -> ExprStrategy<Expr> {
-    let mut choices: Vec<ExprStrategy<Expr>> = Vec::new();
+) -> ExprStrategy {
+    let mut choices: Vec<ExprStrategy> = Vec::new();
     let next_depth = {
         let next_start = if depth.start == 0 { 0 } else { depth.start - 1 };
         let next_end = if depth.end == 0 { 0 } else { depth.end - 1 };
@@ -159,13 +156,11 @@ fn gen_unused_identifier(
 
 /// Generates a primitive of the given type.
 /// Returns `None` if there are no primitives of the target type.
-fn gen_primitive<Expr: ExpressionWrapper + Debug + Clone + 'static>(
-    target_type: Type,
-) -> Option<ExprStrategy<Expr>> {
+fn gen_primitive(target_type: Type) -> Option<ExprStrategy> {
     Primitive::arbitrary_of_type(target_type).map(|s| s.prop_map(make_primitive_expr).boxed())
 }
 
-fn make_primitive_expr<Expr: ExpressionWrapper>(value: Primitive) -> ExprStrategyValue<Expr> {
+fn make_primitive_expr(value: Primitive) -> ExprStrategyValue {
     let value_type = value.get_type();
     let expr = Expr::new_unannotated(Expression::Primitive(value));
     (expr, value_type.into())
@@ -173,10 +168,7 @@ fn make_primitive_expr<Expr: ExpressionWrapper>(value: Primitive) -> ExprStrateg
 
 /// Generates a reference to a variable of the given type.
 /// Returns `None` if there are no variables of the target type.
-fn gen_variable_reference<Expr: ExpressionWrapper + Debug + Clone + 'static>(
-    target_type: Type,
-    bindings: Bindings,
-) -> Option<ExprStrategy<Expr>> {
+fn gen_variable_reference(target_type: Type, bindings: Bindings) -> Option<ExprStrategy> {
     let bindings_of_target_type = match target_type {
         Type::Unknown => bindings,
         Type::Known(expected) => bindings
@@ -204,12 +196,12 @@ fn gen_variable_reference<Expr: ExpressionWrapper + Debug + Clone + 'static>(
 }
 
 /// Generates an assignment.
-fn gen_assignment<Expr: ExpressionWrapper + Debug + Clone + 'static>(
+fn gen_assignment(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Type,
     bindings: Bindings,
-) -> ExprStrategy<Expr> {
+) -> ExprStrategy {
     gen_unused_identifier(config.clone(), bindings.clone())
         .prop_flat_map(move |name| {
             let config_ = config.clone();
@@ -222,7 +214,7 @@ fn gen_assignment<Expr: ExpressionWrapper + Debug + Clone + 'static>(
                 Type::Unknown,
                 bindings_.clone(),
             )
-            .prop_flat_map(move |(value, value_type): ExprStrategyValue<Expr>| {
+            .prop_flat_map(move |(value, value_type): ExprStrategyValue| {
                 let name_ = name.clone();
                 let value_ = value;
                 gen_nested(
@@ -246,12 +238,12 @@ fn gen_assignment<Expr: ExpressionWrapper + Debug + Clone + 'static>(
 
 /// Generates a function of the given type.
 /// If the target type is not a function type, returns `None`.
-fn gen_function<Expr: ExpressionWrapper + Debug + Clone + 'static>(
+fn gen_function(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Type,
     bindings: Bindings,
-) -> Option<ExprStrategy<Expr>> {
+) -> Option<ExprStrategy> {
     match target_type {
         // cannot generate functions for parameters of unknown type without some kind of unification
         Type::Known(known) => {
@@ -295,19 +287,19 @@ fn gen_function<Expr: ExpressionWrapper + Debug + Clone + 'static>(
 }
 
 /// Generates a function application.
-fn gen_apply<Expr: ExpressionWrapper + Debug + Clone + 'static>(
+fn gen_apply(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Type,
     bindings: Bindings,
-) -> ExprStrategy<Expr> {
+) -> ExprStrategy {
     gen_nested(
         config.clone(),
         next_depth.clone(),
         Type::Unknown,
         bindings.clone(),
     )
-    .prop_flat_map(move |(argument, argument_type): ExprStrategyValue<Expr>| {
+    .prop_flat_map(move |(argument, argument_type): ExprStrategyValue| {
         gen_nested(
             config.clone(),
             next_depth.clone(),
@@ -340,12 +332,12 @@ fn gen_apply<Expr: ExpressionWrapper + Debug + Clone + 'static>(
 
 /// Generates an infix operation of the given type.
 /// If the type is not `Integer`, returns `None`.
-fn gen_infix<Expr: ExpressionWrapper + Debug + Clone + 'static>(
+fn gen_infix(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
     target_type: Type,
     bindings: Bindings,
-) -> Option<ExprStrategy<Expr>> {
+) -> Option<ExprStrategy> {
     match target_type {
         Type::Known(known) if *known == KnownType::Integer => Some(
             proptest::arbitrary::any::<Operation>()

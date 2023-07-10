@@ -1,8 +1,7 @@
 use proptest::prelude::*;
 
-use boo_core::ast::*;
 use boo_core::span::Span;
-use boo_language::Expr;
+use boo_language::*;
 use boo_parser::{lex, parse_tokens};
 use boo_test_helpers::proptest::*;
 
@@ -11,7 +10,7 @@ const SPAN: Span = Span { start: 0, end: 0 };
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {
-    check(&boo_generator::arbitrary::<Expr>(), |input| {
+    check(&boo_generator::arbitrary(), |input| {
         let rendered = format!("{}", input);
         let lexed = lex(&rendered)?;
         let parsed = parse_tokens(&lexed)?;
@@ -25,9 +24,8 @@ pub fn remove_spans(expr: Expr) -> Expr {
     Expr::new(
         SPAN,
         match expr.expression() {
-            expression @ Expression::Primitive(_)
-            | expression @ Expression::Native(_)
-            | expression @ Expression::Identifier(_) => expression,
+            Expression::Primitive(x) => Expression::Primitive(x),
+            Expression::Identifier(x) => Expression::Identifier(x),
             Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
                 name,
                 value: remove_spans(value),
