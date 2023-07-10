@@ -6,7 +6,6 @@ use std::fmt::Display;
 
 use crate::identifier::Identifier;
 use crate::native::Native;
-use crate::operation::Operation;
 use crate::primitive::Primitive;
 
 /// A Boo expression. These can be nested arbitrarily.
@@ -32,7 +31,6 @@ pub enum Expression<Outer> {
     Assign(Assign<Outer>),
     Function(Function<Outer>),
     Apply(Apply<Outer>),
-    Infix(Infix<Outer>),
 }
 
 /// Represents assignment.
@@ -62,17 +60,6 @@ pub struct Apply<Outer> {
     pub function: Outer,
     /// The argument.
     pub argument: Outer,
-}
-
-/// An infix operation on integers.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Infix<Outer> {
-    /// The operation.
-    pub operation: Operation,
-    /// The left operand.
-    pub left: Outer,
-    /// The right operand.
-    pub right: Outer,
 }
 
 /// Denotes a wrapper for `Expression` that allows for transformation into
@@ -136,15 +123,6 @@ impl<Outer: ExpressionWrapper> Expression<Outer> {
                 function: function.transform(f),
                 argument: argument.transform(f),
             }),
-            Expression::Infix(Infix {
-                operation,
-                left,
-                right,
-            }) => Expression::Infix(Infix {
-                operation,
-                left: left.transform(f),
-                right: right.transform(f),
-            }),
         }
     }
 }
@@ -158,7 +136,6 @@ impl<Outer: Display> std::fmt::Display for Expression<Outer> {
             Expression::Assign(x) => x.fmt(f),
             Expression::Function(x) => x.fmt(f),
             Expression::Apply(x) => x.fmt(f),
-            Expression::Infix(x) => x.fmt(f),
         }
     }
 }
@@ -182,11 +159,5 @@ impl<Outer: Display> std::fmt::Display for Function<Outer> {
 impl<Outer: Display> std::fmt::Display for Apply<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}) ({})", self.function, self.argument)
-    }
-}
-
-impl<Outer: Display> std::fmt::Display for Infix<Outer> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}) {} ({})", self.left, self.operation, self.right)
     }
 }

@@ -151,7 +151,6 @@ impl<'a> Evaluator<'a> {
                     _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
                 }
             }
-            Expression::Infix(_) => unreachable!("infix"),
         }
     }
 

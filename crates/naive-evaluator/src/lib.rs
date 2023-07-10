@@ -118,7 +118,6 @@ where
                 _ => Err(Error::InvalidFunctionApplication { span }),
             }
         }
-        Expression::Infix(_) => unreachable!("infix"),
     }
 }
 
@@ -187,7 +186,6 @@ where
                 argument: substitute(substitution, argument, bound),
             }),
         ),
-        Expression::Infix(_) => unreachable!("infix"),
     }
 }
 
@@ -227,7 +225,6 @@ where
                 function: avoid_alpha_capture(function, bound.clone()),
                 argument: avoid_alpha_capture(argument, bound),
             }),
-            Expression::Infix(_) => unreachable!("infix"),
         },
     )
 }

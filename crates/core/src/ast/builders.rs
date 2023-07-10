@@ -65,19 +65,3 @@ pub fn apply<Expr: ExpressionWrapper>(
         Expression::Apply(Apply { function, argument }),
     )
 }
-
-pub fn infix<Expr: ExpressionWrapper>(
-    annotation: impl Into<Expr::Annotation>,
-    operation: Operation,
-    left: Expr,
-    right: Expr,
-) -> Expr {
-    Expr::new(
-        annotation.into(),
-        Expression::Infix(Infix {
-            operation,
-            left,
-            right,
-        }),
-    )
-}

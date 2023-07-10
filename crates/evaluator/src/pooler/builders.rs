@@ -6,7 +6,6 @@ use super::ast::*;
 
 use boo_core::ast::*;
 use boo_core::identifier::*;
-use boo_core::operation::*;
 use boo_core::primitive::*;
 
 pub fn primitive(pool: &mut ExprPool, value: Primitive) -> Expr {
@@ -42,17 +41,5 @@ pub fn apply(pool: &mut ExprPool, function: Expr, argument: Expr) -> Expr {
         pool,
         0.into(),
         Expression::Apply(Apply { function, argument }),
-    )
-}
-
-pub fn infix(pool: &mut ExprPool, operation: Operation, left: Expr, right: Expr) -> Expr {
-    Expr::insert(
-        pool,
-        0.into(),
-        Expression::Infix(Infix {
-            operation,
-            left,
-            right,
-        }),
     )
 }
