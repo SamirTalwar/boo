@@ -9,6 +9,8 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
+use im::HashSet;
+
 use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::identifier::*;
@@ -95,6 +97,7 @@ where
                     value: value.into(),
                 },
                 inner,
+                HashSet::new(),
             );
             Ok(Progress::Next(substituted_inner))
         }
@@ -108,6 +111,7 @@ where
                             value: argument.into(),
                         },
                         body,
+                        HashSet::new(),
                     );
                     Ok(Progress::Next(substituted_body))
                 }
@@ -124,7 +128,11 @@ struct Substitution<Expr: ExpressionWrapper + HasSpan> {
     value: Rc<Expr>,
 }
 
-fn substitute<Expr>(substitution: Substitution<Expr>, expr: Expr) -> Expr
+fn substitute<Expr>(
+    substitution: Substitution<Expr>,
+    expr: Expr,
+    bound: HashSet<Identifier>,
+) -> Expr
 where
     Expr: ExpressionWrapper + HasSpan + Clone + 'static,
 {
@@ -147,15 +155,17 @@ where
                 }),
             }),
         ),
-        Expression::Identifier(name) if name == *substitution.name => (*substitution.value).clone(),
+        Expression::Identifier(name) if name == *substitution.name => {
+            avoid_alpha_capture((*substitution.value).clone(), bound)
+        }
         expression @ Expression::Identifier(_) => Expr::new(annotation, expression),
         Expression::Assign(Assign { name, value, inner }) if name != *substitution.name => {
             Expr::new(
                 annotation,
                 Expression::Assign(Assign {
-                    name,
-                    value: substitute(substitution.clone(), value),
-                    inner: substitute(substitution, inner),
+                    name: name.clone(),
+                    value: substitute(substitution.clone(), value, bound.clone()),
+                    inner: substitute(substitution, inner, bound.update(name)),
                 }),
             )
         }
@@ -164,8 +174,8 @@ where
             Expr::new(
                 annotation,
                 Expression::Function(Function {
-                    parameter,
-                    body: substitute(substitution, body),
+                    parameter: parameter.clone(),
+                    body: substitute(substitution, body, bound.update(parameter)),
                 }),
             )
         }
@@ -173,21 +183,51 @@ where
         Expression::Apply(Apply { function, argument }) => Expr::new(
             annotation,
             Expression::Apply(Apply {
-                function: substitute(substitution.clone(), function),
-                argument: substitute(substitution, argument),
+                function: substitute(substitution.clone(), function, bound.clone()),
+                argument: substitute(substitution, argument, bound),
             }),
         ),
-        Expression::Infix(Infix {
-            operation,
-            left,
-            right,
-        }) => Expr::new(
-            annotation,
-            Expression::Infix(Infix {
-                operation,
-                left: substitute(substitution.clone(), left),
-                right: substitute(substitution, right),
-            }),
-        ),
+        Expression::Infix(_) => unreachable!("infix"),
     }
+}
+
+fn avoid_alpha_capture<Expr>(expr: Expr, bound: HashSet<Identifier>) -> Expr
+where
+    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
+{
+    let annotation = expr.annotation();
+    Expr::new(
+        annotation,
+        match expr.expression() {
+            expression @ Expression::Primitive(_) | expression @ Expression::Native(_) => {
+                expression
+            }
+            Expression::Identifier(identifier) if bound.contains(&identifier) => {
+                let original = Rc::new(identifier);
+                let new_identifier = (1u32..)
+                    .map(|suffix| Identifier::AvoidingCapture {
+                        original: original.clone(),
+                        suffix,
+                    })
+                    .find(|i| !bound.contains(i))
+                    .unwrap();
+                Expression::Identifier(new_identifier)
+            }
+            Expression::Identifier(identifier) => Expression::Identifier(identifier),
+            Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
+                name,
+                value: avoid_alpha_capture(value, bound.clone()),
+                inner: avoid_alpha_capture(inner, bound),
+            }),
+            Expression::Function(Function { parameter, body }) => Expression::Function(Function {
+                parameter,
+                body: avoid_alpha_capture(body, bound),
+            }),
+            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
+                function: avoid_alpha_capture(function, bound.clone()),
+                argument: avoid_alpha_capture(argument, bound),
+            }),
+            Expression::Infix(_) => unreachable!("infix"),
+        },
+    )
 }

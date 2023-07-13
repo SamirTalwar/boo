@@ -1,6 +1,7 @@
 //! Identifiers, used for variable and parameter names.
 
 use std::collections::HashSet;
+use std::rc::Rc;
 
 use lazy_static::lazy_static;
 use proptest::strategy::Strategy;
@@ -14,6 +15,10 @@ use regex::Regex;
 pub enum Identifier {
     Name(String),
     Operator(String),
+    AvoidingCapture {
+        original: Rc<Identifier>,
+        suffix: u32,
+    },
 }
 
 /// Errors that can happen when dealing with identifiers.
@@ -88,6 +93,7 @@ impl std::fmt::Display for Identifier {
         match self {
             Identifier::Name(name) => name.fmt(f),
             Identifier::Operator(operator) => operator.fmt(f),
+            Identifier::AvoidingCapture { original, .. } => original.fmt(f),
         }
     }
 }
