@@ -1,0 +1,19 @@
+---
+source: crates/e2e/tests/test.rs
+expression: ast
+---
+Expr(
+    Spanned {
+        span: Span {
+            start: 0,
+            end: 3,
+        },
+        value: Primitive(
+            Integer(
+                Small(
+                    123,
+                ),
+            ),
+        ),
+    },
+)

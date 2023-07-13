@@ -1,0 +1,162 @@
+---
+source: crates/e2e/tests/valid_programs.rs
+expression: ast
+---
+Expr(
+    Spanned {
+        span: Span {
+            start: 0,
+            end: 58,
+        },
+        value: Assign(
+            Assign {
+                name: Name(
+                    "double",
+                ),
+                value: Expr(
+                    Spanned {
+                        span: Span {
+                            start: 13,
+                            end: 38,
+                        },
+                        value: Function(
+                            Function {
+                                parameter: Name(
+                                    "input",
+                                ),
+                                body: Expr(
+                                    Spanned {
+                                        span: Span {
+                                            start: 25,
+                                            end: 38,
+                                        },
+                                        value: Apply(
+                                            Apply {
+                                                function: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 25,
+                                                            end: 38,
+                                                        },
+                                                        value: Apply(
+                                                            Apply {
+                                                                function: Expr(
+                                                                    Spanned {
+                                                                        span: Span {
+                                                                            start: 25,
+                                                                            end: 38,
+                                                                        },
+                                                                        value: Identifier(
+                                                                            Operator(
+                                                                                "+",
+                                                                            ),
+                                                                        ),
+                                                                    },
+                                                                ),
+                                                                argument: Expr(
+                                                                    Spanned {
+                                                                        span: Span {
+                                                                            start: 25,
+                                                                            end: 30,
+                                                                        },
+                                                                        value: Identifier(
+                                                                            Name(
+                                                                                "input",
+                                                                            ),
+                                                                        ),
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                argument: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 33,
+                                                            end: 38,
+                                                        },
+                                                        value: Identifier(
+                                                            Name(
+                                                                "input",
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                inner: Expr(
+                    Spanned {
+                        span: Span {
+                            start: 42,
+                            end: 58,
+                        },
+                        value: Apply(
+                            Apply {
+                                function: Expr(
+                                    Spanned {
+                                        span: Span {
+                                            start: 42,
+                                            end: 48,
+                                        },
+                                        value: Identifier(
+                                            Name(
+                                                "double",
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                argument: Expr(
+                                    Spanned {
+                                        span: Span {
+                                            start: 50,
+                                            end: 58,
+                                        },
+                                        value: Apply(
+                                            Apply {
+                                                function: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 50,
+                                                            end: 56,
+                                                        },
+                                                        value: Identifier(
+                                                            Name(
+                                                                "double",
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                                argument: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 57,
+                                                            end: 58,
+                                                        },
+                                                        value: Primitive(
+                                                            Integer(
+                                                                Small(
+                                                                    4,
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+    },
+)

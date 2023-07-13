@@ -3,6 +3,7 @@
 members = [
   "crates/benchmarks",
   "crates/core",
+  "crates/e2e",
   "crates/evaluator",
   "crates/generator",
   "crates/interpreter",

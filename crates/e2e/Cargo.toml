@@ -1,0 +1,16 @@
+[package]
+name = "boo-e2e"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+boo = { path = "../lib" }
+boo-naive-evaluator = { path = "../naive-evaluator" }
+
+insta = "1.30.0"
+
+[profile.dev.package.insta]
+opt-level = 3
+
+[profile.dev.package.similar]
+opt-level = 3

@@ -1,0 +1,167 @@
+---
+source: crates/e2e/tests/valid_programs.rs
+expression: ast
+---
+Expr(
+    Spanned {
+        span: Span {
+            start: 0,
+            end: 66,
+        },
+        value: Assign(
+            Assign {
+                name: Name(
+                    "negate",
+                ),
+                value: Expr(
+                    Spanned {
+                        span: Span {
+                            start: 13,
+                            end: 34,
+                        },
+                        value: Function(
+                            Function {
+                                parameter: Name(
+                                    "thing",
+                                ),
+                                body: Expr(
+                                    Spanned {
+                                        span: Span {
+                                            start: 25,
+                                            end: 34,
+                                        },
+                                        value: Apply(
+                                            Apply {
+                                                function: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 25,
+                                                            end: 34,
+                                                        },
+                                                        value: Apply(
+                                                            Apply {
+                                                                function: Expr(
+                                                                    Spanned {
+                                                                        span: Span {
+                                                                            start: 25,
+                                                                            end: 34,
+                                                                        },
+                                                                        value: Identifier(
+                                                                            Operator(
+                                                                                "-",
+                                                                            ),
+                                                                        ),
+                                                                    },
+                                                                ),
+                                                                argument: Expr(
+                                                                    Spanned {
+                                                                        span: Span {
+                                                                            start: 25,
+                                                                            end: 26,
+                                                                        },
+                                                                        value: Primitive(
+                                                                            Integer(
+                                                                                Small(
+                                                                                    0,
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                argument: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 29,
+                                                            end: 34,
+                                                        },
+                                                        value: Identifier(
+                                                            Name(
+                                                                "thing",
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                inner: Expr(
+                    Spanned {
+                        span: Span {
+                            start: 38,
+                            end: 66,
+                        },
+                        value: Assign(
+                            Assign {
+                                name: Name(
+                                    "life",
+                                ),
+                                value: Expr(
+                                    Spanned {
+                                        span: Span {
+                                            start: 49,
+                                            end: 51,
+                                        },
+                                        value: Primitive(
+                                            Integer(
+                                                Small(
+                                                    42,
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                inner: Expr(
+                                    Spanned {
+                                        span: Span {
+                                            start: 55,
+                                            end: 66,
+                                        },
+                                        value: Apply(
+                                            Apply {
+                                                function: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 55,
+                                                            end: 61,
+                                                        },
+                                                        value: Identifier(
+                                                            Name(
+                                                                "negate",
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                                argument: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 62,
+                                                            end: 66,
+                                                        },
+                                                        value: Identifier(
+                                                            Name(
+                                                                "life",
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+    },
+)

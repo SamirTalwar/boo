@@ -1,0 +1,168 @@
+---
+source: crates/e2e/tests/valid_programs.rs
+description: let something = 12 in let add_something = fn target -> target + something in add_something 9
+expression: ast
+---
+Expr(
+    Spanned {
+        span: Span {
+            start: 0,
+            end: 92,
+        },
+        value: Assign(
+            Assign {
+                name: Name(
+                    "something",
+                ),
+                value: Expr(
+                    Spanned {
+                        span: Span {
+                            start: 16,
+                            end: 18,
+                        },
+                        value: Primitive(
+                            Integer(
+                                Small(
+                                    12,
+                                ),
+                            ),
+                        ),
+                    },
+                ),
+                inner: Expr(
+                    Spanned {
+                        span: Span {
+                            start: 22,
+                            end: 92,
+                        },
+                        value: Assign(
+                            Assign {
+                                name: Name(
+                                    "add_something",
+                                ),
+                                value: Expr(
+                                    Spanned {
+                                        span: Span {
+                                            start: 42,
+                                            end: 73,
+                                        },
+                                        value: Function(
+                                            Function {
+                                                parameter: Name(
+                                                    "target",
+                                                ),
+                                                body: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 55,
+                                                            end: 73,
+                                                        },
+                                                        value: Apply(
+                                                            Apply {
+                                                                function: Expr(
+                                                                    Spanned {
+                                                                        span: Span {
+                                                                            start: 55,
+                                                                            end: 73,
+                                                                        },
+                                                                        value: Apply(
+                                                                            Apply {
+                                                                                function: Expr(
+                                                                                    Spanned {
+                                                                                        span: Span {
+                                                                                            start: 55,
+                                                                                            end: 73,
+                                                                                        },
+                                                                                        value: Identifier(
+                                                                                            Operator(
+                                                                                                "+",
+                                                                                            ),
+                                                                                        ),
+                                                                                    },
+                                                                                ),
+                                                                                argument: Expr(
+                                                                                    Spanned {
+                                                                                        span: Span {
+                                                                                            start: 55,
+                                                                                            end: 61,
+                                                                                        },
+                                                                                        value: Identifier(
+                                                                                            Name(
+                                                                                                "target",
+                                                                                            ),
+                                                                                        ),
+                                                                                    },
+                                                                                ),
+                                                                            },
+                                                                        ),
+                                                                    },
+                                                                ),
+                                                                argument: Expr(
+                                                                    Spanned {
+                                                                        span: Span {
+                                                                            start: 64,
+                                                                            end: 73,
+                                                                        },
+                                                                        value: Identifier(
+                                                                            Name(
+                                                                                "something",
+                                                                            ),
+                                                                        ),
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                                inner: Expr(
+                                    Spanned {
+                                        span: Span {
+                                            start: 77,
+                                            end: 92,
+                                        },
+                                        value: Apply(
+                                            Apply {
+                                                function: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 77,
+                                                            end: 90,
+                                                        },
+                                                        value: Identifier(
+                                                            Name(
+                                                                "add_something",
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                                argument: Expr(
+                                                    Spanned {
+                                                        span: Span {
+                                                            start: 91,
+                                                            end: 92,
+                                                        },
+                                                        value: Primitive(
+                                                            Integer(
+                                                                Small(
+                                                                    9,
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+    },
+)
