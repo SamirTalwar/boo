@@ -11,10 +11,7 @@ use ast::*;
 use pool::pool_with;
 
 /// Flattens an expression tree into a [`pool::Pool`].
-pub fn pool_exprs<InputExpr>(ast: InputExpr) -> (ExprPool, Expr)
-where
-    InputExpr: ExpressionWrapper<Annotation = Span>,
-{
+pub fn pool_exprs(ast: boo_core::expr::Expr) -> (ExprPool, Expr) {
     pool_with(|pool| add_expr(pool, ast))
 }
 

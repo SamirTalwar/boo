@@ -10,17 +10,13 @@ pub mod evaluator;
 pub mod pooler;
 pub mod thunk;
 
+use boo_core::error::Result;
+use boo_core::expr::Expr;
+
 pub use evaluator::Evaluated;
 
-use boo_core::ast::ExpressionWrapper;
-use boo_core::error::Result;
-use boo_core::span::Span;
-
 /// Evaluates a parsed expression.
-pub fn evaluate<Expr>(expr: Expr) -> Result<evaluator::Evaluated>
-where
-    Expr: ExpressionWrapper<Annotation = Span> + Clone,
-{
+pub fn evaluate(expr: Expr) -> Result<evaluator::Evaluated> {
     let (pool, root) = pooler::pool_exprs(expr);
     evaluator::evaluate(&pool, root)
 }

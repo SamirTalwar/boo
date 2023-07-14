@@ -13,6 +13,7 @@ use im::HashSet;
 
 use boo_core::ast::*;
 use boo_core::error::*;
+use boo_core::expr::Expr;
 use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
@@ -34,16 +35,13 @@ impl NativeContext for EmptyContext {
     }
 }
 
-struct AdditionalContext<'a, Expr> {
+struct AdditionalContext<'a> {
     name: Rc<Identifier>,
     value: Rc<Expr>,
     rest: &'a dyn NativeContext,
 }
 
-impl<'a, Expr> NativeContext for AdditionalContext<'a, Expr>
-where
-    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
-{
+impl<'a> NativeContext for AdditionalContext<'a> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         if identifier == self.name.as_ref() {
             match naively_evaluate((*self.value).clone())?.expression() {
@@ -57,10 +55,7 @@ where
 }
 
 /// Evaluate a parsed AST as simply as possible.
-pub fn naively_evaluate<Expr>(expr: Expr) -> Result<Expr>
-where
-    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
-{
+pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
     let mut progress = expr;
     loop {
         match step(progress)? {
@@ -74,10 +69,7 @@ where
     }
 }
 
-fn step<Expr>(expr: Expr) -> Result<Progress<Expr>>
-where
-    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
-{
+fn step(expr: Expr) -> Result<Progress<Expr>> {
     let annotation = expr.annotation();
     let span = expr.span();
     match expr.expression() {
@@ -122,19 +114,12 @@ where
 }
 
 #[derive(Debug, Clone)]
-struct Substitution<Expr: ExpressionWrapper + HasSpan> {
+struct Substitution {
     name: Rc<Identifier>,
     value: Rc<Expr>,
 }
 
-fn substitute<Expr>(
-    substitution: Substitution<Expr>,
-    expr: Expr,
-    bound: HashSet<Identifier>,
-) -> Expr
-where
-    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
-{
+fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>) -> Expr {
     let annotation = expr.annotation();
     match expr.expression() {
         expression @ Expression::Primitive(_) => Expr::new(annotation, expression),
@@ -189,10 +174,7 @@ where
     }
 }
 
-fn avoid_alpha_capture<Expr>(expr: Expr, bound: HashSet<Identifier>) -> Expr
-where
-    Expr: ExpressionWrapper + HasSpan + Clone + 'static,
-{
+fn avoid_alpha_capture(expr: Expr, bound: HashSet<Identifier>) -> Expr {
     let annotation = expr.annotation();
     Expr::new(
         annotation,

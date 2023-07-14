@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use crate::ast::*;
+use crate::expr::Expr;
 use crate::identifier::Identifier;
 use crate::native::Native;
 use crate::primitive::{Integer, Primitive};
@@ -10,10 +11,10 @@ use crate::primitive::{Integer, Primitive};
 /// Prepares an expression for evaluation by assigning all built-ins.
 ///
 /// This is very naive and probably quite slow; we can do better later.
-pub fn prepare<E: ExpressionWrapper>(expr: E) -> E {
+pub fn prepare(expr: Expr) -> Expr {
     let mut result = expr;
     for (name, builtin) in all().into_iter().rev() {
-        result = E::new_unannotated(Expression::Assign(Assign {
+        result = Expr::new_unannotated(Expression::Assign(Assign {
             name,
             value: builtin,
             inner: result,
@@ -23,7 +24,7 @@ pub fn prepare<E: ExpressionWrapper>(expr: E) -> E {
 }
 
 /// All the built-in expressions.
-pub fn all<E: ExpressionWrapper>() -> Vec<(Identifier, E)> {
+pub fn all() -> Vec<(Identifier, Expr)> {
     vec![
         (Identifier::operator_from_str("+").unwrap(), builtin_add()),
         (
@@ -39,33 +40,32 @@ pub fn all<E: ExpressionWrapper>() -> Vec<(Identifier, E)> {
 }
 
 /// Implements addition, with the `+` operator.
-fn builtin_add<E: ExpressionWrapper>() -> E {
+fn builtin_add() -> Expr {
     builtin_infix_math("+", |x, y| x + y)
 }
 
 /// Implements subtraction, with the `-` operator.
-fn builtin_subtract<E: ExpressionWrapper>() -> E {
+fn builtin_subtract() -> Expr {
     builtin_infix_math("-", |x, y| x - y)
 }
 
 /// Implements multiplication, with the `*` operator.
-fn builtin_multiply<E: ExpressionWrapper>() -> E {
+fn builtin_multiply() -> Expr {
     builtin_infix_math("*", |x, y| x * y)
 }
 
 /// Generic implementation of infix mathematical operations.
-fn builtin_infix_math<E, Op>(name: &str, operate: Op) -> E
+fn builtin_infix_math<Op>(name: &str, operate: Op) -> Expr
 where
-    E: ExpressionWrapper,
     Op: Fn(Integer, Integer) -> Integer + 'static,
 {
     let parameter_left = Identifier::name_from_str("left").unwrap();
     let parameter_right = Identifier::name_from_str("right").unwrap();
-    E::new_unannotated(Expression::Function(Function {
+    Expr::new_unannotated(Expression::Function(Function {
         parameter: parameter_left.clone(),
-        body: E::new_unannotated(Expression::Function(Function {
+        body: Expr::new_unannotated(Expression::Function(Function {
             parameter: parameter_right.clone(),
-            body: E::new_unannotated(Expression::Native(Native {
+            body: Expr::new_unannotated(Expression::Native(Native {
                 unique_name: Identifier::operator_from_str(name).unwrap(),
                 implementation: Arc::new(move |context| {
                     let left = context.lookup_value(&parameter_left)?;
@@ -82,11 +82,11 @@ where
 }
 
 /// A "trace" function, which prints the computed value.
-fn builtin_trace<E: ExpressionWrapper>() -> E {
+fn builtin_trace() -> Expr {
     let parameter = Identifier::name_from_str("param").unwrap();
-    E::new_unannotated(Expression::Function(Function {
+    Expr::new_unannotated(Expression::Function(Function {
         parameter: parameter.clone(),
-        body: E::new_unannotated(Expression::Native(Native {
+        body: Expr::new_unannotated(Expression::Native(Native {
             unique_name: Identifier::name_from_str("trace").unwrap(),
             implementation: Arc::new(move |context| {
                 let value = context.lookup_value(&parameter)?;
