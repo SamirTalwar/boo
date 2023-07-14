@@ -87,44 +87,6 @@ where
 
     /// Unwraps the expression.
     fn expression(self) -> Expression<Self>;
-
-    /// Transforms the wrapper, while keeping the expression tree intact.
-    fn transform<Next>(
-        self,
-        f: &mut impl FnMut(Self::Annotation, Expression<Next>) -> Next,
-    ) -> Next {
-        let annotation = self.annotation();
-        let mapped = self.expression().map(f);
-        f(annotation, mapped)
-    }
-}
-
-impl<Outer: ExpressionWrapper> Expression<Outer> {
-    /// Used along with `ExpressionWrapper` to propagate a transformation
-    /// through the tree.
-    pub fn map<Next>(
-        self,
-        f: &mut impl FnMut(Outer::Annotation, Expression<Next>) -> Next,
-    ) -> Expression<Next> {
-        match self {
-            Expression::Primitive(x) => Expression::Primitive(x),
-            Expression::Native(x) => Expression::Native(x),
-            Expression::Identifier(x) => Expression::Identifier(x),
-            Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
-                name,
-                value: value.transform(f),
-                inner: inner.transform(f),
-            }),
-            Expression::Function(Function { parameter, body }) => Expression::Function(Function {
-                parameter,
-                body: body.transform(f),
-            }),
-            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
-                function: function.transform(f),
-                argument: argument.transform(f),
-            }),
-        }
-    }
 }
 
 impl<Outer: Display> std::fmt::Display for Expression<Outer> {

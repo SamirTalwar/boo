@@ -26,5 +26,24 @@ pub fn add_expr<InputExpr>(pool: &mut ExprPool, expr: InputExpr) -> Expr
 where
     InputExpr: ExpressionWrapper<Annotation = Span>,
 {
-    expr.transform(&mut |span, expression| Expr::insert(pool, span, expression))
+    let annotation = expr.annotation();
+    let expression = match expr.expression() {
+        Expression::Primitive(x) => Expression::Primitive(x),
+        Expression::Native(x) => Expression::Native(x),
+        Expression::Identifier(x) => Expression::Identifier(x),
+        Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
+            name,
+            value: add_expr(pool, value),
+            inner: add_expr(pool, inner),
+        }),
+        Expression::Function(Function { parameter, body }) => Expression::Function(Function {
+            parameter,
+            body: add_expr(pool, body),
+        }),
+        Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
+            function: add_expr(pool, function),
+            argument: add_expr(pool, argument),
+        }),
+    };
+    Expr::insert(pool, annotation, expression)
 }
