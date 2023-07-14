@@ -161,7 +161,7 @@ fn gen_primitive(target_type: Type) -> Option<ExprStrategy> {
 
 fn make_primitive_expr(value: Primitive) -> ExprStrategyValue {
     let value_type = value.get_type();
-    let expr = Expr::new_unannotated(Expression::Primitive(value));
+    let expr = Expr::new(0.into(), Expression::Primitive(value));
     (expr, value_type.into())
 }
 
@@ -186,7 +186,7 @@ fn gen_variable_reference(target_type: Type, bindings: Bindings) -> Option<ExprS
                         .iter()
                         .nth(index.index(bindings_of_target_type.len()))
                         .unwrap();
-                    let expr = Expr::new_unannotated(Expression::Identifier(name.clone()));
+                    let expr = Expr::new(0.into(), Expression::Identifier(name.clone()));
                     (expr, typ.clone())
                 })
                 .boxed(),
@@ -223,11 +223,14 @@ fn gen_assignment(
                     bindings_.update(name.clone(), value_type),
                 )
                 .prop_map(move |(inner, inner_type)| {
-                    let expr = Expr::new_unannotated(Expression::Assign(Assign {
-                        name: name_.clone(),
-                        value: value_.clone(),
-                        inner,
-                    }));
+                    let expr = Expr::new(
+                        0.into(),
+                        Expression::Assign(Assign {
+                            name: name_.clone(),
+                            value: value_.clone(),
+                            inner,
+                        }),
+                    );
                     (expr, inner_type)
                 })
             })
@@ -263,10 +266,13 @@ fn gen_function(
                                 bindings.update(parameter, parameter_type_.clone()),
                             )
                             .prop_map(move |(body, body_type)| {
-                                let expr = Expr::new_unannotated(Expression::Function(Function {
-                                    parameter: parameter_.clone(),
-                                    body,
-                                }));
+                                let expr = Expr::new(
+                                    0.into(),
+                                    Expression::Function(Function {
+                                        parameter: parameter_.clone(),
+                                        body,
+                                    }),
+                                );
                                 let expr_type = KnownType::Function {
                                     parameter: Type::Known(parameter_type_.clone()),
                                     body: Type::Known(body_type),
@@ -312,10 +318,13 @@ fn gen_apply(
             bindings.clone(),
         )
         .prop_map(move |(function, function_type)| {
-            let expr = Expr::new_unannotated(Expression::Apply(Apply {
-                function,
-                argument: argument.clone(),
-            }));
+            let expr = Expr::new(
+                0.into(),
+                Expression::Apply(Apply {
+                    function,
+                    argument: argument.clone(),
+                }),
+            );
             let expr_type = match function_type.as_ref() {
                 KnownType::Function {
                     body: Type::Known(body_type),
@@ -356,11 +365,14 @@ fn gen_infix(
                         ),
                     )
                         .prop_map(move |((left, _), (right, _))| {
-                            let expr = Expr::new_unannotated(Expression::Infix(Infix {
-                                operation,
-                                left,
-                                right,
-                            }));
+                            let expr = Expr::new(
+                                0.into(),
+                                Expression::Infix(Infix {
+                                    operation,
+                                    left,
+                                    right,
+                                }),
+                            );
                             (expr, KnownType::Integer.into())
                         })
                 })

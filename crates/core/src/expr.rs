@@ -20,10 +20,6 @@ impl ExpressionWrapper for Expr {
         }
     }
 
-    fn new_unannotated(expression: Expression<Self>) -> Self {
-        Self::new(None, expression)
-    }
-
     fn annotation(&self) -> Self::Annotation {
         self.span
     }

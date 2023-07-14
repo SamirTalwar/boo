@@ -24,10 +24,6 @@ impl Expr {
         }
     }
 
-    pub fn new_unannotated(expression: Expression) -> Self {
-        Self::new(0.into(), expression)
-    }
-
     pub fn span(&self) -> Span {
         self.span
     }

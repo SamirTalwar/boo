@@ -14,11 +14,14 @@ use crate::primitive::{Integer, Primitive};
 pub fn prepare(expr: Expr) -> Expr {
     let mut result = expr;
     for (name, builtin) in all().into_iter().rev() {
-        result = Expr::new_unannotated(Expression::Assign(Assign {
-            name,
-            value: builtin,
-            inner: result,
-        }));
+        result = Expr::new(
+            None,
+            Expression::Assign(Assign {
+                name,
+                value: builtin,
+                inner: result,
+            }),
+        );
     }
     result
 }
@@ -61,38 +64,53 @@ where
 {
     let parameter_left = Identifier::name_from_str("left").unwrap();
     let parameter_right = Identifier::name_from_str("right").unwrap();
-    Expr::new_unannotated(Expression::Function(Function {
-        parameter: parameter_left.clone(),
-        body: Expr::new_unannotated(Expression::Function(Function {
-            parameter: parameter_right.clone(),
-            body: Expr::new_unannotated(Expression::Native(Native {
-                unique_name: Identifier::operator_from_str(name).unwrap(),
-                implementation: Arc::new(move |context| {
-                    let left = context.lookup_value(&parameter_left)?;
-                    let right = context.lookup_value(&parameter_right)?;
-                    match (left, right) {
-                        (Primitive::Integer(left), Primitive::Integer(right)) => {
-                            Ok(Primitive::Integer(operate(left, right)))
-                        }
-                    }
+    Expr::new(
+        None,
+        Expression::Function(Function {
+            parameter: parameter_left.clone(),
+            body: Expr::new(
+                None,
+                Expression::Function(Function {
+                    parameter: parameter_right.clone(),
+                    body: Expr::new(
+                        None,
+                        Expression::Native(Native {
+                            unique_name: Identifier::operator_from_str(name).unwrap(),
+                            implementation: Arc::new(move |context| {
+                                let left = context.lookup_value(&parameter_left)?;
+                                let right = context.lookup_value(&parameter_right)?;
+                                match (left, right) {
+                                    (Primitive::Integer(left), Primitive::Integer(right)) => {
+                                        Ok(Primitive::Integer(operate(left, right)))
+                                    }
+                                }
+                            }),
+                        }),
+                    ),
                 }),
-            })),
-        })),
-    }))
+            ),
+        }),
+    )
 }
 
 /// A "trace" function, which prints the computed value.
 fn builtin_trace() -> Expr {
     let parameter = Identifier::name_from_str("param").unwrap();
-    Expr::new_unannotated(Expression::Function(Function {
-        parameter: parameter.clone(),
-        body: Expr::new_unannotated(Expression::Native(Native {
-            unique_name: Identifier::name_from_str("trace").unwrap(),
-            implementation: Arc::new(move |context| {
-                let value = context.lookup_value(&parameter)?;
-                eprintln!("trace: {}", value);
-                Ok(value)
-            }),
-        })),
-    }))
+    Expr::new(
+        None,
+        Expression::Function(Function {
+            parameter: parameter.clone(),
+            body: Expr::new(
+                None,
+                Expression::Native(Native {
+                    unique_name: Identifier::name_from_str("trace").unwrap(),
+                    implementation: Arc::new(move |context| {
+                        let value = context.lookup_value(&parameter)?;
+                        eprintln!("trace: {}", value);
+                        Ok(value)
+                    }),
+                }),
+            ),
+        }),
+    )
 }
