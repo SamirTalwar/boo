@@ -3,6 +3,7 @@
 pub mod ast;
 pub mod builtins;
 pub mod error;
+pub mod evaluation;
 pub mod expr;
 pub mod identifier;
 pub mod native;

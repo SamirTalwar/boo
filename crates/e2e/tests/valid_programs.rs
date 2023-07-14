@@ -92,22 +92,16 @@ fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result
     });
 
     let expected_result = match *parse(expected_result_str)?.expression {
-        ast::Expression::Primitive(p) => p,
+        ast::Expression::Primitive(primitive) => evaluation::Evaluated::Primitive(primitive),
         expression => panic!("Expected result that is not a primitive: {:?}", expression),
     };
 
     let expr = boo::builtins::prepare(ast);
     let efficient_result = evaluate(expr.clone())?;
-    assert_eq!(
-        efficient_result,
-        evaluator::Evaluated::Primitive(expected_result.clone())
-    );
+    assert_eq!(efficient_result, expected_result);
 
     let naive_result = boo_naive_evaluator::evaluate(expr)?;
-    assert_eq!(
-        *naive_result.expression,
-        ast::Expression::Primitive(expected_result)
-    );
+    assert_eq!(naive_result, expected_result);
 
     Ok(())
 }

@@ -7,12 +7,14 @@ use im::HashMap;
 
 use boo_core::ast::*;
 use boo_core::error::*;
+use boo_core::evaluation::*;
 use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
 use boo_core::span::Span;
 
 use crate::pooler::ast::*;
+use crate::pooler::unpool_expr;
 use crate::thunk::Thunk;
 
 /// Evaluate a [pooled `Expr`][super::pooler::ast::Expr].
@@ -22,23 +24,7 @@ pub fn evaluate(pool: &ExprPool, root: Expr) -> Result<Evaluated> {
         bindings: Bindings::new(),
     }
     .evaluate(root)
-    .map(|progress| progress.finish())
-}
-
-/// An evaluation result. This can be either a primitive value or a closure.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Evaluated {
-    Primitive(Primitive),
-    Function(Function<Expr>),
-}
-
-impl std::fmt::Display for Evaluated {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Evaluated::Primitive(x) => x.fmt(f),
-            Evaluated::Function(x) => x.fmt(f),
-        }
-    }
+    .map(|progress| progress.finish(pool))
 }
 
 /// An interim evaluation result, with the same lifetime as the pool being
@@ -51,10 +37,13 @@ enum EvaluationProgress<'a> {
 
 impl<'a> EvaluationProgress<'a> {
     /// Concludes evaluation.
-    fn finish(self) -> Evaluated {
+    fn finish(self, pool: &ExprPool) -> Evaluated {
         match self {
             Self::Primitive(x) => Evaluated::Primitive(x.into_owned()),
-            Self::Closure(x, _) => Evaluated::Function(x.clone()),
+            Self::Closure(Function { parameter, body }, _) => Evaluated::Function(Function {
+                parameter: parameter.clone(),
+                body: unpool_expr(pool, *body),
+            }),
         }
     }
 }
@@ -187,7 +176,7 @@ impl<'a> Evaluator<'a> {
 
 impl<'a> NativeContext for Evaluator<'a> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
-        match self.resolve(identifier, None)?.finish() {
+        match self.resolve(identifier, None)?.finish(self.pool) {
             Evaluated::Primitive(primitive) => Ok(primitive),
             Evaluated::Function(_) => Err(Error::TypeError),
         }

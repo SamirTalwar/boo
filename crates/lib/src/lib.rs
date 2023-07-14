@@ -1,6 +1,7 @@
 pub use boo_core::ast;
 pub use boo_core::builtins;
 pub use boo_core::error;
+pub use boo_core::evaluation;
 pub use boo_core::identifier;
 pub use boo_core::native;
 pub use boo_core::primitive;

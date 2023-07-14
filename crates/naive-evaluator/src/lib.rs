@@ -13,6 +13,7 @@ use im::HashSet;
 
 use boo_core::ast::*;
 use boo_core::error::*;
+use boo_core::evaluation::*;
 use boo_core::expr::Expr;
 use boo_core::identifier::*;
 use boo_core::native::*;
@@ -43,9 +44,9 @@ struct AdditionalContext<'a> {
 impl<'a> NativeContext for AdditionalContext<'a> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         if identifier == self.name.as_ref() {
-            match *evaluate((*self.value).clone())?.expression {
-                Expression::Primitive(primitive) => Ok(primitive),
-                _ => Err(Error::TypeError),
+            match evaluate((*self.value).clone())? {
+                Evaluated::Primitive(primitive) => Ok(primitive),
+                Evaluated::Function(_) => Err(Error::TypeError),
             }
         } else {
             self.rest.lookup_value(identifier)
@@ -54,7 +55,7 @@ impl<'a> NativeContext for AdditionalContext<'a> {
 }
 
 /// Evaluate a parsed AST as simply as possible.
-pub fn evaluate(expr: Expr) -> Result<Expr> {
+pub fn evaluate(expr: Expr) -> Result<Evaluated> {
     let mut progress = expr;
     loop {
         match step(progress)? {
@@ -62,7 +63,11 @@ pub fn evaluate(expr: Expr) -> Result<Expr> {
                 progress = next;
             }
             Progress::Complete(complete) => {
-                return Ok(complete);
+                return match *complete.expression {
+                    Expression::Primitive(primitive) => Ok(Evaluated::Primitive(primitive)),
+                    Expression::Function(function) => Ok(Evaluated::Function(function)),
+                    _ => unreachable!("Evaluated to a non-final expression."),
+                };
             }
         }
     }
@@ -91,20 +96,29 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
             Ok(Progress::Next(substituted_inner))
         }
         Expression::Apply(Apply { function, argument }) => {
-            let function_result = evaluate(function)?;
-            match *function_result.expression {
-                Expression::Function(Function { parameter, body }) => {
-                    let substituted_body = substitute(
-                        Substitution {
-                            name: parameter.into(),
-                            value: argument.into(),
-                        },
-                        body,
-                        HashSet::new(),
-                    );
-                    Ok(Progress::Next(substituted_body))
-                }
-                _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
+            let function_result = step(function)?;
+            match function_result {
+                Progress::Next(function_next) => Ok(Progress::Next(Expr::new(
+                    expr.span,
+                    Expression::Apply(Apply {
+                        function: function_next,
+                        argument,
+                    }),
+                ))),
+                Progress::Complete(function_complete) => match *function_complete.expression {
+                    Expression::Function(Function { parameter, body }) => {
+                        let substituted_body = substitute(
+                            Substitution {
+                                name: parameter.into(),
+                                value: argument.into(),
+                            },
+                            body,
+                            HashSet::new(),
+                        );
+                        Ok(Progress::Next(substituted_body))
+                    }
+                    _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
+                },
             }
         }
     }
