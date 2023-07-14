@@ -3,166 +3,166 @@ source: crates/e2e/tests/valid_programs.rs
 description: let something = 12 in let add_something = fn target -> target + something in add_something 9
 expression: ast
 ---
-Expr(
-    Spanned {
-        span: Span {
+Expr {
+    span: Some(
+        Span {
             start: 0,
             end: 92,
         },
-        value: Assign(
-            Assign {
-                name: Name(
-                    "something",
-                ),
-                value: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 16,
-                            end: 18,
-                        },
-                        value: Primitive(
-                            Integer(
-                                Small(
-                                    12,
-                                ),
-                            ),
-                        ),
+    ),
+    expression: Assign(
+        Assign {
+            name: Name(
+                "something",
+            ),
+            value: Expr {
+                span: Some(
+                    Span {
+                        start: 16,
+                        end: 18,
                     },
                 ),
-                inner: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 22,
-                            end: 92,
-                        },
-                        value: Assign(
-                            Assign {
-                                name: Name(
-                                    "add_something",
-                                ),
-                                value: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 42,
-                                            end: 73,
-                                        },
-                                        value: Function(
-                                            Function {
-                                                parameter: Name(
-                                                    "target",
-                                                ),
-                                                body: Expr(
-                                                    Spanned {
-                                                        span: Span {
+                expression: Primitive(
+                    Integer(
+                        Small(
+                            12,
+                        ),
+                    ),
+                ),
+            },
+            inner: Expr {
+                span: Some(
+                    Span {
+                        start: 22,
+                        end: 92,
+                    },
+                ),
+                expression: Assign(
+                    Assign {
+                        name: Name(
+                            "add_something",
+                        ),
+                        value: Expr {
+                            span: Some(
+                                Span {
+                                    start: 42,
+                                    end: 73,
+                                },
+                            ),
+                            expression: Function(
+                                Function {
+                                    parameter: Name(
+                                        "target",
+                                    ),
+                                    body: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 55,
+                                                end: 73,
+                                            },
+                                        ),
+                                        expression: Apply(
+                                            Apply {
+                                                function: Expr {
+                                                    span: Some(
+                                                        Span {
                                                             start: 55,
                                                             end: 73,
                                                         },
-                                                        value: Apply(
-                                                            Apply {
-                                                                function: Expr(
-                                                                    Spanned {
-                                                                        span: Span {
-                                                                            start: 55,
-                                                                            end: 73,
-                                                                        },
-                                                                        value: Apply(
-                                                                            Apply {
-                                                                                function: Expr(
-                                                                                    Spanned {
-                                                                                        span: Span {
-                                                                                            start: 55,
-                                                                                            end: 73,
-                                                                                        },
-                                                                                        value: Identifier(
-                                                                                            Operator(
-                                                                                                "+",
-                                                                                            ),
-                                                                                        ),
-                                                                                    },
-                                                                                ),
-                                                                                argument: Expr(
-                                                                                    Spanned {
-                                                                                        span: Span {
-                                                                                            start: 55,
-                                                                                            end: 61,
-                                                                                        },
-                                                                                        value: Identifier(
-                                                                                            Name(
-                                                                                                "target",
-                                                                                            ),
-                                                                                        ),
-                                                                                    },
-                                                                                ),
-                                                                            },
-                                                                        ),
+                                                    ),
+                                                    expression: Apply(
+                                                        Apply {
+                                                            function: Expr {
+                                                                span: Some(
+                                                                    Span {
+                                                                        start: 55,
+                                                                        end: 73,
                                                                     },
                                                                 ),
-                                                                argument: Expr(
-                                                                    Spanned {
-                                                                        span: Span {
-                                                                            start: 64,
-                                                                            end: 73,
-                                                                        },
-                                                                        value: Identifier(
-                                                                            Name(
-                                                                                "something",
-                                                                            ),
-                                                                        ),
-                                                                    },
+                                                                expression: Identifier(
+                                                                    Operator(
+                                                                        "+",
+                                                                    ),
                                                                 ),
                                                             },
-                                                        ),
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                    },
-                                ),
-                                inner: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 77,
-                                            end: 92,
-                                        },
-                                        value: Apply(
-                                            Apply {
-                                                function: Expr(
-                                                    Spanned {
-                                                        span: Span {
-                                                            start: 77,
-                                                            end: 90,
-                                                        },
-                                                        value: Identifier(
-                                                            Name(
-                                                                "add_something",
-                                                            ),
-                                                        ),
-                                                    },
-                                                ),
-                                                argument: Expr(
-                                                    Spanned {
-                                                        span: Span {
-                                                            start: 91,
-                                                            end: 92,
-                                                        },
-                                                        value: Primitive(
-                                                            Integer(
-                                                                Small(
-                                                                    9,
+                                                            argument: Expr {
+                                                                span: Some(
+                                                                    Span {
+                                                                        start: 55,
+                                                                        end: 61,
+                                                                    },
                                                                 ),
-                                                            ),
+                                                                expression: Identifier(
+                                                                    Name(
+                                                                        "target",
+                                                                    ),
+                                                                ),
+                                                            },
+                                                        },
+                                                    ),
+                                                },
+                                                argument: Expr {
+                                                    span: Some(
+                                                        Span {
+                                                            start: 64,
+                                                            end: 73,
+                                                        },
+                                                    ),
+                                                    expression: Identifier(
+                                                        Name(
+                                                            "something",
                                                         ),
-                                                    },
-                                                ),
+                                                    ),
+                                                },
                                             },
                                         ),
                                     },
-                                ),
-                            },
-                        ),
+                                },
+                            ),
+                        },
+                        inner: Expr {
+                            span: Some(
+                                Span {
+                                    start: 77,
+                                    end: 92,
+                                },
+                            ),
+                            expression: Apply(
+                                Apply {
+                                    function: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 77,
+                                                end: 90,
+                                            },
+                                        ),
+                                        expression: Identifier(
+                                            Name(
+                                                "add_something",
+                                            ),
+                                        ),
+                                    },
+                                    argument: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 91,
+                                                end: 92,
+                                            },
+                                        ),
+                                        expression: Primitive(
+                                            Integer(
+                                                Small(
+                                                    9,
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
                     },
                 ),
             },
-        ),
-    },
-)
+        },
+    ),
+}

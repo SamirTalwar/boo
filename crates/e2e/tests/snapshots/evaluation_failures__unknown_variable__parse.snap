@@ -3,68 +3,68 @@ source: crates/e2e/tests/evaluation_failures.rs
 description: 123 + xyz
 expression: ast
 ---
-Expr(
-    Spanned {
-        span: Span {
+Expr {
+    span: Some(
+        Span {
             start: 0,
             end: 9,
         },
-        value: Apply(
-            Apply {
-                function: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 0,
-                            end: 9,
-                        },
-                        value: Apply(
-                            Apply {
-                                function: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 0,
-                                            end: 9,
-                                        },
-                                        value: Identifier(
-                                            Operator(
-                                                "+",
-                                            ),
-                                        ),
-                                    },
-                                ),
-                                argument: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 0,
-                                            end: 3,
-                                        },
-                                        value: Primitive(
-                                            Integer(
-                                                Small(
-                                                    123,
-                                                ),
-                                            ),
-                                        ),
-                                    },
-                                ),
-                            },
-                        ),
+    ),
+    expression: Apply(
+        Apply {
+            function: Expr {
+                span: Some(
+                    Span {
+                        start: 0,
+                        end: 9,
                     },
                 ),
-                argument: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 6,
-                            end: 9,
-                        },
-                        value: Identifier(
-                            Name(
-                                "xyz",
+                expression: Apply(
+                    Apply {
+                        function: Expr {
+                            span: Some(
+                                Span {
+                                    start: 0,
+                                    end: 9,
+                                },
                             ),
-                        ),
+                            expression: Identifier(
+                                Operator(
+                                    "+",
+                                ),
+                            ),
+                        },
+                        argument: Expr {
+                            span: Some(
+                                Span {
+                                    start: 0,
+                                    end: 3,
+                                },
+                            ),
+                            expression: Primitive(
+                                Integer(
+                                    Small(
+                                        123,
+                                    ),
+                                ),
+                            ),
+                        },
                     },
                 ),
             },
-        ),
-    },
-)
+            argument: Expr {
+                span: Some(
+                    Span {
+                        start: 6,
+                        end: 9,
+                    },
+                ),
+                expression: Identifier(
+                    Name(
+                        "xyz",
+                    ),
+                ),
+            },
+        },
+    ),
+}

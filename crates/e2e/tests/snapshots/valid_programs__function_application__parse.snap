@@ -1,109 +1,110 @@
 ---
-source: crates/e2e/tests/test.rs
+source: crates/e2e/tests/valid_programs.rs
+description: (fn x -> x + x) 9
 expression: ast
 ---
-Expr(
-    Spanned {
-        span: Span {
+Expr {
+    span: Some(
+        Span {
             start: 1,
             end: 17,
         },
-        value: Apply(
-            Apply {
-                function: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 1,
-                            end: 14,
-                        },
-                        value: Function(
-                            Function {
-                                parameter: Name(
-                                    "x",
-                                ),
-                                body: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 9,
-                                            end: 14,
-                                        },
-                                        value: Apply(
+    ),
+    expression: Apply(
+        Apply {
+            function: Expr {
+                span: Some(
+                    Span {
+                        start: 1,
+                        end: 14,
+                    },
+                ),
+                expression: Function(
+                    Function {
+                        parameter: Name(
+                            "x",
+                        ),
+                        body: Expr {
+                            span: Some(
+                                Span {
+                                    start: 9,
+                                    end: 14,
+                                },
+                            ),
+                            expression: Apply(
+                                Apply {
+                                    function: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 9,
+                                                end: 14,
+                                            },
+                                        ),
+                                        expression: Apply(
                                             Apply {
-                                                function: Expr(
-                                                    Spanned {
-                                                        span: Span {
+                                                function: Expr {
+                                                    span: Some(
+                                                        Span {
                                                             start: 9,
                                                             end: 14,
                                                         },
-                                                        value: Apply(
-                                                            Apply {
-                                                                function: Expr(
-                                                                    Spanned {
-                                                                        span: Span {
-                                                                            start: 9,
-                                                                            end: 14,
-                                                                        },
-                                                                        value: Identifier(
-                                                                            Operator(
-                                                                                "+",
-                                                                            ),
-                                                                        ),
-                                                                    },
-                                                                ),
-                                                                argument: Expr(
-                                                                    Spanned {
-                                                                        span: Span {
-                                                                            start: 9,
-                                                                            end: 10,
-                                                                        },
-                                                                        value: Identifier(
-                                                                            Name(
-                                                                                "x",
-                                                                            ),
-                                                                        ),
-                                                                    },
-                                                                ),
-                                                            },
+                                                    ),
+                                                    expression: Identifier(
+                                                        Operator(
+                                                            "+",
                                                         ),
-                                                    },
-                                                ),
-                                                argument: Expr(
-                                                    Spanned {
-                                                        span: Span {
-                                                            start: 13,
-                                                            end: 14,
+                                                    ),
+                                                },
+                                                argument: Expr {
+                                                    span: Some(
+                                                        Span {
+                                                            start: 9,
+                                                            end: 10,
                                                         },
-                                                        value: Identifier(
-                                                            Name(
-                                                                "x",
-                                                            ),
+                                                    ),
+                                                    expression: Identifier(
+                                                        Name(
+                                                            "x",
                                                         ),
-                                                    },
-                                                ),
+                                                    ),
+                                                },
                                             },
                                         ),
                                     },
-                                ),
-                            },
-                        ),
-                    },
-                ),
-                argument: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 16,
-                            end: 17,
-                        },
-                        value: Primitive(
-                            Integer(
-                                Small(
-                                    9,
-                                ),
+                                    argument: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 13,
+                                                end: 14,
+                                            },
+                                        ),
+                                        expression: Identifier(
+                                            Name(
+                                                "x",
+                                            ),
+                                        ),
+                                    },
+                                },
                             ),
-                        ),
+                        },
                     },
                 ),
             },
-        ),
-    },
-)
+            argument: Expr {
+                span: Some(
+                    Span {
+                        start: 16,
+                        end: 17,
+                    },
+                ),
+                expression: Primitive(
+                    Integer(
+                        Small(
+                            9,
+                        ),
+                    ),
+                ),
+            },
+        },
+    ),
+}

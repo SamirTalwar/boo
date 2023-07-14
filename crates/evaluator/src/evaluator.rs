@@ -113,7 +113,7 @@ impl<'a> Evaluator<'a> {
     /// identifier, and captured by closures when a function is evaluated.
     pub fn evaluate(&self, expr_ref: Expr) -> Result<EvaluationProgress<'a>> {
         let expr = expr_ref.read_from(self.pool);
-        match &expr.value {
+        match &expr.expression {
             Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
             Expression::Native(Native { implementation, .. }) => {
                 implementation(self).map(|value| EvaluationProgress::Primitive(Cow::Owned(value)))
@@ -155,7 +155,7 @@ impl<'a> Evaluator<'a> {
     }
 
     /// Resolves a given identifier by evaluating its binding.
-    fn resolve(&self, identifier: &Identifier, span: Span) -> EvaluatedBinding<'a> {
+    fn resolve(&self, identifier: &Identifier, span: Option<Span>) -> EvaluatedBinding<'a> {
         match self.bindings.clone().read(identifier) {
             Some(thunk) => {
                 let result = thunk.resolve_by(move |(value_ref, thunk_bindings)| {
@@ -187,7 +187,7 @@ impl<'a> Evaluator<'a> {
 
 impl<'a> NativeContext for Evaluator<'a> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
-        match self.resolve(identifier, 0.into())?.finish() {
+        match self.resolve(identifier, None)?.finish() {
             Evaluated::Primitive(primitive) => Ok(primitive),
             Evaluated::Function(_) => Err(Error::TypeError),
         }

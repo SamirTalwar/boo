@@ -27,23 +27,23 @@ pub enum Error {
         expected_tokens: Vec<&'static str>,
     },
 
-    #[error("Unknown variable: {name:?}")]
-    #[diagnostic(code(boo::evaluator::unknown_variable))]
-    UnknownVariable {
-        #[label("unknown variable")]
-        span: Span,
-        name: String,
+    #[error("Could not apply the function")]
+    #[diagnostic(code(boo::evaluator::invalid_function_application))]
+    InvalidFunctionApplication {
+        #[label("invalid function")]
+        span: Option<Span>,
     },
 
     #[error("Unexpected type error during evaluation")]
     #[diagnostic(code(boo::evaluator::type_error))]
     TypeError,
 
-    #[error("Could not apply the function")]
+    #[error("Unknown variable: {name:?}")]
     #[diagnostic(code(boo::evaluator::unknown_variable))]
-    InvalidFunctionApplication {
-        #[label("invalid function")]
-        span: Span,
+    UnknownVariable {
+        #[label("unknown variable")]
+        span: Option<Span>,
+        name: String,
     },
 }
 

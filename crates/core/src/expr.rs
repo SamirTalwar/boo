@@ -5,30 +5,36 @@ use crate::span::*;
 
 /// Wraps an expression with a span.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Expr(Box<Spanned<Expression<Expr>>>);
+pub struct Expr {
+    span: Option<Span>,
+    expression: Box<Expression<Expr>>,
+}
 
 impl ExpressionWrapper for Expr {
-    type Annotation = Span;
+    type Annotation = Option<Span>;
 
-    fn new(span: Self::Annotation, value: Expression<Self>) -> Self {
-        Expr(Box::new(Spanned { span, value }))
+    fn new(span: Self::Annotation, expression: Expression<Self>) -> Self {
+        Self {
+            span,
+            expression: expression.into(),
+        }
     }
 
     fn new_unannotated(expression: Expression<Self>) -> Self {
-        Self::new(0.into(), expression)
+        Self::new(None, expression)
     }
 
     fn annotation(&self) -> Self::Annotation {
-        self.0.span
+        self.span
     }
 
     fn expression(self) -> Expression<Self> {
-        self.0.value
+        *self.expression
     }
 }
 
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.value.fmt(f)
+        self.expression.fmt(f)
     }
 }

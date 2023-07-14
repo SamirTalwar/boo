@@ -1,167 +1,168 @@
 ---
 source: crates/e2e/tests/valid_programs.rs
+description: let negate = fn thing -> 0 - thing in let life = 42 in negate life
 expression: ast
 ---
-Expr(
-    Spanned {
-        span: Span {
+Expr {
+    span: Some(
+        Span {
             start: 0,
             end: 66,
         },
-        value: Assign(
-            Assign {
-                name: Name(
-                    "negate",
+    ),
+    expression: Assign(
+        Assign {
+            name: Name(
+                "negate",
+            ),
+            value: Expr {
+                span: Some(
+                    Span {
+                        start: 13,
+                        end: 34,
+                    },
                 ),
-                value: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 13,
-                            end: 34,
-                        },
-                        value: Function(
-                            Function {
-                                parameter: Name(
-                                    "thing",
-                                ),
-                                body: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 25,
-                                            end: 34,
-                                        },
-                                        value: Apply(
+                expression: Function(
+                    Function {
+                        parameter: Name(
+                            "thing",
+                        ),
+                        body: Expr {
+                            span: Some(
+                                Span {
+                                    start: 25,
+                                    end: 34,
+                                },
+                            ),
+                            expression: Apply(
+                                Apply {
+                                    function: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 25,
+                                                end: 34,
+                                            },
+                                        ),
+                                        expression: Apply(
                                             Apply {
-                                                function: Expr(
-                                                    Spanned {
-                                                        span: Span {
+                                                function: Expr {
+                                                    span: Some(
+                                                        Span {
                                                             start: 25,
                                                             end: 34,
                                                         },
-                                                        value: Apply(
-                                                            Apply {
-                                                                function: Expr(
-                                                                    Spanned {
-                                                                        span: Span {
-                                                                            start: 25,
-                                                                            end: 34,
-                                                                        },
-                                                                        value: Identifier(
-                                                                            Operator(
-                                                                                "-",
-                                                                            ),
-                                                                        ),
-                                                                    },
-                                                                ),
-                                                                argument: Expr(
-                                                                    Spanned {
-                                                                        span: Span {
-                                                                            start: 25,
-                                                                            end: 26,
-                                                                        },
-                                                                        value: Primitive(
-                                                                            Integer(
-                                                                                Small(
-                                                                                    0,
-                                                                                ),
-                                                                            ),
-                                                                        ),
-                                                                    },
-                                                                ),
-                                                            },
+                                                    ),
+                                                    expression: Identifier(
+                                                        Operator(
+                                                            "-",
                                                         ),
-                                                    },
-                                                ),
-                                                argument: Expr(
-                                                    Spanned {
-                                                        span: Span {
-                                                            start: 29,
-                                                            end: 34,
+                                                    ),
+                                                },
+                                                argument: Expr {
+                                                    span: Some(
+                                                        Span {
+                                                            start: 25,
+                                                            end: 26,
                                                         },
-                                                        value: Identifier(
-                                                            Name(
-                                                                "thing",
+                                                    ),
+                                                    expression: Primitive(
+                                                        Integer(
+                                                            Small(
+                                                                0,
                                                             ),
                                                         ),
-                                                    },
-                                                ),
+                                                    ),
+                                                },
                                             },
                                         ),
                                     },
-                                ),
-                            },
-                        ),
-                    },
-                ),
-                inner: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 38,
-                            end: 66,
-                        },
-                        value: Assign(
-                            Assign {
-                                name: Name(
-                                    "life",
-                                ),
-                                value: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 49,
-                                            end: 51,
-                                        },
-                                        value: Primitive(
-                                            Integer(
-                                                Small(
-                                                    42,
-                                                ),
+                                    argument: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 29,
+                                                end: 34,
+                                            },
+                                        ),
+                                        expression: Identifier(
+                                            Name(
+                                                "thing",
                                             ),
                                         ),
                                     },
-                                ),
-                                inner: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 55,
-                                            end: 66,
-                                        },
-                                        value: Apply(
-                                            Apply {
-                                                function: Expr(
-                                                    Spanned {
-                                                        span: Span {
-                                                            start: 55,
-                                                            end: 61,
-                                                        },
-                                                        value: Identifier(
-                                                            Name(
-                                                                "negate",
-                                                            ),
-                                                        ),
-                                                    },
-                                                ),
-                                                argument: Expr(
-                                                    Spanned {
-                                                        span: Span {
-                                                            start: 62,
-                                                            end: 66,
-                                                        },
-                                                        value: Identifier(
-                                                            Name(
-                                                                "life",
-                                                            ),
-                                                        ),
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                    },
-                                ),
-                            },
-                        ),
+                                },
+                            ),
+                        },
                     },
                 ),
             },
-        ),
-    },
-)
+            inner: Expr {
+                span: Some(
+                    Span {
+                        start: 38,
+                        end: 66,
+                    },
+                ),
+                expression: Assign(
+                    Assign {
+                        name: Name(
+                            "life",
+                        ),
+                        value: Expr {
+                            span: Some(
+                                Span {
+                                    start: 49,
+                                    end: 51,
+                                },
+                            ),
+                            expression: Primitive(
+                                Integer(
+                                    Small(
+                                        42,
+                                    ),
+                                ),
+                            ),
+                        },
+                        inner: Expr {
+                            span: Some(
+                                Span {
+                                    start: 55,
+                                    end: 66,
+                                },
+                            ),
+                            expression: Apply(
+                                Apply {
+                                    function: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 55,
+                                                end: 61,
+                                            },
+                                        ),
+                                        expression: Identifier(
+                                            Name(
+                                                "negate",
+                                            ),
+                                        ),
+                                    },
+                                    argument: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 62,
+                                                end: 66,
+                                            },
+                                        ),
+                                        expression: Identifier(
+                                            Name(
+                                                "life",
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                    },
+                ),
+            },
+        },
+    ),
+}

@@ -8,7 +8,7 @@ fn test_unknown_variable() -> Result<()> {
         "unknown_variable",
         "123 + xyz",
         Error::UnknownVariable {
-            span: (6..9).into(),
+            span: Some((6..9).into()),
             name: "xyz".to_string(),
         },
     )
@@ -20,7 +20,7 @@ fn test_does_not_close_over_variables_out_of_scope() -> Result<()> {
         "does_not_close_over_variables_out_of_scope",
         "let fun = (let one = 1 in fn param -> one + param + external) in let external = 2 in fun 3",
         Error::UnknownVariable {
-            span: (52..60).into(),
+            span: Some((52..60).into()),
             name: "external".to_string(),
         },
     )

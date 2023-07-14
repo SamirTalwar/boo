@@ -1,123 +1,124 @@
 ---
-source: crates/e2e/tests/test.rs
+source: crates/e2e/tests/valid_programs.rs
+description: 2 * (3 + 4)
 expression: ast
 ---
-Expr(
-    Spanned {
-        span: Span {
+Expr {
+    span: Some(
+        Span {
             start: 0,
             end: 10,
         },
-        value: Apply(
-            Apply {
-                function: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 0,
-                            end: 10,
-                        },
-                        value: Apply(
-                            Apply {
-                                function: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 0,
-                                            end: 10,
-                                        },
-                                        value: Identifier(
-                                            Operator(
-                                                "*",
-                                            ),
-                                        ),
-                                    },
-                                ),
-                                argument: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 0,
-                                            end: 1,
-                                        },
-                                        value: Primitive(
-                                            Integer(
-                                                Small(
-                                                    2,
-                                                ),
-                                            ),
-                                        ),
-                                    },
-                                ),
-                            },
-                        ),
+    ),
+    expression: Apply(
+        Apply {
+            function: Expr {
+                span: Some(
+                    Span {
+                        start: 0,
+                        end: 10,
                     },
                 ),
-                argument: Expr(
-                    Spanned {
-                        span: Span {
-                            start: 5,
-                            end: 10,
+                expression: Apply(
+                    Apply {
+                        function: Expr {
+                            span: Some(
+                                Span {
+                                    start: 0,
+                                    end: 10,
+                                },
+                            ),
+                            expression: Identifier(
+                                Operator(
+                                    "*",
+                                ),
+                            ),
                         },
-                        value: Apply(
-                            Apply {
-                                function: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 5,
-                                            end: 10,
-                                        },
-                                        value: Apply(
-                                            Apply {
-                                                function: Expr(
-                                                    Spanned {
-                                                        span: Span {
-                                                            start: 5,
-                                                            end: 10,
-                                                        },
-                                                        value: Identifier(
-                                                            Operator(
-                                                                "+",
-                                                            ),
-                                                        ),
-                                                    },
-                                                ),
-                                                argument: Expr(
-                                                    Spanned {
-                                                        span: Span {
-                                                            start: 5,
-                                                            end: 6,
-                                                        },
-                                                        value: Primitive(
-                                                            Integer(
-                                                                Small(
-                                                                    3,
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                    },
+                        argument: Expr {
+                            span: Some(
+                                Span {
+                                    start: 0,
+                                    end: 1,
+                                },
+                            ),
+                            expression: Primitive(
+                                Integer(
+                                    Small(
+                                        2,
+                                    ),
                                 ),
-                                argument: Expr(
-                                    Spanned {
-                                        span: Span {
-                                            start: 9,
-                                            end: 10,
-                                        },
-                                        value: Primitive(
-                                            Integer(
-                                                Small(
-                                                    4,
-                                                ),
-                                            ),
-                                        ),
-                                    },
-                                ),
-                            },
-                        ),
+                            ),
+                        },
                     },
                 ),
             },
-        ),
-    },
-)
+            argument: Expr {
+                span: Some(
+                    Span {
+                        start: 5,
+                        end: 10,
+                    },
+                ),
+                expression: Apply(
+                    Apply {
+                        function: Expr {
+                            span: Some(
+                                Span {
+                                    start: 5,
+                                    end: 10,
+                                },
+                            ),
+                            expression: Apply(
+                                Apply {
+                                    function: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 5,
+                                                end: 10,
+                                            },
+                                        ),
+                                        expression: Identifier(
+                                            Operator(
+                                                "+",
+                                            ),
+                                        ),
+                                    },
+                                    argument: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 5,
+                                                end: 6,
+                                            },
+                                        ),
+                                        expression: Primitive(
+                                            Integer(
+                                                Small(
+                                                    3,
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                        argument: Expr {
+                            span: Some(
+                                Span {
+                                    start: 9,
+                                    end: 10,
+                                },
+                            ),
+                            expression: Primitive(
+                                Integer(
+                                    Small(
+                                        4,
+                                    ),
+                                ),
+                            ),
+                        },
+                    },
+                ),
+            },
+        },
+    ),
+}

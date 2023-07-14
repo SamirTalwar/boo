@@ -1,11 +1,10 @@
 //! Flattens an expression tree into a [`pool::Pool`].
 
 pub mod ast;
-pub mod builders;
 pub mod pool;
 
+use boo_core::ast::ExpressionWrapper;
 use boo_core::ast::*;
-use boo_core::span::*;
 
 use ast::*;
 use pool::pool_with;
@@ -19,11 +18,8 @@ pub fn pool_exprs(ast: boo_core::expr::Expr) -> (ExprPool, Expr) {
 ///
 /// The leaf expressions will always be added before their parents, so that the
 /// references are always valid.
-pub fn add_expr<InputExpr>(pool: &mut ExprPool, expr: InputExpr) -> Expr
-where
-    InputExpr: ExpressionWrapper<Annotation = Span>,
-{
-    let annotation = expr.annotation();
+pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
+    let span = expr.annotation();
     let expression = match expr.expression() {
         Expression::Primitive(x) => Expression::Primitive(x),
         Expression::Native(x) => Expression::Native(x),
@@ -42,5 +38,5 @@ where
             argument: add_expr(pool, argument),
         }),
     };
-    Expr::insert(pool, annotation, expression)
+    Expr::insert(pool, span, expression)
 }

@@ -1,11 +1,15 @@
 //! An AST based on a [`Pool`].
 
 use boo_core::ast::Expression;
-use boo_core::span::{Span, Spanned};
+use boo_core::span::Span;
 
 use super::pool::*;
 
-type Inner = Spanned<Expression<Expr>>;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Inner {
+    pub span: Option<Span>,
+    pub expression: Expression<Expr>,
+}
 
 /// An expression pool is a pool scoped to spanned expressions.
 pub type ExprPool = Pool<Inner>;
@@ -16,8 +20,8 @@ pub struct Expr(PoolRef<Inner>);
 
 impl Expr {
     /// Inserts a new expression into the pool.
-    pub fn insert(pool: &mut ExprPool, span: Span, value: Expression<Expr>) -> Self {
-        Self(pool.add(Spanned { span, value }))
+    pub fn insert(pool: &mut ExprPool, span: Option<Span>, expression: Expression<Expr>) -> Self {
+        Self(pool.add(Inner { span, expression }))
     }
 
     /// Reads the entry from the pool.

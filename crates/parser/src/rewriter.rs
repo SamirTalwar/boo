@@ -8,7 +8,7 @@ use boo_language as language;
 pub fn rewrite(expr: language::Expr) -> core::Expr {
     let span = expr.span();
     core::Expr::new(
-        span,
+        Some(span),
         match expr.expression() {
             language::Expression::Primitive(x) => core::Expression::Primitive(x),
             language::Expression::Identifier(x) => core::Expression::Identifier(x),
@@ -37,10 +37,10 @@ pub fn rewrite(expr: language::Expr) -> core::Expr {
                 right,
             }) => core::Expression::Apply(core::Apply {
                 function: core::Expr::new(
-                    span,
+                    Some(span),
                     core::Expression::Apply(core::Apply {
                         function: core::Expr::new(
-                            span,
+                            Some(span),
                             core::Expression::Identifier(operation.identifier()),
                         ),
                         argument: rewrite(left),

@@ -28,7 +28,7 @@ struct EmptyContext {}
 impl NativeContext for EmptyContext {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         Err(Error::UnknownVariable {
-            span: 0.into(),
+            span: None,
             name: identifier.to_string(),
         })
     }

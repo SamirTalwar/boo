@@ -5,35 +5,35 @@ pub mod operation;
 
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
-use boo_core::span::{Span, Spanned};
+use boo_core::span::Span;
 
 pub use crate::operation::Operation;
 
 /// An expression wrapper, annotated with the source location as a span.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Expr(Box<Spanned<Expression>>);
+pub struct Expr {
+    span: Span,
+    expression: Box<Expression>,
+}
 
 impl Expr {
-    pub fn new(span: Span, value: Expression) -> Self {
-        Self(Spanned { span, value }.into())
+    pub fn new(span: Span, expression: Expression) -> Self {
+        Self {
+            span,
+            expression: expression.into(),
+        }
     }
 
-    pub fn new_unannotated(value: Expression) -> Self {
-        Self(
-            Spanned {
-                span: 0.into(),
-                value,
-            }
-            .into(),
-        )
+    pub fn new_unannotated(expression: Expression) -> Self {
+        Self::new(0.into(), expression)
     }
 
     pub fn span(&self) -> Span {
-        self.0.span
+        self.span
     }
 
     pub fn expression(self) -> Expression {
-        self.0.value
+        *self.expression
     }
 }
 
@@ -92,7 +92,7 @@ pub struct Infix {
 
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.value.fmt(f)
+        self.expression.fmt(f)
     }
 }
 
