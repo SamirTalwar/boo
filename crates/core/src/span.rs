@@ -53,22 +53,11 @@ impl From<Span> for miette::SourceSpan {
     }
 }
 
-/// A value that contains a span.
-pub trait HasSpan {
-    fn span(&self) -> Span;
-}
-
 /// A wrapper around `Value` that includes a [`Span`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Spanned<Value> {
     pub span: Span,
     pub value: Value,
-}
-
-impl<Value> HasSpan for Spanned<Value> {
-    fn span(&self) -> Span {
-        self.span
-    }
 }
 
 // ignores the actual span

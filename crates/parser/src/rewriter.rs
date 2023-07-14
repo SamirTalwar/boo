@@ -2,7 +2,6 @@
 
 use boo_core::ast::ExpressionWrapper;
 use boo_core::expr as core;
-use boo_core::span::HasSpan;
 
 use boo_language as language;
 

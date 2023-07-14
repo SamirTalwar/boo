@@ -17,7 +17,6 @@ use boo_core::expr::Expr;
 use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
-use boo_core::span::HasSpan;
 
 enum Progress<T> {
     Next(T),
@@ -70,14 +69,13 @@ pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
 }
 
 fn step(expr: Expr) -> Result<Progress<Expr>> {
-    let annotation = expr.annotation();
-    let span = expr.span();
+    let span = expr.annotation();
     match expr.expression() {
         expression @ Expression::Primitive(_) | expression @ Expression::Function(_) => {
-            Ok(Progress::Complete(Expr::new(annotation, expression)))
+            Ok(Progress::Complete(Expr::new(span, expression)))
         }
         Expression::Native(Native { implementation, .. }) => implementation(&EmptyContext {})
-            .map(|x| Progress::Complete(Expr::new(annotation, Expression::Primitive(x)))),
+            .map(|x| Progress::Complete(Expr::new(span, Expression::Primitive(x)))),
         Expression::Identifier(name) => Err(Error::UnknownVariable {
             span,
             name: name.to_string(),

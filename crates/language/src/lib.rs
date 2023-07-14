@@ -5,26 +5,13 @@ pub mod operation;
 
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
-use boo_core::span::{HasSpan, Span, Spanned};
+use boo_core::span::{Span, Spanned};
 
 pub use crate::operation::Operation;
 
 /// An expression wrapper, annotated with the source location as a span.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr(Box<Spanned<Expression>>);
-
-/// A Boo expression. These can be nested arbitrarily.
-///
-/// This cannot be used on its own; it must be used with [`Expr`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Expression {
-    Primitive(Primitive),
-    Identifier(Identifier),
-    Assign(Assign),
-    Function(Function),
-    Apply(Apply),
-    Infix(Infix),
-}
 
 impl Expr {
     pub fn new(span: Span, value: Expression) -> Self {
@@ -41,15 +28,26 @@ impl Expr {
         )
     }
 
+    pub fn span(&self) -> Span {
+        self.0.span
+    }
+
     pub fn expression(self) -> Expression {
         self.0.value
     }
 }
 
-impl HasSpan for Expr {
-    fn span(&self) -> Span {
-        self.0.span
-    }
+/// A Boo expression. These can be nested arbitrarily.
+///
+/// This cannot be used on its own; it must be used with [`Expr`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Expression {
+    Primitive(Primitive),
+    Identifier(Identifier),
+    Assign(Assign),
+    Function(Function),
+    Apply(Apply),
+    Infix(Infix),
 }
 
 /// Represents assignment.

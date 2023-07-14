@@ -7,12 +7,6 @@ use crate::span::*;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr(Box<Spanned<Expression<Expr>>>);
 
-impl HasSpan for Expr {
-    fn span(&self) -> crate::span::Span {
-        self.0.span
-    }
-}
-
 impl ExpressionWrapper for Expr {
     type Annotation = Span;
 
