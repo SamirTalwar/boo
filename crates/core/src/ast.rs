@@ -1,7 +1,5 @@
 //! Structures that make up the core Boo AST.
 
-pub mod builders;
-
 use std::fmt::Display;
 
 use crate::identifier::Identifier;
@@ -60,27 +58,6 @@ pub struct Apply<Outer> {
     pub function: Outer,
     /// The argument.
     pub argument: Outer,
-}
-
-/// Denotes a wrapper for `Expression` that allows for transformation into
-/// a different wrapper.
-///
-/// This is used to allow for operations that can work on the various stages of
-/// AST, e.g. parsing, type-checking, pooling, and finally evaluation.
-pub trait ExpressionWrapper
-where
-    Self: Sized,
-{
-    type Annotation;
-
-    /// Constructs a new wrapper.
-    fn new(annotation: Self::Annotation, expression: Expression<Self>) -> Self;
-
-    /// Acquires a copy of the annotation.
-    fn annotation(&self) -> Self::Annotation;
-
-    /// Unwraps the expression.
-    fn expression(self) -> Expression<Self>;
 }
 
 impl<Outer: Display> std::fmt::Display for Expression<Outer> {

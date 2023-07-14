@@ -6,26 +6,16 @@ use crate::span::*;
 /// Wraps an expression with a span.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr {
-    span: Option<Span>,
-    expression: Box<Expression<Expr>>,
+    pub span: Option<Span>,
+    pub expression: Box<Expression<Expr>>,
 }
 
-impl ExpressionWrapper for Expr {
-    type Annotation = Option<Span>;
-
-    fn new(span: Self::Annotation, expression: Expression<Self>) -> Self {
+impl Expr {
+    pub fn new(span: Option<Span>, expression: Expression<Self>) -> Self {
         Self {
             span,
             expression: expression.into(),
         }
-    }
-
-    fn annotation(&self) -> Self::Annotation {
-        self.span
-    }
-
-    fn expression(self) -> Expression<Self> {
-        *self.expression
     }
 }
 

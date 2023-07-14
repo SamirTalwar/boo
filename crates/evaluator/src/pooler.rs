@@ -3,7 +3,6 @@
 pub mod ast;
 pub mod pool;
 
-use boo_core::ast::ExpressionWrapper;
 use boo_core::ast::*;
 
 use ast::*;
@@ -19,8 +18,7 @@ pub fn pool_exprs(ast: boo_core::expr::Expr) -> (ExprPool, Expr) {
 /// The leaf expressions will always be added before their parents, so that the
 /// references are always valid.
 pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
-    let span = expr.annotation();
-    let expression = match expr.expression() {
+    let expression = match *expr.expression {
         Expression::Primitive(x) => Expression::Primitive(x),
         Expression::Native(x) => Expression::Native(x),
         Expression::Identifier(x) => Expression::Identifier(x),
@@ -38,5 +36,5 @@ pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
             argument: add_expr(pool, argument),
         }),
     };
-    Expr::insert(pool, span, expression)
+    Expr::insert(pool, expr.span, expression)
 }

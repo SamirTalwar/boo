@@ -1,4 +1,3 @@
-use boo::ast::ExpressionWrapper;
 use boo::error::Result;
 use boo::*;
 use boo_naive_evaluator::naively_evaluate;
@@ -93,7 +92,7 @@ fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result
         insta::assert_debug_snapshot!(name.to_string() + "__parse", ast);
     });
 
-    let expected_result = match parse(expected_result_str)?.expression() {
+    let expected_result = match *parse(expected_result_str)?.expression {
         ast::Expression::Primitive(p) => p,
         expression => panic!("Expected result that is not a primitive: {:?}", expression),
     };
@@ -107,7 +106,7 @@ fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result
 
     let naive_result = naively_evaluate(expr)?;
     assert_eq!(
-        naive_result.expression(),
+        *naive_result.expression,
         ast::Expression::Primitive(expected_result)
     );
 

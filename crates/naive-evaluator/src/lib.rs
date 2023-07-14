@@ -43,7 +43,7 @@ struct AdditionalContext<'a> {
 impl<'a> NativeContext for AdditionalContext<'a> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         if identifier == self.name.as_ref() {
-            match naively_evaluate((*self.value).clone())?.expression() {
+            match *naively_evaluate((*self.value).clone())?.expression {
                 Expression::Primitive(primitive) => Ok(primitive),
                 _ => Err(Error::TypeError),
             }
@@ -69,15 +69,14 @@ pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
 }
 
 fn step(expr: Expr) -> Result<Progress<Expr>> {
-    let span = expr.annotation();
-    match expr.expression() {
+    match *expr.expression {
         expression @ Expression::Primitive(_) | expression @ Expression::Function(_) => {
-            Ok(Progress::Complete(Expr::new(span, expression)))
+            Ok(Progress::Complete(Expr::new(expr.span, expression)))
         }
         Expression::Native(Native { implementation, .. }) => implementation(&EmptyContext {})
-            .map(|x| Progress::Complete(Expr::new(span, Expression::Primitive(x)))),
+            .map(|x| Progress::Complete(Expr::new(expr.span, Expression::Primitive(x)))),
         Expression::Identifier(name) => Err(Error::UnknownVariable {
-            span,
+            span: expr.span,
             name: name.to_string(),
         }),
         Expression::Assign(Assign { name, value, inner }) => {
@@ -93,7 +92,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
         }
         Expression::Apply(Apply { function, argument }) => {
             let function_result = naively_evaluate(function)?;
-            match function_result.expression() {
+            match *function_result.expression {
                 Expression::Function(Function { parameter, body }) => {
                     let substituted_body = substitute(
                         Substitution {
@@ -105,7 +104,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
                     );
                     Ok(Progress::Next(substituted_body))
                 }
-                _ => Err(Error::InvalidFunctionApplication { span }),
+                _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
             }
         }
     }
@@ -118,14 +117,13 @@ struct Substitution {
 }
 
 fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>) -> Expr {
-    let annotation = expr.annotation();
-    match expr.expression() {
-        expression @ Expression::Primitive(_) => Expr::new(annotation, expression),
+    match *expr.expression {
+        expression @ Expression::Primitive(_) => Expr::new(expr.span, expression),
         Expression::Native(Native {
             unique_name,
             implementation,
         }) => Expr::new(
-            annotation,
+            expr.span,
             Expression::Native(Native {
                 unique_name,
                 implementation: Arc::new(move |context| {
@@ -140,10 +138,10 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
         Expression::Identifier(name) if name == *substitution.name => {
             avoid_alpha_capture((*substitution.value).clone(), bound)
         }
-        expression @ Expression::Identifier(_) => Expr::new(annotation, expression),
+        expression @ Expression::Identifier(_) => Expr::new(expr.span, expression),
         Expression::Assign(Assign { name, value, inner }) if name != *substitution.name => {
             Expr::new(
-                annotation,
+                expr.span,
                 Expression::Assign(Assign {
                     name: name.clone(),
                     value: substitute(substitution.clone(), value, bound.clone()),
@@ -151,19 +149,19 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
                 }),
             )
         }
-        expression @ Expression::Assign(_) => Expr::new(annotation, expression),
+        expression @ Expression::Assign(_) => Expr::new(expr.span, expression),
         Expression::Function(Function { parameter, body }) if parameter != *substitution.name => {
             Expr::new(
-                annotation,
+                expr.span,
                 Expression::Function(Function {
                     parameter: parameter.clone(),
                     body: substitute(substitution, body, bound.update(parameter)),
                 }),
             )
         }
-        expression @ Expression::Function(_) => Expr::new(annotation, expression),
+        expression @ Expression::Function(_) => Expr::new(expr.span, expression),
         Expression::Apply(Apply { function, argument }) => Expr::new(
-            annotation,
+            expr.span,
             Expression::Apply(Apply {
                 function: substitute(substitution.clone(), function, bound.clone()),
                 argument: substitute(substitution, argument, bound),
@@ -173,10 +171,9 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
 }
 
 fn avoid_alpha_capture(expr: Expr, bound: HashSet<Identifier>) -> Expr {
-    let annotation = expr.annotation();
     Expr::new(
-        annotation,
-        match expr.expression() {
+        expr.span,
+        match *expr.expression {
             expression @ Expression::Primitive(_) | expression @ Expression::Native(_) => {
                 expression
             }

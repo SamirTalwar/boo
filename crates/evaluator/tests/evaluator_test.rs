@@ -13,7 +13,7 @@ fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
         let expected = boo_naive_evaluator::naively_evaluate(prepared.clone());
         let actual = boo_evaluator::evaluate(prepared);
 
-        match (expected.map(|e| e.expression()), actual) {
+        match (expected.map(|e| *e.expression), actual) {
             (
                 Ok(Expression::Primitive(expected)),
                 Ok(boo_evaluator::Evaluated::Primitive(actual)),

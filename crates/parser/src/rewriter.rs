@@ -1,15 +1,13 @@
 //! Rewrites the expression tree to avoid infix operations entirely.
 
-use boo_core::ast::ExpressionWrapper;
 use boo_core::expr as core;
 
 use boo_language as language;
 
 pub fn rewrite(expr: language::Expr) -> core::Expr {
-    let span = expr.span();
     core::Expr::new(
-        Some(span),
-        match expr.expression() {
+        Some(expr.span),
+        match *expr.expression {
             language::Expression::Primitive(x) => core::Expression::Primitive(x),
             language::Expression::Identifier(x) => core::Expression::Identifier(x),
             language::Expression::Assign(language::Assign { name, value, inner }) => {
@@ -37,10 +35,10 @@ pub fn rewrite(expr: language::Expr) -> core::Expr {
                 right,
             }) => core::Expression::Apply(core::Apply {
                 function: core::Expr::new(
-                    Some(span),
+                    Some(expr.span),
                     core::Expression::Apply(core::Apply {
                         function: core::Expr::new(
-                            Some(span),
+                            Some(expr.span),
                             core::Expression::Identifier(operation.identifier()),
                         ),
                         argument: rewrite(left),

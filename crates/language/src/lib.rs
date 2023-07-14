@@ -12,8 +12,8 @@ pub use crate::operation::Operation;
 /// An expression wrapper, annotated with the source location as a span.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr {
-    span: Span,
-    expression: Box<Expression>,
+    pub span: Span,
+    pub expression: Box<Expression>,
 }
 
 impl Expr {
@@ -22,14 +22,6 @@ impl Expr {
             span,
             expression: expression.into(),
         }
-    }
-
-    pub fn span(&self) -> Span {
-        self.span
-    }
-
-    pub fn expression(self) -> Expression {
-        *self.expression
     }
 }
 
