@@ -2,21 +2,20 @@ use proptest::prelude::*;
 
 use boo_core::ast::*;
 use boo_core::builtins;
-use boo_parser::rewrite;
 use boo_test_helpers::proptest::*;
 
 #[test]
 fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
     check(&boo_generator::arbitrary(), |expr| {
-        let rewritten = rewrite(expr.clone());
+        let rewritten = boo_parser::rewrite(expr.clone());
         let prepared = builtins::prepare(rewritten);
-        let expected = boo_naive_evaluator::naively_evaluate(prepared.clone());
-        let actual = boo_evaluator::evaluate(prepared);
+        let expected = boo_naive_evaluator::evaluate(prepared.clone());
+        let actual = boo_optimized_evaluator::evaluate(prepared);
 
         match (expected.map(|e| *e.expression), actual) {
             (
                 Ok(Expression::Primitive(expected)),
-                Ok(boo_evaluator::Evaluated::Primitive(actual)),
+                Ok(boo_optimized_evaluator::Evaluated::Primitive(actual)),
             ) => {
                 prop_assert_eq!(expected, actual);
             }

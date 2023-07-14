@@ -1,6 +1,5 @@
 use boo::error::Result;
 use boo::*;
-use boo_naive_evaluator::naively_evaluate;
 
 #[test]
 fn test_integer() -> Result<()> {
@@ -104,7 +103,7 @@ fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result
         evaluator::Evaluated::Primitive(expected_result.clone())
     );
 
-    let naive_result = naively_evaluate(expr)?;
+    let naive_result = boo_naive_evaluator::evaluate(expr)?;
     assert_eq!(
         *naive_result.expression,
         ast::Expression::Primitive(expected_result)

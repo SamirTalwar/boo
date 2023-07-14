@@ -43,7 +43,7 @@ struct AdditionalContext<'a> {
 impl<'a> NativeContext for AdditionalContext<'a> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         if identifier == self.name.as_ref() {
-            match *naively_evaluate((*self.value).clone())?.expression {
+            match *evaluate((*self.value).clone())?.expression {
                 Expression::Primitive(primitive) => Ok(primitive),
                 _ => Err(Error::TypeError),
             }
@@ -54,7 +54,7 @@ impl<'a> NativeContext for AdditionalContext<'a> {
 }
 
 /// Evaluate a parsed AST as simply as possible.
-pub fn naively_evaluate(expr: Expr) -> Result<Expr> {
+pub fn evaluate(expr: Expr) -> Result<Expr> {
     let mut progress = expr;
     loop {
         match step(progress)? {
@@ -91,7 +91,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
             Ok(Progress::Next(substituted_inner))
         }
         Expression::Apply(Apply { function, argument }) => {
-            let function_result = naively_evaluate(function)?;
+            let function_result = evaluate(function)?;
             match *function_result.expression {
                 Expression::Function(Function { parameter, body }) => {
                     let substituted_body = substitute(

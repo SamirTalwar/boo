@@ -8,6 +8,6 @@ bench = false
 
 [dependencies]
 boo-core = { path = "../core" }
-boo-evaluator = { path = "../evaluator" }
 boo-language = { path = "../language" }
+boo-optimized-evaluator = { path = "../optimized-evaluator" }
 boo-parser = { path = "../parser" }

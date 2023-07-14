@@ -207,8 +207,8 @@ name = "boo"
 version = "0.1.0"
 dependencies = [
  "boo-core",
- "boo-evaluator",
  "boo-language",
+ "boo-optimized-evaluator",
  "boo-parser",
 ]
 
@@ -218,9 +218,9 @@ version = "0.1.0"
 dependencies = [
  "boo",
  "boo-core",
- "boo-evaluator",
  "boo-generator",
  "boo-naive-evaluator",
+ "boo-optimized-evaluator",
  "boo-parser",
  "criterion",
  "num-bigint",
@@ -248,21 +248,6 @@ dependencies = [
  "boo",
  "boo-naive-evaluator",
  "insta",
-]
-
-[[package]]
-name = "boo-evaluator"
-version = "0.1.0"
-dependencies = [
- "boo-core",
- "boo-generator",
- "boo-language",
- "boo-naive-evaluator",
- "boo-parser",
- "boo-test-helpers",
- "im",
- "proptest",
- "proptest-derive",
 ]
 
 [[package]]
@@ -304,6 +289,21 @@ version = "0.1.0"
 dependencies = [
  "boo-core",
  "im",
+]
+
+[[package]]
+name = "boo-optimized-evaluator"
+version = "0.1.0"
+dependencies = [
+ "boo-core",
+ "boo-generator",
+ "boo-language",
+ "boo-naive-evaluator",
+ "boo-parser",
+ "boo-test-helpers",
+ "im",
+ "proptest",
+ "proptest-derive",
 ]
 
 [[package]]

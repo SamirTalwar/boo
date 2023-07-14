@@ -12,11 +12,13 @@ const BENCHMARK_COUNT: usize = 8;
 pub fn evaluate_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("evaluate");
     for (i, expr) in benchmarks().take(BENCHMARK_COUNT).enumerate() {
-        group.bench_with_input(BenchmarkId::new("evaluate", i), &expr, |b, expr| {
-            b.iter(|| boo_evaluator::evaluate(black_box(expr.clone())))
-        });
+        group.bench_with_input(
+            BenchmarkId::new("optimally evaluate", i),
+            &expr,
+            |b, expr| b.iter(|| boo_optimized_evaluator::evaluate(black_box(expr.clone()))),
+        );
         group.bench_with_input(BenchmarkId::new("naively evaluate", i), &expr, |b, expr| {
-            b.iter(|| boo_naive_evaluator::naively_evaluate(black_box(expr.clone())))
+            b.iter(|| boo_naive_evaluator::evaluate(black_box(expr.clone())))
         });
     }
     group.finish();

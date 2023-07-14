@@ -5,7 +5,6 @@ use miette::IntoDiagnostic;
 use reedline::*;
 
 use boo::*;
-use boo_naive_evaluator::naively_evaluate;
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -61,7 +60,7 @@ fn interpret(args: &Args, buffer: &str) -> miette::Result<()> {
     let parsed = parse(buffer)?;
     let expr = boo::builtins::prepare(parsed);
     if args.naive {
-        let result = naively_evaluate(expr)?;
+        let result = boo_naive_evaluator::evaluate(expr)?;
         println!("{}", result);
     } else {
         let result = evaluate(expr)?;
