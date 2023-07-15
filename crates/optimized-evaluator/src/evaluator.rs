@@ -3,8 +3,6 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use im::HashMap;
-
 use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::evaluation::*;
@@ -13,9 +11,8 @@ use boo_core::native::*;
 use boo_core::primitive::*;
 use boo_core::span::Span;
 
-use crate::ast::*;
-use crate::pooler::unpool_expr;
-use crate::thunk::Thunk;
+use crate::ast::{Expr, ExprPool};
+use crate::structures::{Bindings, EvaluatedBinding, EvaluationProgress};
 
 /// Evaluate a [pooled `Expr`][super::pooler::ast::Expr].
 pub fn evaluate(pool: &ExprPool, root: Expr) -> Result<Evaluated> {
@@ -25,67 +22,6 @@ pub fn evaluate(pool: &ExprPool, root: Expr) -> Result<Evaluated> {
     }
     .evaluate(root)
     .map(|progress| progress.finish(pool))
-}
-
-/// An interim evaluation result, with the same lifetime as the pool being
-/// evaluated.
-#[derive(Debug, Clone)]
-enum EvaluationProgress<'a> {
-    Primitive(Cow<'a, Primitive>),
-    Closure(&'a Function<Expr>, Bindings<'a>),
-}
-
-impl<'a> EvaluationProgress<'a> {
-    /// Concludes evaluation.
-    fn finish(self, pool: &ExprPool) -> Evaluated {
-        match self {
-            Self::Primitive(x) => Evaluated::Primitive(x.into_owned()),
-            Self::Closure(Function { parameter, body }, _) => Evaluated::Function(Function {
-                parameter: parameter.clone(),
-                body: unpool_expr(pool, *body),
-            }),
-        }
-    }
-}
-
-type UnevaluatedBinding<'a> = (Expr, Bindings<'a>);
-type EvaluatedBinding<'a> = Result<EvaluationProgress<'a>>;
-
-/// The set of bindings in a given scope.
-///
-/// The variables bound in a specific scope are a mapping from an identifier to
-/// the underlying expression. This expression is evaluated lazily, but only
-/// once, using [`Thunk`].
-#[derive(Debug, Clone)]
-struct Bindings<'a>(
-    HashMap<Cow<'a, Identifier>, Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>>,
-);
-
-impl<'a> Bindings<'a> {
-    /// Constructs an empty set of bindings.
-    pub fn new() -> Self {
-        Self(HashMap::new())
-    }
-
-    pub fn read(
-        &mut self,
-        identifier: &Identifier,
-    ) -> Option<&mut Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>> {
-        self.0.get_mut(identifier)
-    }
-
-    /// Adds a new binding to the set.
-    pub fn with(
-        &self,
-        identifier: &'a Identifier,
-        expression: Expr,
-        expression_bindings: Self,
-    ) -> Self {
-        Self(self.0.update(
-            Cow::Borrowed(identifier),
-            Thunk::unresolved((expression, expression_bindings)),
-        ))
-    }
 }
 
 /// An expression pool together with the current bound context, which can
