@@ -1,6 +1,11 @@
 use crate::ast::Function;
+use crate::error::Result;
 use crate::expr::Expr;
 use crate::primitive::Primitive;
+
+pub trait Evaluator {
+    fn evaluate(&self, expr: Expr) -> Result<Evaluated>;
+}
 
 /// An evaluation result. This can be either a primitive value or a closure.
 #[derive(Debug, Clone, PartialEq, Eq)]

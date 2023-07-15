@@ -247,6 +247,7 @@ version = "0.1.0"
 dependencies = [
  "boo",
  "boo-naive-evaluator",
+ "boo-optimized-evaluator",
  "insta",
 ]
 
@@ -326,7 +327,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "boo",
- "boo-core",
  "boo-generator",
  "boo-language",
  "boo-parser",

@@ -4,21 +4,27 @@ use criterion::{black_box, BenchmarkId, Criterion};
 use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
 
+use boo_core::evaluation::Evaluator;
 use boo_core::expr::Expr;
+use boo_naive_evaluator::NaiveEvaluator;
+use boo_optimized_evaluator::OptimizedEvaluator;
 use boo_parser::rewrite;
 
 const BENCHMARK_COUNT: usize = 8;
 
 pub fn evaluate_benchmark(c: &mut Criterion) {
+    let optimized_evaluator = OptimizedEvaluator::new();
+    let naive_evaluator = NaiveEvaluator::new();
+
     let mut group = c.benchmark_group("evaluate");
     for (i, expr) in benchmarks().take(BENCHMARK_COUNT).enumerate() {
         group.bench_with_input(
             BenchmarkId::new("optimally evaluate", i),
             &expr,
-            |b, expr| b.iter(|| boo_optimized_evaluator::evaluate(black_box(expr.clone()))),
+            |b, expr| b.iter(|| optimized_evaluator.evaluate(black_box(expr.clone()))),
         );
         group.bench_with_input(BenchmarkId::new("naively evaluate", i), &expr, |b, expr| {
-            b.iter(|| boo_naive_evaluator::evaluate(black_box(expr.clone())))
+            b.iter(|| naive_evaluator.evaluate(black_box(expr.clone())))
         });
     }
     group.finish();

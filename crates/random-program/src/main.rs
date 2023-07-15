@@ -5,8 +5,9 @@ use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
 
+use boo::evaluation::Evaluator;
+use boo::identifier::*;
 use boo::*;
-use boo_core::identifier::*;
 
 fn main() -> anyhow::Result<()> {
     let any_expr = boo_generator::gen(
@@ -25,9 +26,13 @@ fn main() -> anyhow::Result<()> {
     println!("Expression:\n{}\n", expr);
 
     let rewritten = boo::parser::rewrite(expr);
+
+    let evaluator = OptimizedEvaluator::new();
     let prepared = builtins::prepare(rewritten);
     let start_time = Instant::now();
-    let result = evaluate(prepared).expect("Could not interpret the expression.");
+    let result = evaluator
+        .evaluate(prepared)
+        .expect("Could not interpret the expression.");
     let end_time = Instant::now();
     println!("Result:\n{}", result);
 

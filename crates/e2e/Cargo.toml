@@ -6,5 +6,6 @@ edition = "2021"
 [dev-dependencies]
 boo = { path = "../lib" }
 boo-naive-evaluator = { path = "../naive-evaluator" }
+boo-optimized-evaluator = { path = "../optimized-evaluator" }
 
 insta = "1.30.0"

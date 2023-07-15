@@ -1,5 +1,8 @@
 use boo::error::{Error, Result};
+use boo::evaluation::Evaluator;
 use boo::*;
+use boo_naive_evaluator::NaiveEvaluator;
+use boo_optimized_evaluator::OptimizedEvaluator;
 
 #[test]
 fn test_unknown_variable() -> Result<()> {
@@ -32,10 +35,10 @@ fn expect_error(name: &str, program: &str, expected_error: Error) -> Result<()> 
     });
 
     let expr = boo::builtins::prepare(ast);
-    let efficient_result = evaluate(expr.clone());
+    let efficient_result = OptimizedEvaluator::new().evaluate(expr.clone());
     assert_eq!(efficient_result, Err(expected_error.clone()));
 
-    let naive_result = boo_naive_evaluator::evaluate(expr);
+    let naive_result = NaiveEvaluator::new().evaluate(expr);
     assert_eq!(naive_result, Err(expected_error));
 
     Ok(())

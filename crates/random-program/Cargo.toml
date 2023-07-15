@@ -10,7 +10,6 @@ bench = false
 
 [dependencies]
 boo = { path = "../lib" }
-boo-core = { path = "../core" }
 boo-generator = { path = "../generator" }
 boo-language = { path = "../language" }
 boo-parser = { path = "../parser" }

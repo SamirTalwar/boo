@@ -1,5 +1,8 @@
 use boo::error::Result;
+use boo::evaluation::Evaluator;
 use boo::*;
+use boo_naive_evaluator::NaiveEvaluator;
+use boo_optimized_evaluator::OptimizedEvaluator;
 
 #[test]
 fn test_integer() -> Result<()> {
@@ -97,10 +100,10 @@ fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result
     };
 
     let expr = boo::builtins::prepare(ast);
-    let efficient_result = evaluate(expr.clone())?;
+    let efficient_result = OptimizedEvaluator::new().evaluate(expr.clone())?;
     assert_eq!(efficient_result, expected_result);
 
-    let naive_result = boo_naive_evaluator::evaluate(expr)?;
+    let naive_result = NaiveEvaluator::new().evaluate(expr)?;
     assert_eq!(naive_result, expected_result);
 
     Ok(())

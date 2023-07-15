@@ -1,4 +1,4 @@
-//! Evaluates a parsed AST as simply as possible.
+//! Evaluates a core AST as simply as possible.
 //!
 //! This evaluator is not used by the interpreter. It is meant as an
 //! implementation that is "so simple that there are obviously no deficiencies"
@@ -18,6 +18,27 @@ use boo_core::expr::Expr;
 use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
+
+/// Evaluates an AST as simply as possible.
+pub struct NaiveEvaluator {}
+
+impl NaiveEvaluator {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Default for NaiveEvaluator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Evaluator for NaiveEvaluator {
+    fn evaluate(&self, expr: Expr) -> Result<Evaluated> {
+        evaluate(expr)
+    }
+}
 
 enum Progress<T> {
     Next(T),
@@ -54,8 +75,7 @@ impl<'a> NativeContext for AdditionalContext<'a> {
     }
 }
 
-/// Evaluate a parsed AST as simply as possible.
-pub fn evaluate(expr: Expr) -> Result<Evaluated> {
+fn evaluate(expr: Expr) -> Result<Evaluated> {
     let mut progress = expr;
     loop {
         match step(progress)? {

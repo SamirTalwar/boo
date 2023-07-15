@@ -1,4 +1,4 @@
-//! Evaluates a parsed AST.
+//! Evaluates a core AST.
 //!
 //! This evaluator makes use of two optimizations:
 //!
@@ -11,11 +11,27 @@ pub mod pooler;
 pub mod thunk;
 
 use boo_core::error::Result;
-use boo_core::evaluation::Evaluated;
+use boo_core::evaluation::*;
 use boo_core::expr::Expr;
 
-/// Evaluates a parsed expression.
-pub fn evaluate(expr: Expr) -> Result<Evaluated> {
-    let (pool, root) = pooler::pool_exprs(expr);
-    evaluator::evaluate(&pool, root)
+/// Evaluates a core AST.
+pub struct OptimizedEvaluator {}
+
+impl OptimizedEvaluator {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Default for OptimizedEvaluator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Evaluator for OptimizedEvaluator {
+    fn evaluate(&self, expr: Expr) -> Result<Evaluated> {
+        let (pool, root) = pooler::pool_exprs(expr);
+        evaluator::evaluate(&pool, root)
+    }
 }
