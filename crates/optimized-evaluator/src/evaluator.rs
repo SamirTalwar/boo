@@ -13,7 +13,7 @@ use boo_core::native::*;
 use boo_core::primitive::*;
 use boo_core::span::Span;
 
-use crate::pooler::ast::*;
+use crate::ast::*;
 use crate::pooler::unpool_expr;
 use crate::thunk::Thunk;
 

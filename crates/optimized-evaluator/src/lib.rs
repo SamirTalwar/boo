@@ -6,7 +6,9 @@
 //!   2.  All bound variables are "thunked"; they will only be evaluated the
 //!       first time they are read.
 
+pub mod ast;
 pub mod evaluator;
+pub mod pool;
 pub mod pooler;
 pub mod thunk;
 

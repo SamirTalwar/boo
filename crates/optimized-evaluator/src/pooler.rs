@@ -1,12 +1,9 @@
 //! Flattens an expression tree into a [`pool::Pool`].
 
-pub mod ast;
-pub mod pool;
-
 use boo_core::ast::*;
 
-use ast::*;
-use pool::pool_with;
+use crate::ast::*;
+use crate::pool::pool_with;
 
 /// Flattens an expression tree into a [`pool::Pool`].
 pub fn pool_exprs(ast: boo_core::expr::Expr) -> (ExprPool, Expr) {

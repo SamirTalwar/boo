@@ -9,7 +9,7 @@
 use std::marker::PhantomData;
 
 /// The pool of values.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Pool<T>(Vec<T>);
 
 /// A reference into a pool, scoped to a specific type.
