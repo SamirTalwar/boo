@@ -64,12 +64,12 @@ impl<'a> Bindings<'a> {
     /// Adds a new binding to the set.
     pub fn with(
         &self,
-        identifier: &'a Identifier,
+        identifier: Cow<'a, Identifier>,
         expression: Expr,
         expression_bindings: Self,
     ) -> Self {
         Self(self.0.update(
-            Cow::Borrowed(identifier),
+            identifier,
             Thunk::unresolved((expression, expression_bindings)),
         ))
     }

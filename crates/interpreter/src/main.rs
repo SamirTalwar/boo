@@ -17,9 +17,13 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let evaluator: Box<dyn Evaluator> = if args.naive {
-        Box::new(boo_naive_evaluator::NaiveEvaluator::new())
+        let mut evaluator = boo_naive_evaluator::NaiveEvaluator::new();
+        boo::builtins::prepare(&mut evaluator).unwrap();
+        Box::new(evaluator)
     } else {
-        Box::new(OptimizedEvaluator::new())
+        let mut evaluator = OptimizedEvaluator::new();
+        boo::builtins::prepare(&mut evaluator).unwrap();
+        Box::new(evaluator)
     };
 
     let stdin = std::io::stdin();
@@ -68,8 +72,7 @@ fn repl(evaluator: &dyn Evaluator) {
 
 fn interpret(evaluator: &dyn Evaluator, buffer: &str) -> miette::Result<()> {
     let parsed = parse(buffer)?;
-    let expr = boo::builtins::prepare(parsed);
-    let result = evaluator.evaluate(expr)?;
+    let result = evaluator.evaluate(parsed)?;
     println!("{}", result);
     Ok(())
 }

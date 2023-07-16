@@ -20,11 +20,13 @@ use boo_core::native::*;
 use boo_core::primitive::*;
 
 /// Evaluates an AST as simply as possible.
-pub struct NaiveEvaluator {}
+pub struct NaiveEvaluator {
+    bindings: Vec<(Identifier, Expr)>,
+}
 
 impl NaiveEvaluator {
     pub fn new() -> Self {
-        Self {}
+        Self { bindings: vec![] }
     }
 }
 
@@ -35,8 +37,24 @@ impl Default for NaiveEvaluator {
 }
 
 impl Evaluator for NaiveEvaluator {
+    fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
+        self.bindings.push((identifier, expr));
+        Ok(())
+    }
+
     fn evaluate(&self, expr: Expr) -> Result<Evaluated> {
-        evaluate(expr)
+        let mut prepared = expr;
+        for (identifier, value) in self.bindings.iter().rev() {
+            prepared = Expr::new(
+                None,
+                Expression::Assign(Assign {
+                    name: identifier.clone(),
+                    value: value.clone(),
+                    inner: prepared,
+                }),
+            );
+        }
+        evaluate(prepared)
     }
 }
 

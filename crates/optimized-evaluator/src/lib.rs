@@ -13,28 +13,4 @@ mod pooler;
 mod structures;
 mod thunk;
 
-use boo_core::error::Result;
-use boo_core::evaluation::*;
-use boo_core::expr::Expr;
-
-/// Evaluates a core AST.
-pub struct OptimizedEvaluator {}
-
-impl OptimizedEvaluator {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Default for OptimizedEvaluator {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Evaluator for OptimizedEvaluator {
-    fn evaluate(&self, expr: Expr) -> Result<Evaluated> {
-        let (pool, root) = pooler::pool_exprs(expr);
-        evaluator::evaluate(&pool, root)
-    }
-}
+pub use evaluator::OptimizedEvaluator;

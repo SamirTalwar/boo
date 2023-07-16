@@ -68,10 +68,3 @@ impl<T> Default for Pool<T> {
         Self::new()
     }
 }
-
-/// Constructs a new pool in a functional style, leaking data.
-pub fn pool_with<T, Leak>(f: impl FnOnce(&mut Pool<T>) -> Leak) -> (Pool<T>, Leak) {
-    let mut new_pool = Pool::new();
-    let leak = f(&mut new_pool);
-    (new_pool, leak)
-}

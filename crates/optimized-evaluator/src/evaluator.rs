@@ -1,42 +1,79 @@
 //! Evaluates a [pooled `Expr`][super::pooler::ast::Expr].
 
 use std::borrow::Cow;
+use std::collections;
 use std::sync::Arc;
 
 use boo_core::ast::*;
 use boo_core::error::*;
 use boo_core::evaluation::*;
+use boo_core::expr::Expr as CoreExpr;
 use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
 use boo_core::span::Span;
 
 use crate::ast::{Expr, ExprPool};
+use crate::pooler::add_expr;
 use crate::structures::{Bindings, EvaluatedBinding, EvaluationProgress};
-
-/// Evaluate a [pooled `Expr`][super::pooler::ast::Expr].
-pub fn evaluate(pool: &ExprPool, root: Expr) -> Result<Evaluated> {
-    Evaluator {
-        pool,
-        bindings: Bindings::new(),
-    }
-    .evaluate(root)
-    .map(|progress| progress.finish(pool))
-}
 
 /// An expression pool together with the current bound context, which can
 /// evaluate a given expression reference from the pool.
-struct Evaluator<'a> {
+pub struct OptimizedEvaluator {
+    pool: ExprPool,
+    bindings: collections::HashMap<Identifier, Expr>,
+}
+
+impl OptimizedEvaluator {
+    pub fn new() -> Self {
+        Self {
+            pool: ExprPool::new(),
+            bindings: collections::HashMap::new(),
+        }
+    }
+}
+
+impl Default for OptimizedEvaluator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Evaluator for OptimizedEvaluator {
+    fn bind(&mut self, identifier: Identifier, expr: CoreExpr) -> Result<()> {
+        let pool_ref = add_expr(&mut self.pool, expr);
+        self.bindings.insert(identifier, pool_ref);
+        Ok(())
+    }
+
+    fn evaluate(&self, expr: CoreExpr) -> Result<Evaluated> {
+        let mut pool = self.pool.clone();
+        let root = add_expr(&mut pool, expr);
+        let bindings =
+            self.bindings
+                .iter()
+                .fold(Bindings::new(), |bindings, (identifier, pool_ref)| {
+                    bindings.with(Cow::Borrowed(identifier), *pool_ref, Bindings::new())
+                });
+        let inner = InnerEvaluator {
+            pool: &pool,
+            bindings,
+        };
+        inner.evaluate(root).map(|progress| progress.finish(&pool))
+    }
+}
+
+struct InnerEvaluator<'a> {
     pool: &'a ExprPool,
     bindings: Bindings<'a>,
 }
 
-impl<'a> Evaluator<'a> {
+impl<'a> InnerEvaluator<'a> {
     /// Evaluates an expression from a pool in a given scope.
     ///
     /// The bindings are modified by assignment, accessed when evaluating an
     /// identifier, and captured by closures when a function is evaluated.
-    pub fn evaluate(&self, expr_ref: Expr) -> Result<EvaluationProgress<'a>> {
+    fn evaluate(&self, expr_ref: Expr) -> Result<EvaluationProgress<'a>> {
         let expr = expr_ref.read_from(self.pool);
         match &expr.expression {
             Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
@@ -68,7 +105,7 @@ impl<'a> Evaluator<'a> {
                         // the body is executed in the context of the function,
                         // but the argument must be evaluated in the outer context
                         .switch(function_bindings.with(
-                            parameter,
+                            Cow::Borrowed(parameter),
                             *argument_ref,
                             self.bindings.clone(),
                         ))
@@ -96,10 +133,11 @@ impl<'a> Evaluator<'a> {
     }
 
     fn with(&self, identifier: &'a Identifier, expression: Expr) -> Self {
-        self.switch(
-            self.bindings
-                .with(identifier, expression, self.bindings.clone()),
-        )
+        self.switch(self.bindings.with(
+            Cow::Borrowed(identifier),
+            expression,
+            self.bindings.clone(),
+        ))
     }
 
     fn switch(&self, new_bindings: Bindings<'a>) -> Self {
@@ -110,7 +148,7 @@ impl<'a> Evaluator<'a> {
     }
 }
 
-impl<'a> NativeContext for Evaluator<'a> {
+impl<'a> NativeContext for InnerEvaluator<'a> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         match self.resolve(identifier, None)?.finish(self.pool) {
             Evaluated::Primitive(primitive) => Ok(primitive),

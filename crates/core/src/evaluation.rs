@@ -1,9 +1,17 @@
 use crate::ast::Function;
 use crate::error::Result;
 use crate::expr::Expr;
+use crate::identifier::Identifier;
 use crate::primitive::Primitive;
 
+/// An evaluator knows how to evaluate expressions within a context.
+///
+/// Context can be added in the form of top-level bindings to other expressions.
 pub trait Evaluator {
+    /// Bind a new top-level expression.
+    fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()>;
+
+    /// Evaluate the given expression.
     fn evaluate(&self, expr: Expr) -> Result<Evaluated>;
 }
 

@@ -99,11 +99,15 @@ fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result
         expression => panic!("Expected result that is not a primitive: {:?}", expression),
     };
 
-    let expr = boo::builtins::prepare(ast);
-    let efficient_result = OptimizedEvaluator::new().evaluate(expr.clone())?;
+    let mut optimized_evaluator = OptimizedEvaluator::new();
+    builtins::prepare(&mut optimized_evaluator)?;
+    let mut naive_evaluator = NaiveEvaluator::new();
+    builtins::prepare(&mut naive_evaluator)?;
+
+    let efficient_result = optimized_evaluator.evaluate(ast.clone())?;
     assert_eq!(efficient_result, expected_result);
 
-    let naive_result = NaiveEvaluator::new().evaluate(expr)?;
+    let naive_result = naive_evaluator.evaluate(ast)?;
     assert_eq!(naive_result, expected_result);
 
     Ok(())

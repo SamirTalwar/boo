@@ -8,14 +8,15 @@ use boo_test_helpers::proptest::*;
 
 #[test]
 fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
-    let naive_evaluator = NaiveEvaluator::new();
-    let optimized_evaluator = OptimizedEvaluator::new();
+    let mut naive_evaluator = NaiveEvaluator::new();
+    builtins::prepare(&mut naive_evaluator).unwrap();
+    let mut optimized_evaluator = OptimizedEvaluator::new();
+    builtins::prepare(&mut optimized_evaluator).unwrap();
 
     check(&boo_generator::arbitrary(), |expr| {
         let rewritten = boo_parser::rewrite(expr.clone());
-        let prepared = builtins::prepare(rewritten);
-        let expected = naive_evaluator.evaluate(prepared.clone());
-        let actual = optimized_evaluator.evaluate(prepared);
+        let expected = naive_evaluator.evaluate(rewritten.clone());
+        let actual = optimized_evaluator.evaluate(rewritten);
 
         match (expected, actual) {
             (Ok(Evaluated::Primitive(expected)), Ok(Evaluated::Primitive(actual))) => {

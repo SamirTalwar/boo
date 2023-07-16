@@ -3,12 +3,6 @@
 use boo_core::ast::*;
 
 use crate::ast::*;
-use crate::pool::pool_with;
-
-/// Flattens an expression tree into a [`pool::Pool`].
-pub fn pool_exprs(ast: boo_core::expr::Expr) -> (ExprPool, Expr) {
-    pool_with(|pool| add_expr(pool, ast))
-}
 
 /// Adds a single expression into the pool, recursively.
 ///

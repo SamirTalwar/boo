@@ -3,27 +3,19 @@
 use std::sync::Arc;
 
 use crate::ast::*;
+use crate::error::Result;
+use crate::evaluation::Evaluator;
 use crate::expr::Expr;
 use crate::identifier::Identifier;
 use crate::native::Native;
 use crate::primitive::{Integer, Primitive};
 
-/// Prepares an expression for evaluation by assigning all built-ins.
-///
-/// This is very naive and probably quite slow; we can do better later.
-pub fn prepare(expr: Expr) -> Expr {
-    let mut result = expr;
+/// Prepares an evaluator by assigning all built-ins.
+pub fn prepare(evaluator: &mut impl Evaluator) -> Result<()> {
     for (name, builtin) in all().into_iter().rev() {
-        result = Expr::new(
-            None,
-            Expression::Assign(Assign {
-                name,
-                value: builtin,
-                inner: result,
-            }),
-        );
+        evaluator.bind(name, builtin)?;
     }
-    result
+    Ok(())
 }
 
 /// All the built-in expressions.
