@@ -65,7 +65,7 @@ fn gen_nested(
     target_type: Type,
     bindings: Bindings,
 ) -> ExprStrategy {
-    let mut choices: Vec<ExprStrategy> = Vec::new();
+    let mut choices: Vec<(u32, ExprStrategy)> = Vec::new();
     let next_depth = {
         let next_start = if depth.start == 0 { 0 } else { depth.start - 1 };
         let next_end = if depth.end == 0 { 0 } else { depth.end - 1 };
@@ -76,23 +76,26 @@ fn gen_nested(
     if depth.start == 0 {
         // generate primitives
         if let Some(strategy) = gen_primitive(target_type.clone()) {
-            choices.push(strategy);
+            choices.push((1, strategy));
         }
 
         // generate references to already-bound variables (in `bindings`)
         if let Some(strategy) = gen_variable_reference(target_type.clone(), bindings.clone()) {
-            choices.push(strategy);
+            choices.push((10, strategy));
         }
     }
 
     // if this node can have children:
     if depth.end > 0 {
         // generate variable assignments
-        choices.push(gen_assignment(
-            config.clone(),
-            next_depth.clone(),
-            target_type.clone(),
-            bindings.clone(),
+        choices.push((
+            2,
+            gen_assignment(
+                config.clone(),
+                next_depth.clone(),
+                target_type.clone(),
+                bindings.clone(),
+            ),
         ));
 
         // generate functions
@@ -102,7 +105,7 @@ fn gen_nested(
             target_type.clone(),
             bindings.clone(),
         ) {
-            choices.push(strategy);
+            choices.push((2, strategy));
         }
     }
 
@@ -112,11 +115,14 @@ fn gen_nested(
     // the time).
     if depth.end > 1 {
         // generate function application
-        choices.push(gen_apply(
-            config.clone(),
-            next_depth.clone(),
-            target_type.clone(),
-            bindings.clone(),
+        choices.push((
+            2,
+            gen_apply(
+                config.clone(),
+                next_depth.clone(),
+                target_type.clone(),
+                bindings.clone(),
+            ),
         ));
 
         // generate infix computations
@@ -126,7 +132,7 @@ fn gen_nested(
             target_type.clone(),
             bindings.clone(),
         ) {
-            choices.push(strategy);
+            choices.push((2, strategy));
         }
     }
 
@@ -134,7 +140,7 @@ fn gen_nested(
         // increase the depth and try again
         gen_nested(config, depth.start..(depth.end + 1), target_type, bindings)
     } else {
-        prop::strategy::Union::new(choices).boxed()
+        prop::strategy::Union::new_weighted(choices).boxed()
     }
 }
 
