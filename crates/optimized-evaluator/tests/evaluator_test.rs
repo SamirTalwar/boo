@@ -14,9 +14,9 @@ fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
     builtins::prepare(&mut optimized_evaluator).unwrap();
 
     check(&boo_generator::arbitrary(), |expr| {
-        let rewritten = boo_parser::rewrite(expr.clone());
-        let expected = naive_evaluator.evaluate(rewritten.clone());
-        let actual = optimized_evaluator.evaluate(rewritten);
+        let core_expr = expr.clone().to_core();
+        let expected = naive_evaluator.evaluate(core_expr.clone());
+        let actual = optimized_evaluator.evaluate(core_expr);
 
         match (expected, actual) {
             (Ok(Evaluated::Primitive(expected)), Ok(Evaluated::Primitive(actual))) => {

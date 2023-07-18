@@ -1,35 +1,35 @@
-//! Rewrites the expression tree to avoid infix operations entirely.
+//! Rewrites the expression tree to as a core AST.
+//!
+//! For now, this just rewrites infix operations as normal function application.
 
 use boo_core::expr as core;
 
-use boo_language as language;
-
-pub fn rewrite(expr: language::Expr) -> core::Expr {
+pub fn rewrite(expr: crate::Expr) -> core::Expr {
     core::Expr::new(
         Some(expr.span),
         match *expr.expression {
-            language::Expression::Primitive(x) => core::Expression::Primitive(x),
-            language::Expression::Identifier(x) => core::Expression::Identifier(x),
-            language::Expression::Assign(language::Assign { name, value, inner }) => {
+            crate::Expression::Primitive(x) => core::Expression::Primitive(x),
+            crate::Expression::Identifier(x) => core::Expression::Identifier(x),
+            crate::Expression::Assign(crate::Assign { name, value, inner }) => {
                 core::Expression::Assign(core::Assign {
                     name,
                     value: rewrite(value),
                     inner: rewrite(inner),
                 })
             }
-            language::Expression::Function(language::Function { parameter, body }) => {
+            crate::Expression::Function(crate::Function { parameter, body }) => {
                 core::Expression::Function(core::Function {
                     parameter,
                     body: rewrite(body),
                 })
             }
-            language::Expression::Apply(language::Apply { function, argument }) => {
+            crate::Expression::Apply(crate::Apply { function, argument }) => {
                 core::Expression::Apply(core::Apply {
                     function: rewrite(function),
                     argument: rewrite(argument),
                 })
             }
-            language::Expression::Infix(language::Infix {
+            crate::Expression::Infix(crate::Infix {
                 operation,
                 left,
                 right,

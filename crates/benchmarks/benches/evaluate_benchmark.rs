@@ -8,7 +8,6 @@ use boo_core::evaluation::Evaluator;
 use boo_core::expr::Expr;
 use boo_naive_evaluator::NaiveEvaluator;
 use boo_optimized_evaluator::OptimizedEvaluator;
-use boo_parser::rewrite;
 
 const BENCHMARK_COUNT: usize = 8;
 
@@ -50,6 +49,6 @@ fn benchmarks() -> impl Iterator<Item = Expr> {
         )
         .new_tree(&mut runner)
         .unwrap();
-        Some(rewrite(tree.current()))
+        Some(tree.current().to_core())
     })
 }

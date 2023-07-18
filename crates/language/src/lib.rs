@@ -2,6 +2,7 @@
 
 pub mod builders;
 pub mod operation;
+mod rewriter;
 
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
@@ -22,6 +23,11 @@ impl Expr {
             span,
             expression: expression.into(),
         }
+    }
+
+    /// Convert the expression to a core expression.
+    pub fn to_core(self) -> boo_core::expr::Expr {
+        rewriter::rewrite(self)
     }
 }
 
