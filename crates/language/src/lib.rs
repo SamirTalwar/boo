@@ -10,7 +10,7 @@ use boo_core::span::Span;
 
 pub use crate::operation::Operation;
 
-/// An expression wrapper, annotated with the source location as a span.
+/// An outer Boo language expression node, annotated with the source location.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr {
     pub span: Span,
@@ -18,6 +18,7 @@ pub struct Expr {
 }
 
 impl Expr {
+    /// Creates a new Boo language outer expression, given the inner expression.
     pub fn new(span: Span, expression: Expression) -> Self {
         Self {
             span,
@@ -31,9 +32,7 @@ impl Expr {
     }
 }
 
-/// A Boo expression. These can be nested arbitrarily.
-///
-/// This cannot be used on its own; it must be used with [`Expr`].
+/// An inner Boo language expression node.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression {
     Primitive(Primitive),
