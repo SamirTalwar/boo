@@ -23,10 +23,11 @@ pub fn assign(span: impl Into<Span>, name: Identifier, value: Expr, inner: Expr)
     )
 }
 
-pub fn function(span: impl Into<Span>, parameter: Identifier, body: Expr) -> Expr {
+pub fn function(span: impl Into<Span>, parameters: Vec<Identifier>, body: Expr) -> Expr {
+    assert!(!parameters.is_empty(), "parameters must not be empty");
     Expr::new(
         span.into(),
-        Expression::Function(Function { parameter, body }),
+        Expression::Function(Function { parameters, body }),
     )
 }
 

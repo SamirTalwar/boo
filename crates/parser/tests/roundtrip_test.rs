@@ -27,8 +27,8 @@ pub fn remove_spans(expr: Expr) -> Expr {
                 value: remove_spans(value),
                 inner: remove_spans(inner),
             }),
-            Expression::Function(Function { parameter, body }) => Expression::Function(Function {
-                parameter,
+            Expression::Function(Function { parameters, body }) => Expression::Function(Function {
+                parameters,
                 body: remove_spans(body),
             }),
             Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {

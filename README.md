@@ -95,3 +95,9 @@ You can name functions for later use with `let`:
 〉let double = fn x -> x * 2 in double 7
 14
 ```
+
+Functions can take one or more parameters:
+
+```
+let add = fn x y -> x + y in add 2 3
+```

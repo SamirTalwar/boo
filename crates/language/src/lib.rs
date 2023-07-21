@@ -57,8 +57,8 @@ pub struct Assign {
 /// Represents a function definition.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function {
-    /// The name of the function parameter.
-    pub parameter: Identifier,
+    /// The names of the function parameters.
+    pub parameters: Vec<Identifier>,
     /// The body of the function.
     pub body: Expr,
 }
@@ -114,7 +114,11 @@ impl std::fmt::Display for Assign {
 
 impl std::fmt::Display for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "fn {} -> ({})", self.parameter, self.body)
+        write!(f, "fn ")?;
+        for parameter in &self.parameters {
+            write!(f, "{} ", parameter)?;
+        }
+        write!(f, "-> ({})", self.body)
     }
 }
 

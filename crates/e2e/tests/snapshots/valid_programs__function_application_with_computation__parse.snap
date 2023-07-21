@@ -1,13 +1,13 @@
 ---
 source: crates/e2e/tests/valid_programs.rs
-description: (fn x -> fn y -> x + y) (8 * 2) (3 * 4)
+description: (fn x y -> x + y) (8 * 2) (3 * 4)
 expression: ast
 ---
 Expr {
     span: Some(
         Span {
             start: 1,
-            end: 38,
+            end: 32,
         },
     ),
     expression: Apply(
@@ -16,7 +16,7 @@ Expr {
                 span: Some(
                     Span {
                         start: 1,
-                        end: 30,
+                        end: 24,
                     },
                 ),
                 expression: Apply(
@@ -25,7 +25,7 @@ Expr {
                             span: Some(
                                 Span {
                                     start: 1,
-                                    end: 22,
+                                    end: 16,
                                 },
                             ),
                             expression: Function(
@@ -36,8 +36,8 @@ Expr {
                                     body: Expr {
                                         span: Some(
                                             Span {
-                                                start: 9,
-                                                end: 22,
+                                                start: 1,
+                                                end: 16,
                                             },
                                         ),
                                         expression: Function(
@@ -48,8 +48,8 @@ Expr {
                                                 body: Expr {
                                                     span: Some(
                                                         Span {
-                                                            start: 17,
-                                                            end: 22,
+                                                            start: 11,
+                                                            end: 16,
                                                         },
                                                     ),
                                                     expression: Apply(
@@ -57,8 +57,8 @@ Expr {
                                                             function: Expr {
                                                                 span: Some(
                                                                     Span {
-                                                                        start: 17,
-                                                                        end: 22,
+                                                                        start: 11,
+                                                                        end: 16,
                                                                     },
                                                                 ),
                                                                 expression: Apply(
@@ -66,8 +66,8 @@ Expr {
                                                                         function: Expr {
                                                                             span: Some(
                                                                                 Span {
-                                                                                    start: 17,
-                                                                                    end: 22,
+                                                                                    start: 11,
+                                                                                    end: 16,
                                                                                 },
                                                                             ),
                                                                             expression: Identifier(
@@ -79,8 +79,8 @@ Expr {
                                                                         argument: Expr {
                                                                             span: Some(
                                                                                 Span {
-                                                                                    start: 17,
-                                                                                    end: 18,
+                                                                                    start: 11,
+                                                                                    end: 12,
                                                                                 },
                                                                             ),
                                                                             expression: Identifier(
@@ -95,8 +95,8 @@ Expr {
                                                             argument: Expr {
                                                                 span: Some(
                                                                     Span {
-                                                                        start: 21,
-                                                                        end: 22,
+                                                                        start: 15,
+                                                                        end: 16,
                                                                     },
                                                                 ),
                                                                 expression: Identifier(
@@ -117,8 +117,8 @@ Expr {
                         argument: Expr {
                             span: Some(
                                 Span {
-                                    start: 25,
-                                    end: 30,
+                                    start: 19,
+                                    end: 24,
                                 },
                             ),
                             expression: Apply(
@@ -126,8 +126,8 @@ Expr {
                                     function: Expr {
                                         span: Some(
                                             Span {
-                                                start: 25,
-                                                end: 30,
+                                                start: 19,
+                                                end: 24,
                                             },
                                         ),
                                         expression: Apply(
@@ -135,8 +135,8 @@ Expr {
                                                 function: Expr {
                                                     span: Some(
                                                         Span {
-                                                            start: 25,
-                                                            end: 30,
+                                                            start: 19,
+                                                            end: 24,
                                                         },
                                                     ),
                                                     expression: Identifier(
@@ -148,8 +148,8 @@ Expr {
                                                 argument: Expr {
                                                     span: Some(
                                                         Span {
-                                                            start: 25,
-                                                            end: 26,
+                                                            start: 19,
+                                                            end: 20,
                                                         },
                                                     ),
                                                     expression: Primitive(
@@ -166,8 +166,8 @@ Expr {
                                     argument: Expr {
                                         span: Some(
                                             Span {
-                                                start: 29,
-                                                end: 30,
+                                                start: 23,
+                                                end: 24,
                                             },
                                         ),
                                         expression: Primitive(
@@ -187,8 +187,8 @@ Expr {
             argument: Expr {
                 span: Some(
                     Span {
-                        start: 33,
-                        end: 38,
+                        start: 27,
+                        end: 32,
                     },
                 ),
                 expression: Apply(
@@ -196,8 +196,8 @@ Expr {
                         function: Expr {
                             span: Some(
                                 Span {
-                                    start: 33,
-                                    end: 38,
+                                    start: 27,
+                                    end: 32,
                                 },
                             ),
                             expression: Apply(
@@ -205,8 +205,8 @@ Expr {
                                     function: Expr {
                                         span: Some(
                                             Span {
-                                                start: 33,
-                                                end: 38,
+                                                start: 27,
+                                                end: 32,
                                             },
                                         ),
                                         expression: Identifier(
@@ -218,8 +218,8 @@ Expr {
                                     argument: Expr {
                                         span: Some(
                                             Span {
-                                                start: 33,
-                                                end: 34,
+                                                start: 27,
+                                                end: 28,
                                             },
                                         ),
                                         expression: Primitive(
@@ -236,8 +236,8 @@ Expr {
                         argument: Expr {
                             span: Some(
                                 Span {
-                                    start: 37,
-                                    end: 38,
+                                    start: 31,
+                                    end: 32,
                                 },
                             ),
                             expression: Primitive(

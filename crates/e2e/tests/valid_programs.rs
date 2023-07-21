@@ -28,7 +28,7 @@ fn test_function_application() -> Result<()> {
 fn test_function_application_with_computation() -> Result<()> {
     check_program(
         "function_application_with_computation",
-        "(fn x -> fn y -> x + y) (8 * 2) (3 * 4)",
+        "(fn x y -> x + y) (8 * 2) (3 * 4)",
         "28",
     )
 }

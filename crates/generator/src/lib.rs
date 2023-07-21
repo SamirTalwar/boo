@@ -275,7 +275,7 @@ fn gen_function(
                                 let expr = Expr::new(
                                     0.into(),
                                     Expression::Function(Function {
-                                        parameter: parameter_.clone(),
+                                        parameters: vec![parameter_.clone()],
                                         body,
                                     }),
                                 );

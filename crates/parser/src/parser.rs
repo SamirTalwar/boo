@@ -13,20 +13,20 @@ peg::parser! {
 
         pub rule expr() -> Expr = precedence! {
             fn_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Fn }] } / expected!("fn"))
-            parameter:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] } / expected!("an identifier"))
+            parameters_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] } / expected!("an identifier"))+
             (quiet! { [AnnotatedToken { annotation: _, token: Token::Arrow }] } / expected!("->"))
             body:expr() {
-                let p = match &parameter.token {
-                    Token::Identifier(parameter) => parameter,
-                    _ => unreachable!(),
-                };
-                Expr::new(
-                    fn_.annotation | body.span,
-                    Expression::Function(Function {
-                        parameter: p.clone(),
-                        body,
-                    }),
-                )
+                let span = fn_.annotation | body.span;
+                let parameters = parameters_.into_iter().map(|parameter|
+                    match &parameter.token {
+                        Token::Identifier(identifier) => identifier.clone(),
+                        _ => unreachable!(),
+                    }
+                ).collect();
+                Expr::new(fn_.annotation | body.span, Expression::Function(Function {
+                    parameters,
+                    body,
+                }))
             }
             --
             let_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Let }] } / expected!("let"))
@@ -230,7 +230,11 @@ mod tests {
     fn test_parsing_a_function() {
         // fn argument -> argument
         check(&Identifier::arbitrary(), |argument| {
-            let expected = function(0..9, argument.clone(), identifier(8..9, argument.clone()));
+            let expected = function(
+                0..9,
+                vec![argument.clone()],
+                identifier(8..9, argument.clone()),
+            );
             let tokens = vec![
                 AnnotatedToken {
                     annotation: (0..2).into(),
@@ -259,50 +263,57 @@ mod tests {
 
     #[test]
     fn test_parsing_a_more_complicated_function() {
-        // fn argument -> argument + argument
-        check(&Identifier::arbitrary(), |argument| {
-            let expected = function(
-                0..13,
-                argument.clone(),
-                infix(
-                    8..13,
-                    Operation::Add,
-                    identifier(8..9, argument.clone()),
-                    identifier(12..13, argument.clone()),
-                ),
-            );
-            let tokens = vec![
-                AnnotatedToken {
-                    annotation: (0..2).into(),
-                    token: Token::Fn,
-                },
-                AnnotatedToken {
-                    annotation: (3..4).into(),
-                    token: Token::Identifier(argument.clone()),
-                },
-                AnnotatedToken {
-                    annotation: (5..7).into(),
-                    token: Token::Arrow,
-                },
-                AnnotatedToken {
-                    annotation: (8..9).into(),
-                    token: Token::Identifier(argument.clone()),
-                },
-                AnnotatedToken {
-                    annotation: (10..11).into(),
-                    token: Token::Operator("+"),
-                },
-                AnnotatedToken {
-                    annotation: (12..13).into(),
-                    token: Token::Identifier(argument),
-                },
-            ];
+        // fn argument_x argument_y -> argument_x + argument_y
+        check(
+            &(Identifier::arbitrary(), Identifier::arbitrary()),
+            |(argument_x, argument_y)| {
+                let expected = function(
+                    0..15,
+                    vec![argument_x.clone(), argument_y.clone()],
+                    infix(
+                        10..15,
+                        Operation::Add,
+                        identifier(10..11, argument_x.clone()),
+                        identifier(14..15, argument_y.clone()),
+                    ),
+                );
+                let tokens = vec![
+                    AnnotatedToken {
+                        annotation: (0..2).into(),
+                        token: Token::Fn,
+                    },
+                    AnnotatedToken {
+                        annotation: (3..4).into(),
+                        token: Token::Identifier(argument_x.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (5..6).into(),
+                        token: Token::Identifier(argument_y.clone()),
+                    },
+                    AnnotatedToken {
+                        annotation: (7..9).into(),
+                        token: Token::Arrow,
+                    },
+                    AnnotatedToken {
+                        annotation: (10..11).into(),
+                        token: Token::Identifier(argument_x),
+                    },
+                    AnnotatedToken {
+                        annotation: (12..13).into(),
+                        token: Token::Operator("+"),
+                    },
+                    AnnotatedToken {
+                        annotation: (14..15).into(),
+                        token: Token::Identifier(argument_y),
+                    },
+                ];
 
-            let actual = parse_tokens(&tokens);
+                let actual = parse_tokens(&tokens);
 
-            prop_assert_eq!(actual, Ok(expected));
-            Ok(())
-        })
+                prop_assert_eq!(actual, Ok(expected));
+                Ok(())
+            },
+        )
     }
 
     #[test]
@@ -315,7 +326,7 @@ mod tests {
                     1..19,
                     function(
                         1..14,
-                        argument.clone(),
+                        vec![argument.clone()],
                         infix(
                             9..14,
                             Operation::Add,
@@ -468,7 +479,7 @@ mod tests {
                     function_name.clone(),
                     function(
                         8..22,
-                        argument.clone(),
+                        vec![argument.clone()],
                         infix(
                             17..22,
                             Operation::Add,
