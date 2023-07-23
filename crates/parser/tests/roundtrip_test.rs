@@ -1,15 +1,13 @@
 use proptest::prelude::*;
 
 use boo_language::*;
-use boo_parser::{lex, parse_tokens};
 use boo_test_helpers::proptest::*;
 
 #[test]
 fn test_rendering_and_parsing_an_expression() {
     check(&boo_generator::arbitrary(), |input| {
         let rendered = format!("{}", input);
-        let lexed = lex(&rendered)?;
-        let parsed = parse_tokens(&lexed)?;
+        let parsed = boo_parser::parse(&rendered)?;
         let despanned = remove_spans(parsed);
         prop_assert_eq!(input, despanned);
         Ok(())
