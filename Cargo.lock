@@ -216,12 +216,10 @@ dependencies = [
 name = "boo-benchmarks"
 version = "0.1.0"
 dependencies = [
- "boo",
  "boo-core",
  "boo-generator",
  "boo-naive-evaluator",
  "boo-optimized-evaluator",
- "boo-parser",
  "criterion",
  "num-bigint",
  "proptest",
@@ -236,7 +234,6 @@ dependencies = [
  "miette",
  "num-bigint",
  "proptest",
- "proptest-derive",
  "regex",
  "thiserror",
 ]
@@ -259,18 +256,15 @@ dependencies = [
  "boo-language",
  "im",
  "proptest",
- "proptest-derive",
 ]
 
 [[package]]
 name = "boo-interpreter"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "boo",
  "boo-naive-evaluator",
  "clap 4.3.11",
- "im",
  "miette",
  "reedline",
 ]
@@ -304,7 +298,6 @@ dependencies = [
  "boo-test-helpers",
  "im",
  "proptest",
- "proptest-derive",
 ]
 
 [[package]]
@@ -328,8 +321,6 @@ dependencies = [
  "anyhow",
  "boo",
  "boo-generator",
- "boo-language",
- "boo-parser",
  "proptest",
 ]
 

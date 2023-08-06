@@ -39,6 +39,7 @@
           pkgs.cargo
           pkgs.cargo-edit
           pkgs.cargo-insta
+          pkgs.cargo-machete
           pkgs.clippy
           pkgs.rust-analyzer
           pkgs.rustPlatform.rustcSrc

@@ -6,6 +6,7 @@ cargo build --all-targets
 cargo test
 cargo clippy
 cargo fmt --check
+cargo machete
 
 if 'IN_NIX_SHELL' in $env {
   print ''
