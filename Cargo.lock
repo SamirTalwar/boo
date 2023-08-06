@@ -315,10 +315,10 @@ dependencies = [
  "boo-generator",
  "boo-language",
  "boo-test-helpers",
+ "insta",
  "logos",
  "peg",
  "proptest",
- "proptest-derive",
 ]
 
 [[package]]

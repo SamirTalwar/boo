@@ -17,5 +17,5 @@ peg = "0.8.1"
 boo-generator = { path = "../generator" }
 boo-test-helpers = { path = "../test-helpers" }
 
+insta = "1.30.0"
 proptest = "1.2.0"
-proptest-derive = "0.3.0"
