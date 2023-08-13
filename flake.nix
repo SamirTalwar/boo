@@ -26,6 +26,8 @@
     in
     {
       packages.boo = craneLib.buildPackage {
+        pname = "boo";
+
         src = pkgs.lib.cleanSourceWith {
           src = craneLib.path ./.;
           filter = path: type: snapFilter path type || craneLib.filterCargoSources path type;
