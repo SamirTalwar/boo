@@ -21,16 +21,19 @@
     let
       pkgs = import nixpkgs { inherit system; };
       craneLib = crane.lib.${system};
+
+      snapFilter = path: _type: builtins.match ".*\\.snap$" path != null;
     in
     {
       packages.boo = craneLib.buildPackage {
-        src = craneLib.cleanCargoSource (craneLib.path ./.);
+        src = pkgs.lib.cleanSourceWith {
+          src = craneLib.path ./.;
+          filter = path: type: snapFilter path type || craneLib.filterCargoSources path type;
+        };
 
         buildInputs = [
           pkgs.iconv
         ];
-
-        doCheck = false;
       };
 
       packages.default = self.packages.${system}.boo;
