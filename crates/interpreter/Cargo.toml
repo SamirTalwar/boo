@@ -14,6 +14,6 @@ bench = false
 boo = { path = "../lib" }
 boo-naive-evaluator = { path = "../naive-evaluator" }
 
-clap = { version = "4.3.11", features = ["derive"] }
-miette = { version = "5.9.0", features = ["fancy"] }
+clap = { version = "4.3.21", features = ["derive"] }
+miette = { version = "5.10.0", features = ["fancy"] }
 reedline = "0.18.0"

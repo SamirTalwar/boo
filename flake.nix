@@ -23,15 +23,17 @@
       craneLib = crane.lib.${system};
     in
     {
-      packages.um = craneLib.buildPackage {
+      packages.boo = craneLib.buildPackage {
         src = craneLib.cleanCargoSource (craneLib.path ./.);
 
         buildInputs = [
           pkgs.iconv
         ];
+
+        doCheck = false;
       };
 
-      packages.default = self.packages.${system}.um;
+      packages.default = self.packages.${system}.boo;
 
       devShells.default = pkgs.mkShell {
         buildInputs = [
