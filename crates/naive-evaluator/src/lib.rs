@@ -7,7 +7,6 @@
 //! arbitrary program.
 
 use std::rc::Rc;
-use std::sync::Arc;
 
 use im::HashSet;
 
@@ -178,7 +177,7 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
             expr.span,
             Expression::Native(Native {
                 unique_name,
-                implementation: Arc::new(move |context| {
+                implementation: Rc::new(move |context| {
                     implementation(&AdditionalContext {
                         name: substitution.name.clone(),
                         value: substitution.value.clone(),

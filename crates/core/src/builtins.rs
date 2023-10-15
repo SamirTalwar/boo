@@ -1,6 +1,6 @@
 //! Built-in native functionality, required for evaluation of anything useful.
 
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::ast::*;
 use crate::error::Result;
@@ -68,7 +68,7 @@ where
                         None,
                         Expression::Native(Native {
                             unique_name: Identifier::operator_from_str(name).unwrap(),
-                            implementation: Arc::new(move |context| {
+                            implementation: Rc::new(move |context| {
                                 let left = context.lookup_value(&parameter_left)?;
                                 let right = context.lookup_value(&parameter_right)?;
                                 match (left, right) {
@@ -96,7 +96,7 @@ fn builtin_trace() -> Expr {
                 None,
                 Expression::Native(Native {
                     unique_name: Identifier::name_from_str("trace").unwrap(),
-                    implementation: Arc::new(move |context| {
+                    implementation: Rc::new(move |context| {
                         let value = context.lookup_value(&parameter)?;
                         eprintln!("trace: {}", value);
                         Ok(value)

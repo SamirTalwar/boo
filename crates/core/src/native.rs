@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::error::Result;
 use crate::identifier::Identifier;
@@ -8,7 +8,7 @@ pub trait NativeContext {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive>;
 }
 
-type Implementation = Arc<dyn Fn(&dyn NativeContext) -> Result<Primitive>>;
+type Implementation = Rc<dyn Fn(&dyn NativeContext) -> Result<Primitive>>;
 
 #[derive(Clone)]
 pub struct Native {

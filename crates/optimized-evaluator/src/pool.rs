@@ -29,7 +29,7 @@ pub struct PoolRef<T> {
 
 impl<T> Clone for PoolRef<T> {
     fn clone(&self) -> Self {
-        PoolRef { ..*self }
+        *self
     }
 }
 
