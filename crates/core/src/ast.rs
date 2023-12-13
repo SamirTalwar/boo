@@ -28,6 +28,7 @@ pub enum Expression<Outer> {
     Identifier(Identifier),
     Assign(Assign<Outer>),
     Function(Function<Outer>),
+    Match(Match<Outer>),
     Apply(Apply<Outer>),
 }
 
@@ -51,6 +52,34 @@ pub struct Function<Outer> {
     pub body: Outer,
 }
 
+/// A set of patterns matched against a value.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Match<Outer> {
+    /// The value to be matched.
+    pub value: Outer,
+    /// The patterns.
+    pub patterns: PatternMatch<Outer>,
+}
+
+/// A set of patterns matched against a value.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PatternMatch<Outer> {
+    /// Matches anything.
+    Anything {
+        /// The inevitable result.
+        result: Outer,
+    },
+    /// Matches a specific primitive value.
+    Primitive {
+        /// The pattern to be matched.
+        pattern: Primitive,
+        /// The result of successfully matching against the pattern.
+        matched: Outer,
+        /// The rest of the patterns, in the case where we fail to match against the pattern.
+        not_matched: Box<PatternMatch<Outer>>,
+    },
+}
+
 /// Applies an argument to a function.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Apply<Outer> {
@@ -68,6 +97,7 @@ impl<Outer: Display> std::fmt::Display for Expression<Outer> {
             Expression::Identifier(x) => x.fmt(f),
             Expression::Assign(x) => x.fmt(f),
             Expression::Function(x) => x.fmt(f),
+            Expression::Match(x) => x.fmt(f),
             Expression::Apply(x) => x.fmt(f),
         }
     }
@@ -86,6 +116,25 @@ impl<Outer: Display> std::fmt::Display for Assign<Outer> {
 impl<Outer: Display> std::fmt::Display for Function<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "fn {} -> ({})", self.parameter, self.body)
+    }
+}
+
+impl<Outer: Display> std::fmt::Display for Match<Outer> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "match {} {{ {} }}", self.value, self.patterns)
+    }
+}
+
+impl<Outer: Display> std::fmt::Display for PatternMatch<Outer> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PatternMatch::Anything { result } => write!(f, "_ -> {}", result),
+            PatternMatch::Primitive {
+                pattern,
+                matched,
+                not_matched,
+            } => write!(f, "{} -> {}; {}", pattern, matched, not_matched),
+        }
     }
 }
 

@@ -10,7 +10,8 @@ use regex::Regex;
 /// An identifier is a valid name for a variable.
 ///
 /// Valid identifiers start with a letter or underscore, and can then be
-/// followed by 0 or more letters, numbers, or underscores.
+/// followed by 0 or more letters, numbers, or underscores. At least one
+/// non-underscore character is required.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Identifier {
     Name(String),
@@ -45,7 +46,7 @@ lazy_static! {
     static ref VALID_OPERATORS: HashSet<&'static str> = ["+", "-", "*"].into();
 
     // ensure that the set of keywords matches the keywords defined in lexer.rs
-    static ref KEYWORDS: HashSet<&'static str> = ["in", "let"].into();
+    static ref KEYWORDS: HashSet<&'static str> = ["fn", "in", "let", "match"].into();
 }
 
 impl Identifier {
@@ -80,7 +81,9 @@ impl Identifier {
     }
 
     fn is_valid_name(name: &str) -> bool {
-        !KEYWORDS.contains(name) && VALID_IDENTIFIER_NAME_REGEX.is_match(name)
+        !KEYWORDS.contains(name)
+            && !name.chars().all(|c| c == '_')
+            && VALID_IDENTIFIER_NAME_REGEX.is_match(name)
     }
 
     fn is_valid_operator(operator: &str) -> bool {
@@ -121,6 +124,7 @@ impl Identifier {
             length.end() - 1,
         ))
         .unwrap()
+        .prop_filter("invalid name", |name| Identifier::is_valid_name(name))
         .prop_map(|x| Identifier::name_from_string(x).unwrap())
     }
 
@@ -137,6 +141,7 @@ impl Identifier {
             length.end() - 1,
         ))
         .unwrap()
+        .prop_filter("invalid name", |name| Identifier::is_valid_name(name))
         .prop_map(|x| Identifier::name_from_string(x).unwrap())
     }
 }
@@ -166,6 +171,14 @@ mod tests {
         assert_eq!(
             Identifier::name_from_str("x_y_z"),
             Ok(Identifier::Name("x_y_z".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_names_cannot_consist_entirely_of_underscores() {
+        assert_eq!(
+            Identifier::name_from_str("____"),
+            Err(IdentifierError::InvalidIdentifier)
         );
     }
 

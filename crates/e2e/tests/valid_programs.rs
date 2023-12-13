@@ -88,6 +88,15 @@ fn test_closing_over_a_variable() -> Result<()> {
     )
 }
 
+#[test]
+fn test_pattern_matching_on_integers() -> Result<()> {
+    check_program(
+        "pattern_matching_on_integers",
+        "match 2 { 1 -> 2; 2 -> 3; 3 -> 4; _ -> 0 }",
+        "3",
+    )
+}
+
 fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result<()> {
     let ast = parse(program)?.to_core();
     insta::with_settings!({ description => program }, {

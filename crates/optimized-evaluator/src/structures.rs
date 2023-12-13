@@ -37,6 +37,7 @@ impl<'a> EvaluationProgress<'a> {
 
 pub type UnevaluatedBinding<'a> = (Expr, Bindings<'a>);
 pub type EvaluatedBinding<'a> = Result<EvaluationProgress<'a>>;
+pub type Binding<'a> = Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>;
 
 /// The set of bindings in a given scope.
 ///
@@ -44,9 +45,7 @@ pub type EvaluatedBinding<'a> = Result<EvaluationProgress<'a>>;
 /// the underlying expression. This expression is evaluated lazily, but only
 /// once, using [`Thunk`].
 #[derive(Debug, Clone)]
-pub struct Bindings<'a>(
-    HashMap<Cow<'a, Identifier>, Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>>,
-);
+pub struct Bindings<'a>(HashMap<Cow<'a, Identifier>, Binding<'a>>);
 
 impl<'a> Bindings<'a> {
     /// Constructs an empty set of bindings.

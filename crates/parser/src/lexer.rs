@@ -15,12 +15,22 @@ pub enum Token<'a> {
     StartGroup,
     #[token(r")")]
     EndGroup,
+    #[token(r"{")]
+    BlockStart,
+    #[token(r"}")]
+    BlockEnd,
+    #[token(r";")]
+    Separator,
+    #[token(r"_")]
+    Anything,
     #[token(r"let")]
     Let,
     #[token(r"in")]
     In,
     #[token(r"fn")]
     Fn,
+    #[token(r"match")]
+    Match,
     #[token(r"=")]
     Assign,
     #[token(r"->")]

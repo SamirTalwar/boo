@@ -9,7 +9,7 @@ fn test_rendering_and_parsing_an_expression() {
         let rendered = format!("{}", input);
         let parsed = boo_parser::parse(&rendered)?;
         let despanned = remove_spans(parsed);
-        prop_assert_eq!(input, despanned);
+        prop_assert_eq!(input, despanned, "\nrendered = {}\n", rendered);
         Ok(())
     })
 }
@@ -28,6 +28,16 @@ pub fn remove_spans(expr: Expr) -> Expr {
             Expression::Function(Function { parameters, body }) => Expression::Function(Function {
                 parameters,
                 body: remove_spans(body),
+            }),
+            Expression::Match(Match { value, patterns }) => Expression::Match(Match {
+                value: remove_spans(value),
+                patterns: patterns
+                    .into_iter()
+                    .map(|PatternMatch { pattern, result }| PatternMatch {
+                        pattern,
+                        result: remove_spans(result),
+                    })
+                    .collect(),
             }),
             Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
                 function: remove_spans(function),

@@ -16,6 +16,8 @@ peg::parser! {
             --
             x:assign() { x }
             --
+            x:match_() { x }
+            --
             left:(@) (quiet! { [AnnotatedToken { annotation: _, token: Token::Operator("+") }] } / expected!("'+'")) right:@ {
                 construct_infix(left, Operation::Add, right)
             }
@@ -41,7 +43,7 @@ peg::parser! {
         }
 
         rule atomic_expr() -> Expr =
-            e:(primitive() / identifier() / group()) { e }
+            e:(primitive_expr() / identifier() / group()) { e }
 
         rule group() -> Expr =
             (quiet! { [AnnotatedToken { annotation: _, token: Token::StartGroup }] } / expected!("'('"))
@@ -50,12 +52,14 @@ peg::parser! {
                 e
             }
 
-        rule primitive() -> Expr =
+        rule primitive_expr() -> Expr =
+            primitive:primitive() {
+                Expr::new(primitive.0, Expression::Primitive(primitive.1))
+            }
+
+        rule primitive() -> (Span, Primitive) =
             quiet! { [AnnotatedToken { annotation, token: Token::Integer(n) }] {
-                Expr::new(
-                    *annotation,
-                    Expression::Primitive(Primitive::Integer(n.clone())),
-                )
+                (*annotation, Primitive::Integer(n.clone()))
             } } / expected!("an integer")
 
         rule identifier() -> Expr =
@@ -103,6 +107,41 @@ peg::parser! {
                         inner,
                     }),
                 )
+            }
+
+        rule match_() -> Expr =
+            match_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Match }] } / expected!("match"))
+            value:expr()
+            block_start:(quiet! { [AnnotatedToken { annotation: _, token: Token::BlockStart }] } / expected!("{"))
+            patterns:(pattern_match() ++ quiet! { [AnnotatedToken { annotation: _, token: Token::Separator }] } / expected!(";"))
+            block_end:(quiet! { [AnnotatedToken { annotation: _, token: Token::BlockEnd }] } / expected!("}")) {
+                Expr::new(
+                    match_.annotation | block_end.annotation,
+                    Expression::Match(Match {
+                        value,
+                        patterns,
+                    }),
+                )
+            }
+
+        rule pattern_match() -> PatternMatch =
+            pattern:(pattern_primitive() / pattern_anything())
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::Arrow }] } / expected!("->"))
+            result:expr() {
+                PatternMatch {
+                    pattern,
+                    result,
+                }
+            }
+
+        rule pattern_primitive() -> Pattern =
+            primitive:primitive() {
+                Pattern::Primitive(primitive.1)
+            }
+
+        rule pattern_anything() -> Pattern =
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::Anything }] } / expected!("_")) {
+                Pattern::Anything
             }
     }
 }

@@ -15,6 +15,7 @@ use boo_core::span::Span;
 
 use crate::ast::{Expr, ExprPool};
 use crate::pooler::add_expr;
+use crate::structures::Binding;
 use crate::structures::{Bindings, EvaluatedBinding, EvaluationProgress};
 
 /// An expression pool together with the current bound context, which can
@@ -89,6 +90,13 @@ impl<'a> InnerEvaluator<'a> {
             Expression::Function(function) => {
                 Ok(EvaluationProgress::Closure(function, self.bindings.clone()))
             }
+            Expression::Match(Match {
+                value: value_ref,
+                patterns,
+            }) => self.evaluate_pattern_match(
+                Binding::unresolved((*value_ref, self.bindings.clone())),
+                patterns,
+            ),
             Expression::Apply(Apply {
                 function: function_ref,
                 argument: argument_ref,
@@ -116,20 +124,47 @@ impl<'a> InnerEvaluator<'a> {
         }
     }
 
-    /// Resolves a given identifier by evaluating its binding.
+    /// Evaluates pattern-matching, ensuring that the value is only resolved once.
+    fn evaluate_pattern_match(
+        &self,
+        mut value: Binding<'a>,
+        patterns: &PatternMatch<Expr>,
+    ) -> Result<EvaluationProgress<'a>> {
+        match patterns {
+            PatternMatch::Anything { result: result_ref } => self.evaluate(*result_ref),
+            PatternMatch::Primitive {
+                pattern,
+                matched: matched_ref,
+                not_matched,
+            } => {
+                let resolved_value = self.resolve_binding(&mut value)?;
+                match resolved_value {
+                    EvaluationProgress::Primitive(actual) if actual.as_ref() == pattern => {
+                        self.evaluate(*matched_ref)
+                    }
+                    _ => self.evaluate_pattern_match(value, not_matched),
+                }
+            }
+        }
+    }
+
+    /// Resolves a given identifier by evaluating it in the context of the bindings.
     fn resolve(&self, identifier: &Identifier, span: Option<Span>) -> EvaluatedBinding<'a> {
         match self.bindings.clone().read(identifier) {
-            Some(thunk) => {
-                let result = thunk.resolve_by(move |(value_ref, thunk_bindings)| {
-                    self.switch(thunk_bindings.clone()).evaluate(*value_ref)
-                });
-                Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
-            }
+            Some(binding) => self.resolve_binding(binding),
             None => Err(Error::UnknownVariable {
                 span,
                 name: identifier.to_string(),
             }),
         }
+    }
+
+    /// Resolves a given binding in context.
+    fn resolve_binding(&self, binding: &mut Binding<'a>) -> EvaluatedBinding<'a> {
+        let result = binding.resolve_by(move |(value_ref, thunk_bindings)| {
+            self.switch(thunk_bindings.clone()).evaluate(*value_ref)
+        });
+        Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
     }
 
     fn with(&self, identifier: &'a Identifier, expression: Expr) -> Self {

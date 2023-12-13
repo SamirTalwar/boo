@@ -101,3 +101,15 @@ Functions can take one or more parameters:
 ```
 let add = fn x y -> x + y in add 2 3
 ```
+
+### Pattern-matching
+
+You can match on values to perform conditions.
+
+```
+let value = 2 in match value { 1 -> 9; 2 -> 7; 3 -> 5; _ -> 0 }
+```
+
+As of now, you can only match on constant integers.
+
+You must always provide a base case using the `_` symbol.

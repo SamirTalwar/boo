@@ -1,0 +1,115 @@
+---
+source: crates/e2e/tests/valid_programs.rs
+description: "match 2 { 1 -> 2; 2 -> 3; 3 -> 4; _ -> 0 }"
+expression: ast
+---
+Expr {
+    span: Some(
+        Span {
+            start: 0,
+            end: 42,
+        },
+    ),
+    expression: Match(
+        Match {
+            value: Expr {
+                span: Some(
+                    Span {
+                        start: 6,
+                        end: 7,
+                    },
+                ),
+                expression: Primitive(
+                    Integer(
+                        Small(
+                            2,
+                        ),
+                    ),
+                ),
+            },
+            patterns: Primitive {
+                pattern: Integer(
+                    Small(
+                        1,
+                    ),
+                ),
+                matched: Expr {
+                    span: Some(
+                        Span {
+                            start: 15,
+                            end: 16,
+                        },
+                    ),
+                    expression: Primitive(
+                        Integer(
+                            Small(
+                                2,
+                            ),
+                        ),
+                    ),
+                },
+                not_matched: Primitive {
+                    pattern: Integer(
+                        Small(
+                            2,
+                        ),
+                    ),
+                    matched: Expr {
+                        span: Some(
+                            Span {
+                                start: 23,
+                                end: 24,
+                            },
+                        ),
+                        expression: Primitive(
+                            Integer(
+                                Small(
+                                    3,
+                                ),
+                            ),
+                        ),
+                    },
+                    not_matched: Primitive {
+                        pattern: Integer(
+                            Small(
+                                3,
+                            ),
+                        ),
+                        matched: Expr {
+                            span: Some(
+                                Span {
+                                    start: 31,
+                                    end: 32,
+                                },
+                            ),
+                            expression: Primitive(
+                                Integer(
+                                    Small(
+                                        4,
+                                    ),
+                                ),
+                            ),
+                        },
+                        not_matched: Anything {
+                            result: Expr {
+                                span: Some(
+                                    Span {
+                                        start: 39,
+                                        end: 40,
+                                    },
+                                ),
+                                expression: Primitive(
+                                    Integer(
+                                        Small(
+                                            0,
+                                        ),
+                                    ),
+                                ),
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    ),
+}

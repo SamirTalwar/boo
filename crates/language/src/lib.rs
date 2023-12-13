@@ -39,6 +39,7 @@ pub enum Expression {
     Identifier(Identifier),
     Assign(Assign),
     Function(Function),
+    Match(Match),
     Apply(Apply),
     Infix(Infix),
 }
@@ -61,6 +62,31 @@ pub struct Function {
     pub parameters: Vec<Identifier>,
     /// The body of the function.
     pub body: Expr,
+}
+
+/// A set of patterns matched against a value.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Match {
+    /// The value to be matched.
+    pub value: Expr,
+    /// The patterns.
+    pub patterns: Vec<PatternMatch>,
+}
+
+/// A single pattern and its assigned result.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PatternMatch {
+    /// The pattern to be matched.
+    pub pattern: Pattern,
+    /// The result of matching against the pattern.
+    pub result: Expr,
+}
+
+/// A single pattern.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Pattern {
+    Primitive(Primitive),
+    Anything,
 }
 
 /// Applies an argument to a function.
@@ -96,6 +122,7 @@ impl std::fmt::Display for Expression {
             Expression::Identifier(x) => x.fmt(f),
             Expression::Assign(x) => x.fmt(f),
             Expression::Function(x) => x.fmt(f),
+            Expression::Match(x) => x.fmt(f),
             Expression::Apply(x) => x.fmt(f),
             Expression::Infix(x) => x.fmt(f),
         }
@@ -119,6 +146,33 @@ impl std::fmt::Display for Function {
             write!(f, "{} ", parameter)?;
         }
         write!(f, "-> ({})", self.body)
+    }
+}
+
+impl std::fmt::Display for Match {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "match {} {{", self.value)?;
+        let mut pattern_iter = self.patterns.iter();
+        if let Some(PatternMatch {
+            pattern: first_pattern,
+            result: first_result,
+        }) = pattern_iter.next()
+        {
+            write!(f, "{} -> ({})", first_pattern, first_result)?;
+            for PatternMatch { pattern, result } in pattern_iter {
+                write!(f, "; {} -> ({})", pattern, result)?;
+            }
+        }
+        write!(f, "}}")
+    }
+}
+
+impl std::fmt::Display for Pattern {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Pattern::Primitive(x) => x.fmt(f),
+            Pattern::Anything => write!(f, "_"),
+        }
     }
 }
 

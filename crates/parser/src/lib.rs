@@ -33,6 +33,7 @@ mod tests {
                     "an integer",
                     "fn",
                     "let",
+                    "match",
                 ],
             },
         )
@@ -949,6 +950,124 @@ mod tests {
     }
 
     #[test]
+    fn test_parsing_a_match_expression() {
+        let input = "match 2 { 1 -> 2; 2 -> 3; 3 -> 4; _ -> 0 }";
+        let parsed = parse(input);
+
+        insta::assert_debug_snapshot!(parsed, @r###"
+        Ok(
+            Expr {
+                span: Span {
+                    start: 0,
+                    end: 42,
+                },
+                expression: Match(
+                    Match {
+                        value: Expr {
+                            span: Span {
+                                start: 6,
+                                end: 7,
+                            },
+                            expression: Primitive(
+                                Integer(
+                                    Small(
+                                        2,
+                                    ),
+                                ),
+                            ),
+                        },
+                        patterns: [
+                            PatternMatch {
+                                pattern: Primitive(
+                                    Integer(
+                                        Small(
+                                            1,
+                                        ),
+                                    ),
+                                ),
+                                result: Expr {
+                                    span: Span {
+                                        start: 15,
+                                        end: 16,
+                                    },
+                                    expression: Primitive(
+                                        Integer(
+                                            Small(
+                                                2,
+                                            ),
+                                        ),
+                                    ),
+                                },
+                            },
+                            PatternMatch {
+                                pattern: Primitive(
+                                    Integer(
+                                        Small(
+                                            2,
+                                        ),
+                                    ),
+                                ),
+                                result: Expr {
+                                    span: Span {
+                                        start: 23,
+                                        end: 24,
+                                    },
+                                    expression: Primitive(
+                                        Integer(
+                                            Small(
+                                                3,
+                                            ),
+                                        ),
+                                    ),
+                                },
+                            },
+                            PatternMatch {
+                                pattern: Primitive(
+                                    Integer(
+                                        Small(
+                                            3,
+                                        ),
+                                    ),
+                                ),
+                                result: Expr {
+                                    span: Span {
+                                        start: 31,
+                                        end: 32,
+                                    },
+                                    expression: Primitive(
+                                        Integer(
+                                            Small(
+                                                4,
+                                            ),
+                                        ),
+                                    ),
+                                },
+                            },
+                            PatternMatch {
+                                pattern: Anything,
+                                result: Expr {
+                                    span: Span {
+                                        start: 39,
+                                        end: 40,
+                                    },
+                                    expression: Primitive(
+                                        Integer(
+                                            Small(
+                                                0,
+                                            ),
+                                        ),
+                                    ),
+                                },
+                            },
+                        ],
+                    },
+                ),
+            },
+        )
+        "###);
+    }
+
+    #[test]
     fn test_parsing_rejects_anything_else() {
         let input = "1 / 2";
         let parsed = parse(input);
@@ -984,6 +1103,7 @@ mod tests {
                     "an integer",
                     "fn",
                     "let",
+                    "match",
                 ],
             },
         )

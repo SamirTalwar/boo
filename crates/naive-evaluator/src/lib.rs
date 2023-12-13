@@ -132,6 +132,37 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
             );
             Ok(Progress::Next(substituted_inner))
         }
+        Expression::Match(Match { value, patterns }) => match patterns {
+            PatternMatch::Anything { result } => Ok(Progress::Next(result)),
+            _ => match step(value)? {
+                Progress::Next(value_next) => Ok(Progress::Next(Expr::new(
+                    expr.span,
+                    Expression::Match(Match {
+                        value: value_next,
+                        patterns,
+                    }),
+                ))),
+                Progress::Complete(value_complete) => match patterns {
+                    PatternMatch::Anything { .. } => unreachable!(),
+                    PatternMatch::Primitive {
+                        pattern,
+                        matched,
+                        not_matched,
+                    } => match *value_complete.expression {
+                        Expression::Primitive(actual) if actual == pattern => {
+                            Ok(Progress::Next(matched))
+                        }
+                        _ => Ok(Progress::Next(Expr::new(
+                            expr.span,
+                            Expression::Match(Match {
+                                value: value_complete,
+                                patterns: *not_matched,
+                            }),
+                        ))),
+                    },
+                },
+            },
+        },
         Expression::Apply(Apply { function, argument }) => {
             let function_result = step(function)?;
             match function_result {
@@ -211,6 +242,13 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
             )
         }
         expression @ Expression::Function(_) => Expr::new(expr.span, expression),
+        Expression::Match(Match { value, patterns }) => Expr::new(
+            expr.span,
+            Expression::Match(Match {
+                value: substitute(substitution.clone(), value, bound.clone()),
+                patterns: substitute_pattern_match(substitution.clone(), patterns, bound.clone()),
+            }),
+        ),
         Expression::Apply(Apply { function, argument }) => Expr::new(
             expr.span,
             Expression::Apply(Apply {
@@ -218,6 +256,31 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
                 argument: substitute(substitution, argument, bound),
             }),
         ),
+    }
+}
+
+fn substitute_pattern_match(
+    substitution: Substitution,
+    pattern_match: PatternMatch<Expr>,
+    bound: HashSet<Identifier>,
+) -> PatternMatch<Expr> {
+    match pattern_match {
+        PatternMatch::Anything { result } => PatternMatch::Anything {
+            result: substitute(substitution, result, bound),
+        },
+        PatternMatch::Primitive {
+            pattern,
+            matched,
+            not_matched,
+        } => PatternMatch::Primitive {
+            pattern,
+            matched: substitute(substitution.clone(), matched.clone(), bound.clone()),
+            not_matched: Box::new(substitute_pattern_match(
+                substitution.clone(),
+                *not_matched,
+                bound.clone(),
+            )),
+        },
     }
 }
 
@@ -249,10 +312,37 @@ fn avoid_alpha_capture(expr: Expr, bound: HashSet<Identifier>) -> Expr {
                 parameter,
                 body: avoid_alpha_capture(body, bound),
             }),
+            Expression::Match(Match { value, patterns }) => Expression::Match(Match {
+                value: avoid_alpha_capture(value, bound.clone()),
+                patterns: avoid_alpha_capture_pattern_match(patterns, bound),
+            }),
             Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
                 function: avoid_alpha_capture(function, bound.clone()),
                 argument: avoid_alpha_capture(argument, bound),
             }),
         },
     )
+}
+
+fn avoid_alpha_capture_pattern_match(
+    pattern_match: PatternMatch<Expr>,
+    bound: HashSet<Identifier>,
+) -> PatternMatch<Expr> {
+    match pattern_match {
+        PatternMatch::Anything { result } => PatternMatch::Anything {
+            result: avoid_alpha_capture(result, bound),
+        },
+        PatternMatch::Primitive {
+            pattern,
+            matched,
+            not_matched,
+        } => PatternMatch::Primitive {
+            pattern,
+            matched: avoid_alpha_capture(matched.clone(), bound.clone()),
+            not_matched: Box::new(avoid_alpha_capture_pattern_match(
+                *not_matched,
+                bound.clone(),
+            )),
+        },
+    }
 }

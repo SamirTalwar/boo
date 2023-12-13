@@ -76,7 +76,7 @@ fn gen_nested(
     if depth.start == 0 {
         // generate primitives
         if let Some(strategy) = gen_primitive(target_type.clone()) {
-            choices.push((1, strategy));
+            choices.push((1, strategy.prop_map(make_primitive_expr).boxed()));
         }
 
         // generate references to already-bound variables (in `bindings`)
@@ -114,6 +114,17 @@ fn gen_nested(
     // nodes to depth (max_depth - 2) or higher, we try to avoid this (most of
     // the time).
     if depth.end > 1 {
+        // generate pattern matches
+        choices.push((
+            2,
+            gen_match(
+                config.clone(),
+                next_depth.clone(),
+                target_type.clone(),
+                bindings.clone(),
+            ),
+        ));
+
         // generate function application
         choices.push((
             2,
@@ -161,8 +172,8 @@ fn gen_unused_identifier(
 
 /// Generates a primitive of the given type.
 /// Returns `None` if there are no primitives of the target type.
-fn gen_primitive(target_type: Type) -> Option<ExprStrategy> {
-    Primitive::arbitrary_of_type(target_type).map(|s| s.prop_map(make_primitive_expr).boxed())
+fn gen_primitive(target_type: Type) -> Option<BoxedStrategy<Primitive>> {
+    Primitive::arbitrary_of_type(target_type)
 }
 
 fn make_primitive_expr(value: Primitive) -> ExprStrategyValue {
@@ -295,6 +306,96 @@ fn gen_function(
         }
         _ => None,
     }
+}
+
+/// Generates a pattern match.
+///
+/// It always has a default case.
+fn gen_match(
+    config: Rc<ExprGenConfig>,
+    next_depth: std::ops::Range<usize>,
+    target_type: Type,
+    bindings: Bindings,
+) -> ExprStrategy {
+    gen_nested(
+        config.clone(),
+        next_depth.clone(),
+        Type::Unknown,
+        bindings.clone(),
+    )
+    .prop_flat_map(move |(value, value_type): ExprStrategyValue| {
+        let config_ = config.clone();
+        let next_depth_ = next_depth.clone();
+        let target_type_ = target_type.clone();
+        let bindings_ = bindings.clone();
+        proptest::collection::vec(
+            gen_pattern(
+                config.clone(),
+                next_depth.clone(),
+                Type::Known(value_type),
+                target_type.clone(),
+                bindings.clone(),
+            ),
+            0..5,
+        )
+        .prop_flat_map(move |patterns| {
+            gen_nested(
+                config_.clone(),
+                next_depth_.clone(),
+                target_type_.clone(),
+                bindings_.clone(),
+            )
+            .prop_map(move |(anything_result, anything_type)| {
+                let mut patterns_with_base_case = patterns.clone();
+                patterns_with_base_case.push((Pattern::Anything, anything_result, anything_type));
+                patterns_with_base_case
+            })
+        })
+        .prop_map(move |patterns| {
+            let expr = Expr::new(
+                0.into(),
+                Expression::Match(Match {
+                    value: value.clone(),
+                    patterns: patterns
+                        .iter()
+                        .map(|(pattern, result, _)| PatternMatch {
+                            pattern: pattern.clone(),
+                            result: result.clone(),
+                        })
+                        .collect(),
+                }),
+            );
+            let expr_type = patterns.first().unwrap().2.clone();
+            (expr, expr_type)
+        })
+    })
+    .boxed()
+}
+
+/// Generates a single pattern.
+fn gen_pattern(
+    config: Rc<ExprGenConfig>,
+    next_depth: std::ops::Range<usize>,
+    pattern_type: Type,
+    target_type: Type,
+    bindings: Bindings,
+) -> impl Strategy<Value = (Pattern, Expr, Rc<KnownType>)> {
+    let mut choices: Vec<BoxedStrategy<Pattern>> = vec![];
+    if let Some(primitive_strategy) =
+        gen_primitive(pattern_type).map(|strategy| strategy.prop_map(Pattern::Primitive))
+    {
+        choices.push(primitive_strategy.boxed());
+    };
+    choices.push(Just(Pattern::Anything).boxed());
+    prop::strategy::Union::new(choices).prop_flat_map(move |pattern| {
+        gen_nested(
+            config.clone(),
+            next_depth.clone(),
+            target_type.clone(),
+            bindings.clone(),
+        )
+        .prop_map(move |(expr, expr_type)| (pattern.clone(), expr, expr_type))
+    })
 }
 
 /// Generates a function application.
