@@ -2,20 +2,19 @@
 
 use std
 
-cargo build --all-targets
-cargo test
-cargo clippy
-cargo fmt --check
-cargo machete
-
-if 'IN_NIX_SHELL' in $env {
-  nix build --no-link
-  print ''
-  print 'Checking rust-toolchain.toml'
-  std assert equal (open rust-toolchain.toml | get toolchain.channel) (rustc --version | split row (char space) | $in.1)
-} else {
-  print 'Skipping Nix checks.'
+def run [name operation] {
+  print --stderr $"+ ($name)"
+  do $operation
 }
+
+run 'cargo build' { cargo build --all-targets }
+run 'cargo nextest run' { cargo nextest run }
+run 'cargo clippy' { cargo clippy }
+run 'cargo fmt' { cargo fmt --check }
+run 'cargo machete' { cargo machete }
+
+run 'nix build' { nix build }
+run 'nix flake check' { nix flake check }
 
 print ''
 print "Here's a random program for you."
