@@ -23,10 +23,11 @@ pub enum Identifier {
 }
 
 /// Errors that can happen when dealing with identifiers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 pub enum IdentifierError {
     /// Returned when attempting to construct a new [`Identifier`] with an
     /// invalid name.
+    #[error("invalid identifier")]
     InvalidIdentifier,
 }
 

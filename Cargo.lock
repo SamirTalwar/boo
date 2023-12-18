@@ -247,6 +247,7 @@ dependencies = [
 name = "boo-language"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "boo-core",
  "proptest",
  "proptest-derive",

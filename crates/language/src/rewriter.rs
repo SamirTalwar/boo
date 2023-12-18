@@ -80,3 +80,51 @@ pub fn rewrite(expr: crate::Expr) -> core::Expr {
         })),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use boo_core::identifier::Identifier;
+    use boo_core::primitive::Primitive;
+
+    use super::*;
+
+    #[test]
+    fn test_infix_expressions_are_converted_to_nested_function_applications() -> anyhow::Result<()>
+    {
+        let a = Primitive::Integer(3.into());
+        let b = Primitive::Integer(5.into());
+        let expression = crate::Expr::new(
+            (0..5).into(),
+            crate::Expression::Infix(crate::Infix {
+                operation: crate::Operation::Add,
+                left: crate::Expr::new((0..1).into(), crate::Expression::Primitive(a.clone())),
+                right: crate::Expr::new((4..5).into(), crate::Expression::Primitive(b.clone())),
+            }),
+        );
+
+        let expected = core::Expr::new(
+            Some((0..5).into()),
+            core::Expression::Apply(core::Apply {
+                function: core::Expr::new(
+                    Some((0..5).into()),
+                    core::Expression::Apply(core::Apply {
+                        function: core::Expr::new(
+                            Some((0..5).into()),
+                            core::Expression::Identifier(Identifier::operator_from_str("+")?),
+                        ),
+                        argument: core::Expr::new(
+                            Some((0..1).into()),
+                            core::Expression::Primitive(a),
+                        ),
+                    }),
+                ),
+                argument: core::Expr::new(Some((4..5).into()), core::Expression::Primitive(b)),
+            }),
+        );
+
+        let actual = rewrite(expression);
+
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+}
