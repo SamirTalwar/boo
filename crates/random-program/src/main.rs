@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
     let expr = tree.current();
     println!("Expression:\n{}\n", expr);
 
-    let core_expr = expr.to_core();
+    let core_expr = expr.to_core()?;
 
     let mut evaluator = OptimizedEvaluator::new();
     builtins::prepare(&mut evaluator)?;

@@ -29,7 +29,7 @@ fn test_does_not_close_over_variables_out_of_scope() -> Result<()> {
 }
 
 fn expect_error(name: &str, program: &str, expected_error: Error) -> Result<()> {
-    let ast = parse(program)?.to_core();
+    let ast = parse(program)?.to_core()?;
     insta::with_settings!({ description => program }, {
         insta::assert_debug_snapshot!(name.to_string() + "__parse", ast);
     });

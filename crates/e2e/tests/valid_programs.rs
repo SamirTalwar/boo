@@ -98,12 +98,12 @@ fn test_pattern_matching_on_integers() -> Result<()> {
 }
 
 fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result<()> {
-    let ast = parse(program)?.to_core();
+    let ast = parse(program)?.to_core()?;
     insta::with_settings!({ description => program }, {
         insta::assert_debug_snapshot!(name.to_string() + "__parse", ast);
     });
 
-    let expected_result = match *parse(expected_result_str)?.to_core().expression {
+    let expected_result = match *parse(expected_result_str)?.to_core()?.expression {
         ast::Expression::Primitive(primitive) => evaluation::Evaluated::Primitive(primitive),
         expression => panic!("Expected result that is not a primitive: {:?}", expression),
     };

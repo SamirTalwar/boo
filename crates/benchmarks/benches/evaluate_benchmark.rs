@@ -49,6 +49,6 @@ fn benchmarks() -> impl Iterator<Item = Expr> {
         )
         .new_tree(&mut runner)
         .unwrap();
-        Some(tree.current().to_core())
+        Some(tree.current().to_core().unwrap())
     })
 }

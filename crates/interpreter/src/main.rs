@@ -72,7 +72,8 @@ fn repl(evaluator: &dyn Evaluator) {
 
 fn interpret(evaluator: &dyn Evaluator, buffer: &str) -> miette::Result<()> {
     let parsed = parse(buffer)?;
-    let result = evaluator.evaluate(parsed.to_core())?;
+    let expression = parsed.to_core()?;
+    let result = evaluator.evaluate(expression)?;
     println!("{}", result);
     Ok(())
 }
