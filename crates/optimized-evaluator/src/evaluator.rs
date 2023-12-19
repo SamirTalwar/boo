@@ -82,14 +82,38 @@ impl<'a> InnerEvaluator<'a> {
                 implementation(self).map(|value| EvaluationProgress::Primitive(Cow::Owned(value)))
             }
             Expression::Identifier(name) => self.resolve(name, expr.span),
+            Expression::Function(function) => {
+                Ok(EvaluationProgress::Closure(function, self.bindings.clone()))
+            }
+            Expression::Apply(Apply {
+                function: function_ref,
+                argument: argument_ref,
+            }) => {
+                let function_result = self.evaluate(*function_ref)?;
+                match function_result {
+                    EvaluationProgress::Closure(
+                        Function {
+                            parameter,
+                            body: body_ref,
+                        },
+                        function_bindings,
+                    ) => self
+                        // the body is executed in the context of the function,
+                        // but the argument must be evaluated in the outer context
+                        .switch(function_bindings.with(
+                            Cow::Borrowed(parameter),
+                            *argument_ref,
+                            self.bindings.clone(),
+                        ))
+                        .evaluate(*body_ref),
+                    _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
+                }
+            }
             Expression::Assign(Assign {
                 name,
                 value: value_ref,
                 inner: inner_ref,
             }) => self.with(name, *value_ref).evaluate(*inner_ref),
-            Expression::Function(function) => {
-                Ok(EvaluationProgress::Closure(function, self.bindings.clone()))
-            }
             Expression::Match(Match {
                 value: value_ref,
                 patterns,
@@ -119,30 +143,6 @@ impl<'a> InnerEvaluator<'a> {
                     }
                 }
                 Err(Error::MatchWithoutBaseCase { span: expr.span })
-            }
-            Expression::Apply(Apply {
-                function: function_ref,
-                argument: argument_ref,
-            }) => {
-                let function_result = self.evaluate(*function_ref)?;
-                match function_result {
-                    EvaluationProgress::Closure(
-                        Function {
-                            parameter,
-                            body: body_ref,
-                        },
-                        function_bindings,
-                    ) => self
-                        // the body is executed in the context of the function,
-                        // but the argument must be evaluated in the outer context
-                        .switch(function_bindings.with(
-                            Cow::Borrowed(parameter),
-                            *argument_ref,
-                            self.bindings.clone(),
-                        ))
-                        .evaluate(*body_ref),
-                    _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
-                }
             }
         }
     }

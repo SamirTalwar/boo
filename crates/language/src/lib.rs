@@ -41,10 +41,10 @@ impl Expr {
 pub enum Expression {
     Primitive(Primitive),
     Identifier(Identifier),
-    Assign(Assign),
     Function(Function),
-    Match(Match),
     Apply(Apply),
+    Assign(Assign),
+    Match(Match),
     Infix(Infix),
 }
 
@@ -124,10 +124,10 @@ impl std::fmt::Display for Expression {
         match self {
             Expression::Primitive(x) => x.fmt(f),
             Expression::Identifier(x) => x.fmt(f),
-            Expression::Assign(x) => x.fmt(f),
             Expression::Function(x) => x.fmt(f),
-            Expression::Match(x) => x.fmt(f),
             Expression::Apply(x) => x.fmt(f),
+            Expression::Assign(x) => x.fmt(f),
+            Expression::Match(x) => x.fmt(f),
             Expression::Infix(x) => x.fmt(f),
         }
     }

@@ -27,10 +27,10 @@ pub enum Expression<Outer> {
     Primitive(Primitive),
     Native(Native),
     Identifier(Identifier),
-    Assign(Assign<Outer>),
     Function(Function<Outer>),
-    Match(Match<Outer>),
     Apply(Apply<Outer>),
+    Assign(Assign<Outer>),
+    Match(Match<Outer>),
 }
 
 /// Represents assignment.
@@ -93,10 +93,10 @@ impl<Outer: Display> std::fmt::Display for Expression<Outer> {
             Expression::Primitive(x) => x.fmt(f),
             Expression::Native(x) => x.fmt(f),
             Expression::Identifier(x) => x.fmt(f),
-            Expression::Assign(x) => x.fmt(f),
             Expression::Function(x) => x.fmt(f),
-            Expression::Match(x) => x.fmt(f),
             Expression::Apply(x) => x.fmt(f),
+            Expression::Assign(x) => x.fmt(f),
+            Expression::Match(x) => x.fmt(f),
         }
     }
 }

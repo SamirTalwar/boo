@@ -16,13 +16,6 @@ pub fn identifier(span: impl Into<Span>, name: Identifier) -> Expr {
     Expr::new(span.into(), Expression::Identifier(name))
 }
 
-pub fn assign(span: impl Into<Span>, name: Identifier, value: Expr, inner: Expr) -> Expr {
-    Expr::new(
-        span.into(),
-        Expression::Assign(Assign { name, value, inner }),
-    )
-}
-
 pub fn function(span: impl Into<Span>, parameters: Vec<Identifier>, body: Expr) -> Expr {
     assert!(!parameters.is_empty(), "parameters must not be empty");
     Expr::new(
@@ -33,6 +26,13 @@ pub fn function(span: impl Into<Span>, parameters: Vec<Identifier>, body: Expr) 
 
 pub fn apply(span: impl Into<Span>, function: Expr, argument: Expr) -> Expr {
     Expr::new(span.into(), Expression::Apply(Apply { function, argument }))
+}
+
+pub fn assign(span: impl Into<Span>, name: Identifier, value: Expr, inner: Expr) -> Expr {
+    Expr::new(
+        span.into(),
+        Expression::Assign(Assign { name, value, inner }),
+    )
 }
 
 pub fn infix(span: impl Into<Span>, operation: Operation, left: Expr, right: Expr) -> Expr {

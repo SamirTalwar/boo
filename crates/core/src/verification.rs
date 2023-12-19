@@ -6,6 +6,19 @@ pub fn verify(expr: &expr::Expr) -> Result<()> {
         expr::Expression::Primitive(_)
         | expr::Expression::Native(_)
         | expr::Expression::Identifier(_) => (),
+        expr::Expression::Function(expr::Function {
+            parameter: _,
+            ref body,
+        }) => {
+            verify(body)?;
+        }
+        expr::Expression::Apply(expr::Apply {
+            ref function,
+            ref argument,
+        }) => {
+            verify(function)?;
+            verify(argument)?;
+        }
         expr::Expression::Assign(expr::Assign {
             name: _,
             ref value,
@@ -13,12 +26,6 @@ pub fn verify(expr: &expr::Expr) -> Result<()> {
         }) => {
             verify(value)?;
             verify(inner)?;
-        }
-        expr::Expression::Function(expr::Function {
-            parameter: _,
-            ref body,
-        }) => {
-            verify(body)?;
         }
         expr::Expression::Match(expr::Match {
             ref value,
@@ -32,13 +39,6 @@ pub fn verify(expr: &expr::Expr) -> Result<()> {
             for expr::PatternMatch { pattern: _, result } in patterns {
                 verify(result)?;
             }
-        }
-        expr::Expression::Apply(expr::Apply {
-            ref function,
-            ref argument,
-        }) => {
-            verify(function)?;
-            verify(argument)?;
         }
     };
     Ok(())

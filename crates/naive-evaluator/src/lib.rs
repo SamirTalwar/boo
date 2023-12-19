@@ -121,6 +121,32 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
             span: expr.span,
             name: name.to_string(),
         }),
+        Expression::Apply(Apply { function, argument }) => {
+            let function_result = step(function)?;
+            match function_result {
+                Progress::Next(function_next) => Ok(Progress::Next(Expr::new(
+                    expr.span,
+                    Expression::Apply(Apply {
+                        function: function_next,
+                        argument,
+                    }),
+                ))),
+                Progress::Complete(function_complete) => match *function_complete.expression {
+                    Expression::Function(Function { parameter, body }) => {
+                        let substituted_body = substitute(
+                            Substitution {
+                                name: parameter.into(),
+                                value: argument.into(),
+                            },
+                            body,
+                            HashSet::new(),
+                        );
+                        Ok(Progress::Next(substituted_body))
+                    }
+                    _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
+                },
+            }
+        }
         Expression::Assign(Assign { name, value, inner }) => {
             let substituted_inner = substitute(
                 Substitution {
@@ -168,32 +194,6 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
                 },
             }
         }
-        Expression::Apply(Apply { function, argument }) => {
-            let function_result = step(function)?;
-            match function_result {
-                Progress::Next(function_next) => Ok(Progress::Next(Expr::new(
-                    expr.span,
-                    Expression::Apply(Apply {
-                        function: function_next,
-                        argument,
-                    }),
-                ))),
-                Progress::Complete(function_complete) => match *function_complete.expression {
-                    Expression::Function(Function { parameter, body }) => {
-                        let substituted_body = substitute(
-                            Substitution {
-                                name: parameter.into(),
-                                value: argument.into(),
-                            },
-                            body,
-                            HashSet::new(),
-                        );
-                        Ok(Progress::Next(substituted_body))
-                    }
-                    _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
-                },
-            }
-        }
     }
 }
 
@@ -226,6 +226,23 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
             avoid_alpha_capture((*substitution.value).clone(), bound)
         }
         expression @ Expression::Identifier(_) => Expr::new(expr.span, expression),
+        Expression::Function(Function { parameter, body }) if parameter != *substitution.name => {
+            Expr::new(
+                expr.span,
+                Expression::Function(Function {
+                    parameter: parameter.clone(),
+                    body: substitute(substitution, body, bound.update(parameter)),
+                }),
+            )
+        }
+        expression @ Expression::Function(_) => Expr::new(expr.span, expression),
+        Expression::Apply(Apply { function, argument }) => Expr::new(
+            expr.span,
+            Expression::Apply(Apply {
+                function: substitute(substitution.clone(), function, bound.clone()),
+                argument: substitute(substitution, argument, bound),
+            }),
+        ),
         Expression::Assign(Assign { name, value, inner }) if name != *substitution.name => {
             Expr::new(
                 expr.span,
@@ -237,16 +254,6 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
             )
         }
         expression @ Expression::Assign(_) => Expr::new(expr.span, expression),
-        Expression::Function(Function { parameter, body }) if parameter != *substitution.name => {
-            Expr::new(
-                expr.span,
-                Expression::Function(Function {
-                    parameter: parameter.clone(),
-                    body: substitute(substitution, body, bound.update(parameter)),
-                }),
-            )
-        }
-        expression @ Expression::Function(_) => Expr::new(expr.span, expression),
         Expression::Match(Match { value, patterns }) => Expr::new(
             expr.span,
             Expression::Match(Match {
@@ -258,13 +265,6 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
                         result: substitute(substitution.clone(), result, bound.clone()),
                     })
                     .collect(),
-            }),
-        ),
-        Expression::Apply(Apply { function, argument }) => Expr::new(
-            expr.span,
-            Expression::Apply(Apply {
-                function: substitute(substitution.clone(), function, bound.clone()),
-                argument: substitute(substitution, argument, bound),
             }),
         ),
     }
@@ -289,14 +289,18 @@ fn avoid_alpha_capture(expr: Expr, bound: HashSet<Identifier>) -> Expr {
                 Expression::Identifier(new_identifier)
             }
             Expression::Identifier(identifier) => Expression::Identifier(identifier),
+            Expression::Function(Function { parameter, body }) => Expression::Function(Function {
+                parameter,
+                body: avoid_alpha_capture(body, bound),
+            }),
+            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
+                function: avoid_alpha_capture(function, bound.clone()),
+                argument: avoid_alpha_capture(argument, bound),
+            }),
             Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
                 name,
                 value: avoid_alpha_capture(value, bound.clone()),
                 inner: avoid_alpha_capture(inner, bound),
-            }),
-            Expression::Function(Function { parameter, body }) => Expression::Function(Function {
-                parameter,
-                body: avoid_alpha_capture(body, bound),
             }),
             Expression::Match(Match { value, patterns }) => Expression::Match(Match {
                 value: avoid_alpha_capture(value, bound.clone()),
@@ -307,10 +311,6 @@ fn avoid_alpha_capture(expr: Expr, bound: HashSet<Identifier>) -> Expr {
                         result: avoid_alpha_capture(result, bound.clone()),
                     })
                     .collect(),
-            }),
-            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
-                function: avoid_alpha_capture(function, bound.clone()),
-                argument: avoid_alpha_capture(argument, bound),
             }),
         },
     )

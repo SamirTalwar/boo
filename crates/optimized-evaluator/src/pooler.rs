@@ -13,14 +13,18 @@ pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
         Expression::Primitive(x) => Expression::Primitive(x),
         Expression::Native(x) => Expression::Native(x),
         Expression::Identifier(x) => Expression::Identifier(x),
+        Expression::Function(Function { parameter, body }) => Expression::Function(Function {
+            parameter,
+            body: add_expr(pool, body),
+        }),
+        Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
+            function: add_expr(pool, function),
+            argument: add_expr(pool, argument),
+        }),
         Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
             name,
             value: add_expr(pool, value),
             inner: add_expr(pool, inner),
-        }),
-        Expression::Function(Function { parameter, body }) => Expression::Function(Function {
-            parameter,
-            body: add_expr(pool, body),
         }),
         Expression::Match(Match { value, patterns }) => Expression::Match(Match {
             value: add_expr(pool, value),
@@ -31,10 +35,6 @@ pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
                     result: add_expr(pool, result),
                 })
                 .collect(),
-        }),
-        Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
-            function: add_expr(pool, function),
-            argument: add_expr(pool, argument),
         }),
     };
     Expr::insert(pool, expr.span, expression)
@@ -49,14 +49,18 @@ pub fn unpool_expr(pool: &ExprPool, expr: Expr) -> boo_core::expr::Expr {
             Expression::Primitive(primitive) => Expression::Primitive(primitive.clone()),
             Expression::Native(native) => Expression::Native(native.clone()),
             Expression::Identifier(identifier) => Expression::Identifier(identifier.clone()),
+            Expression::Function(Function { parameter, body }) => Expression::Function(Function {
+                parameter: parameter.clone(),
+                body: unpool_expr(pool, *body),
+            }),
+            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
+                function: unpool_expr(pool, *function),
+                argument: unpool_expr(pool, *argument),
+            }),
             Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
                 name: name.clone(),
                 value: unpool_expr(pool, *value),
                 inner: unpool_expr(pool, *inner),
-            }),
-            Expression::Function(Function { parameter, body }) => Expression::Function(Function {
-                parameter: parameter.clone(),
-                body: unpool_expr(pool, *body),
             }),
             Expression::Match(Match { value, patterns }) => Expression::Match(Match {
                 value: unpool_expr(pool, *value),
@@ -67,10 +71,6 @@ pub fn unpool_expr(pool: &ExprPool, expr: Expr) -> boo_core::expr::Expr {
                         result: unpool_expr(pool, *result),
                     })
                     .collect(),
-            }),
-            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
-                function: unpool_expr(pool, *function),
-                argument: unpool_expr(pool, *argument),
             }),
         },
     )

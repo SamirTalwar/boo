@@ -20,14 +20,18 @@ pub fn remove_spans(expr: Expr) -> Expr {
         match *expr.expression {
             Expression::Primitive(x) => Expression::Primitive(x),
             Expression::Identifier(x) => Expression::Identifier(x),
+            Expression::Function(Function { parameters, body }) => Expression::Function(Function {
+                parameters,
+                body: remove_spans(body),
+            }),
+            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
+                function: remove_spans(function),
+                argument: remove_spans(argument),
+            }),
             Expression::Assign(Assign { name, value, inner }) => Expression::Assign(Assign {
                 name,
                 value: remove_spans(value),
                 inner: remove_spans(inner),
-            }),
-            Expression::Function(Function { parameters, body }) => Expression::Function(Function {
-                parameters,
-                body: remove_spans(body),
             }),
             Expression::Match(Match { value, patterns }) => Expression::Match(Match {
                 value: remove_spans(value),
@@ -38,10 +42,6 @@ pub fn remove_spans(expr: Expr) -> Expr {
                         result: remove_spans(result),
                     })
                     .collect(),
-            }),
-            Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
-                function: remove_spans(function),
-                argument: remove_spans(argument),
             }),
             Expression::Infix(Infix {
                 operation,
