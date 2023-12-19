@@ -28,10 +28,6 @@ pub fn rewrite(expr: crate::Expr) -> Result<core::Expr> {
             expr
         }
         crate::Expression::Match(crate::Match { value, patterns }) => {
-            match patterns.last().unwrap().pattern {
-                crate::Pattern::Anything => (),
-                _ => panic!("FATAL: Encountered a match expression without a base case."),
-            };
             wrap(core::Expression::Match(core::Match {
                 value: rewrite(value)?,
                 patterns: patterns

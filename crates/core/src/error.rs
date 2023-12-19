@@ -27,6 +27,13 @@ pub enum Error {
         expected_tokens: Vec<&'static str>,
     },
 
+    #[error("Match expression without a base case")]
+    #[diagnostic(code(boo::verifier::match_without_base_case))]
+    MatchWithoutBaseCase {
+        #[label("match expression requires a base case")]
+        span: Option<Span>,
+    },
+
     #[error("Could not apply the function")]
     #[diagnostic(code(boo::evaluator::invalid_function_application))]
     InvalidFunctionApplication {

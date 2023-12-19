@@ -8,6 +8,7 @@ use boo_core::error::Result;
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
 use boo_core::span::Span;
+use boo_core::verification;
 
 pub use crate::operation::Operation;
 
@@ -29,7 +30,9 @@ impl Expr {
 
     /// Convert the expression to a core expression.
     pub fn to_core(self) -> Result<boo_core::expr::Expr> {
-        rewriter::rewrite(self)
+        let result = rewriter::rewrite(self)?;
+        verification::verify(&result)?;
+        Ok(result)
     }
 }
 

@@ -118,7 +118,7 @@ impl<'a> InnerEvaluator<'a> {
                         }
                     }
                 }
-                unreachable!("Match expression with no matching patterns.")
+                Err(Error::MatchWithoutBaseCase { span: expr.span })
             }
             Expression::Apply(Apply {
                 function: function_ref,

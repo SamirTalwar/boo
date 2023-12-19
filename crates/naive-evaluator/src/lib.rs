@@ -138,7 +138,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
         }) => {
             let PatternMatch { pattern, result } = patterns
                 .pop_front()
-                .unwrap_or_else(|| unreachable!("Match expression with no matching patterns."));
+                .ok_or(Error::MatchWithoutBaseCase { span: expr.span })?;
             match pattern {
                 Pattern::Anything => Ok(Progress::Next(result)),
                 _ => match step(value)? {
