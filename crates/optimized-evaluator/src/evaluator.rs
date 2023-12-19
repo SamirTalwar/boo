@@ -93,10 +93,33 @@ impl<'a> InnerEvaluator<'a> {
             Expression::Match(Match {
                 value: value_ref,
                 patterns,
-            }) => self.evaluate_pattern_match(
-                Binding::unresolved((*value_ref, self.bindings.clone())),
-                patterns,
-            ),
+            }) => {
+                // Ensure we only evaluate the value once.
+                let mut value = Binding::unresolved((*value_ref, self.bindings.clone()));
+                for PatternMatch {
+                    pattern,
+                    result: result_ref,
+                } in patterns
+                {
+                    match pattern {
+                        Pattern::Anything => {
+                            return self.evaluate(*result_ref);
+                        }
+                        Pattern::Primitive(expected) => {
+                            let resolved_value = self.resolve_binding(&mut value)?;
+                            match resolved_value {
+                                EvaluationProgress::Primitive(actual)
+                                    if actual.as_ref() == expected =>
+                                {
+                                    return self.evaluate(*result_ref);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                unreachable!("Match expression with no matching patterns.")
+            }
             Expression::Apply(Apply {
                 function: function_ref,
                 argument: argument_ref,
@@ -119,30 +142,6 @@ impl<'a> InnerEvaluator<'a> {
                         ))
                         .evaluate(*body_ref),
                     _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
-                }
-            }
-        }
-    }
-
-    /// Evaluates pattern-matching, ensuring that the value is only resolved once.
-    fn evaluate_pattern_match(
-        &self,
-        mut value: Binding<'a>,
-        patterns: &PatternMatch<Expr>,
-    ) -> Result<EvaluationProgress<'a>> {
-        match patterns {
-            PatternMatch::Anything { result: result_ref } => self.evaluate(*result_ref),
-            PatternMatch::Primitive {
-                pattern,
-                matched: matched_ref,
-                not_matched,
-            } => {
-                let resolved_value = self.resolve_binding(&mut value)?;
-                match resolved_value {
-                    EvaluationProgress::Primitive(actual) if actual.as_ref() == pattern => {
-                        self.evaluate(*matched_ref)
-                    }
-                    _ => self.evaluate_pattern_match(value, not_matched),
                 }
             }
         }

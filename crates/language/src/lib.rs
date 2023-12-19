@@ -86,8 +86,8 @@ pub struct PatternMatch {
 /// A single pattern.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Pattern {
-    Primitive(Primitive),
     Anything,
+    Primitive(Primitive),
 }
 
 /// Applies an argument to a function.
@@ -171,8 +171,8 @@ impl std::fmt::Display for Match {
 impl std::fmt::Display for Pattern {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Pattern::Primitive(x) => x.fmt(f),
             Pattern::Anything => write!(f, "_"),
+            Pattern::Primitive(x) => x.fmt(f),
         }
     }
 }

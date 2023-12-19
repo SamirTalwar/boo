@@ -1,5 +1,6 @@
 //! Structures that make up the core Boo AST.
 
+use std::collections::VecDeque;
 use std::fmt::Display;
 
 use crate::identifier::Identifier;
@@ -58,26 +59,23 @@ pub struct Match<Outer> {
     /// The value to be matched.
     pub value: Outer,
     /// The patterns.
-    pub patterns: PatternMatch<Outer>,
+    pub patterns: VecDeque<PatternMatch<Outer>>,
 }
 
-/// A set of patterns matched against a value.
+/// A single pattern and its assigned result.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum PatternMatch<Outer> {
-    /// Matches anything.
-    Anything {
-        /// The inevitable result.
-        result: Outer,
-    },
-    /// Matches a specific primitive value.
-    Primitive {
-        /// The pattern to be matched.
-        pattern: Primitive,
-        /// The result of successfully matching against the pattern.
-        matched: Outer,
-        /// The rest of the patterns, in the case where we fail to match against the pattern.
-        not_matched: Box<PatternMatch<Outer>>,
-    },
+pub struct PatternMatch<Outer> {
+    /// The pattern to be matched.
+    pub pattern: Pattern,
+    /// The result of matching against the pattern.
+    pub result: Outer,
+}
+
+/// A single pattern.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Pattern {
+    Anything,
+    Primitive(Primitive),
 }
 
 /// Applies an argument to a function.
@@ -121,19 +119,27 @@ impl<Outer: Display> std::fmt::Display for Function<Outer> {
 
 impl<Outer: Display> std::fmt::Display for Match<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "match {} {{ {} }}", self.value, self.patterns)
+        write!(f, "match {} {{", self.value)?;
+        let mut pattern_iter = self.patterns.iter();
+        if let Some(PatternMatch {
+            pattern: first_pattern,
+            result: first_result,
+        }) = pattern_iter.next()
+        {
+            write!(f, "{} -> ({})", first_pattern, first_result)?;
+            for PatternMatch { pattern, result } in pattern_iter {
+                write!(f, "; {} -> ({})", pattern, result)?;
+            }
+        }
+        write!(f, "}}")
     }
 }
 
-impl<Outer: Display> std::fmt::Display for PatternMatch<Outer> {
+impl std::fmt::Display for Pattern {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PatternMatch::Anything { result } => write!(f, "_ -> {}", result),
-            PatternMatch::Primitive {
-                pattern,
-                matched,
-                not_matched,
-            } => write!(f, "{} -> {}; {}", pattern, matched, not_matched),
+            Pattern::Primitive(x) => x.fmt(f),
+            Pattern::Anything => write!(f, "_"),
         }
     }
 }

@@ -27,39 +27,28 @@ pub fn rewrite(expr: crate::Expr) -> Result<core::Expr> {
             }
             expr
         }
-        crate::Expression::Match(crate::Match {
-            value,
-            mut patterns,
-        }) => {
-            let crate::PatternMatch {
-                pattern: base_pattern,
-                result: base_result,
-            } = patterns.pop().unwrap();
-            let mut rewritten_patterns = match base_pattern {
-                crate::Pattern::Anything => core::PatternMatch::Anything {
-                    result: rewrite(base_result)?,
-                },
+        crate::Expression::Match(crate::Match { value, patterns }) => {
+            match patterns.last().unwrap().pattern {
+                crate::Pattern::Anything => (),
                 _ => panic!("FATAL: Encountered a match expression without a base case."),
             };
-            for crate::PatternMatch { pattern, result } in patterns.into_iter().rev() {
-                match pattern {
-                    crate::Pattern::Primitive(primitive) => {
-                        rewritten_patterns = core::PatternMatch::Primitive {
-                            pattern: primitive,
-                            matched: rewrite(result)?,
-                            not_matched: Box::new(rewritten_patterns),
-                        };
-                    }
-                    crate::Pattern::Anything => {
-                        rewritten_patterns = core::PatternMatch::Anything {
-                            result: rewrite(result)?,
-                        };
-                    }
-                }
-            }
             wrap(core::Expression::Match(core::Match {
                 value: rewrite(value)?,
-                patterns: rewritten_patterns,
+                patterns: patterns
+                    .into_iter()
+                    .map(
+                        |crate::PatternMatch { pattern, result }| -> Result<core::PatternMatch<_>> {
+                            let rewritten_pattern = match pattern {
+                                crate::Pattern::Anything => core::Pattern::Anything,
+                                crate::Pattern::Primitive(x) => core::Pattern::Primitive(x),
+                            };
+                            Ok(core::PatternMatch {
+                                pattern: rewritten_pattern,
+                                result: rewrite(result)?,
+                            })
+                        },
+                    )
+                    .collect::<Result<_>>()?,
             }))
         }
         crate::Expression::Apply(crate::Apply { function, argument }) => {

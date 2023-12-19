@@ -24,7 +24,13 @@ pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
         }),
         Expression::Match(Match { value, patterns }) => Expression::Match(Match {
             value: add_expr(pool, value),
-            patterns: add_pattern_match(pool, patterns),
+            patterns: patterns
+                .into_iter()
+                .map(|PatternMatch { pattern, result }| PatternMatch {
+                    pattern,
+                    result: add_expr(pool, result),
+                })
+                .collect(),
         }),
         Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
             function: add_expr(pool, function),
@@ -32,27 +38,6 @@ pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
         }),
     };
     Expr::insert(pool, expr.span, expression)
-}
-
-/// Adds a pattern match into the pool, recursively.
-fn add_pattern_match(
-    pool: &mut ExprPool,
-    pattern_match: boo_core::expr::PatternMatch<boo_core::expr::Expr>,
-) -> PatternMatch<Expr> {
-    match pattern_match {
-        PatternMatch::Anything { result } => PatternMatch::Anything {
-            result: add_expr(pool, result),
-        },
-        PatternMatch::Primitive {
-            pattern,
-            matched,
-            not_matched,
-        } => PatternMatch::Primitive {
-            pattern,
-            matched: add_expr(pool, matched),
-            not_matched: Box::new(add_pattern_match(pool, *not_matched)),
-        },
-    }
 }
 
 // Recreates a core expression from the flattened variant.
@@ -75,7 +60,13 @@ pub fn unpool_expr(pool: &ExprPool, expr: Expr) -> boo_core::expr::Expr {
             }),
             Expression::Match(Match { value, patterns }) => Expression::Match(Match {
                 value: unpool_expr(pool, *value),
-                patterns: unpool_pattern_match(pool, patterns),
+                patterns: patterns
+                    .iter()
+                    .map(|PatternMatch { pattern, result }| PatternMatch {
+                        pattern: pattern.clone(),
+                        result: unpool_expr(pool, *result),
+                    })
+                    .collect(),
             }),
             Expression::Apply(Apply { function, argument }) => Expression::Apply(Apply {
                 function: unpool_expr(pool, *function),
@@ -83,25 +74,4 @@ pub fn unpool_expr(pool: &ExprPool, expr: Expr) -> boo_core::expr::Expr {
             }),
         },
     )
-}
-
-// Recreates a core pattern match from the flattened variant.
-fn unpool_pattern_match(
-    pool: &ExprPool,
-    pattern_match: &PatternMatch<Expr>,
-) -> boo_core::expr::PatternMatch<boo_core::expr::Expr> {
-    match pattern_match {
-        PatternMatch::Anything { result } => PatternMatch::Anything {
-            result: unpool_expr(pool, *result),
-        },
-        PatternMatch::Primitive {
-            pattern,
-            matched,
-            not_matched,
-        } => PatternMatch::Primitive {
-            pattern: pattern.clone(),
-            matched: unpool_expr(pool, *matched),
-            not_matched: Box::new(unpool_pattern_match(pool, not_matched)),
-        },
-    }
 }

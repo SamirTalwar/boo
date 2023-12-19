@@ -27,34 +27,40 @@ Expr {
                     ),
                 ),
             },
-            patterns: Primitive {
-                pattern: Integer(
-                    Small(
-                        1,
+            patterns: [
+                PatternMatch {
+                    pattern: Primitive(
+                        Integer(
+                            Small(
+                                1,
+                            ),
+                        ),
                     ),
-                ),
-                matched: Expr {
-                    span: Some(
-                        Span {
-                            start: 15,
-                            end: 16,
-                        },
-                    ),
-                    expression: Primitive(
+                    result: Expr {
+                        span: Some(
+                            Span {
+                                start: 15,
+                                end: 16,
+                            },
+                        ),
+                        expression: Primitive(
+                            Integer(
+                                Small(
+                                    2,
+                                ),
+                            ),
+                        ),
+                    },
+                },
+                PatternMatch {
+                    pattern: Primitive(
                         Integer(
                             Small(
                                 2,
                             ),
                         ),
                     ),
-                },
-                not_matched: Primitive {
-                    pattern: Integer(
-                        Small(
-                            2,
-                        ),
-                    ),
-                    matched: Expr {
+                    result: Expr {
                         span: Some(
                             Span {
                                 start: 23,
@@ -69,47 +75,50 @@ Expr {
                             ),
                         ),
                     },
-                    not_matched: Primitive {
-                        pattern: Integer(
+                },
+                PatternMatch {
+                    pattern: Primitive(
+                        Integer(
                             Small(
                                 3,
                             ),
                         ),
-                        matched: Expr {
-                            span: Some(
-                                Span {
-                                    start: 31,
-                                    end: 32,
-                                },
-                            ),
-                            expression: Primitive(
-                                Integer(
-                                    Small(
-                                        4,
-                                    ),
-                                ),
-                            ),
-                        },
-                        not_matched: Anything {
-                            result: Expr {
-                                span: Some(
-                                    Span {
-                                        start: 39,
-                                        end: 40,
-                                    },
-                                ),
-                                expression: Primitive(
-                                    Integer(
-                                        Small(
-                                            0,
-                                        ),
-                                    ),
-                                ),
+                    ),
+                    result: Expr {
+                        span: Some(
+                            Span {
+                                start: 31,
+                                end: 32,
                             },
-                        },
+                        ),
+                        expression: Primitive(
+                            Integer(
+                                Small(
+                                    4,
+                                ),
+                            ),
+                        ),
                     },
                 },
-            },
+                PatternMatch {
+                    pattern: Anything,
+                    result: Expr {
+                        span: Some(
+                            Span {
+                                start: 39,
+                                end: 40,
+                            },
+                        ),
+                        expression: Primitive(
+                            Integer(
+                                Small(
+                                    0,
+                                ),
+                            ),
+                        ),
+                    },
+                },
+            ],
         },
     ),
 }
