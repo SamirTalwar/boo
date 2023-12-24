@@ -5,18 +5,7 @@ package.version = "0.1.0"
 package.edition = "2021"
 
 members = [
-  "crates/benchmarks",
-  "crates/core",
-  "crates/e2e",
-  "crates/generator",
-  "crates/interpreter",
-  "crates/language",
-  "crates/lib",
-  "crates/naive-evaluator",
-  "crates/optimized-evaluator",
-  "crates/parser",
-  "crates/random-program",
-  "crates/test-helpers",
+  "crates/*",
 ]
 
 [profile.dev.package.insta]
