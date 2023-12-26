@@ -7,6 +7,7 @@
 //! arbitrary program.
 
 use std::rc::Rc;
+use std::sync::Arc;
 
 use im::HashSet;
 
@@ -278,7 +279,7 @@ fn avoid_alpha_capture(expr: Expr, bound: HashSet<Identifier>) -> Expr {
                 expression
             }
             Expression::Identifier(identifier) if bound.contains(&identifier) => {
-                let original = Rc::new(identifier);
+                let original = Arc::new(identifier);
                 let new_identifier = (1u32..)
                     .map(|suffix| Identifier::AvoidingCapture {
                         original: original.clone(),

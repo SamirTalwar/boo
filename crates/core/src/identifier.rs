@@ -1,7 +1,7 @@
 //! Identifiers, used for variable and parameter names.
 
 use std::collections::HashSet;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use lazy_static::lazy_static;
 use proptest::strategy::Strategy;
@@ -17,7 +17,7 @@ pub enum Identifier {
     Name(String),
     Operator(String),
     AvoidingCapture {
-        original: Rc<Identifier>,
+        original: Arc<Identifier>,
         suffix: u32,
     },
 }
