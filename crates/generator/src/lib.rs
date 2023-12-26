@@ -1,20 +1,35 @@
-//! generators for asts. used for testing and program synthesis.
+//! Generators for ASTs. Used for testing and program synthesis.
 
 use std::fmt::Debug;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use im::HashMap;
 use proptest::prelude::*;
 
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
-use boo_core::types::{KnownType, Type};
+use boo_core::types::{Type, TypeRef};
 use boo_language::*;
 
-type ExprStrategyValue = (Expr, Rc<KnownType>);
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TargetType {
+    Unknown,
+    Known(Arc<Type<Self>>),
+}
+
+impl From<Type<Self>> for TargetType {
+    fn from(value: Type<Self>) -> Self {
+        Self::Known(Arc::new(value))
+    }
+}
+
+impl TypeRef for TargetType {}
+
+type ExprStrategyValue = (Expr, TargetType);
 type ExprStrategy = BoxedStrategy<ExprStrategyValue>;
 
-type Bindings = HashMap<Identifier, Rc<KnownType>>;
+type Bindings = HashMap<Identifier, TargetType>;
 
 /// The generator configuration.
 #[derive(Debug)]
@@ -44,15 +59,10 @@ pub fn arbitrary() -> impl Strategy<Value = Expr> {
 
 /// Creates a strategy for generating expresions according to the configuration.
 pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
-    Just(KnownType::Integer)
+    Just(Type::<TargetType>::Integer.into())
         .prop_flat_map(move |target_type| {
             let start_depth = config.depth.clone();
-            gen_nested(
-                config.clone(),
-                start_depth,
-                Type::Known(target_type.into()),
-                HashMap::new(),
-            )
+            gen_nested(config.clone(), start_depth, target_type, HashMap::new())
         })
         .prop_map(|(expr, _)| expr)
 }
@@ -62,7 +72,7 @@ pub fn gen(config: Rc<ExprGenConfig>) -> impl Strategy<Value = Expr> {
 fn gen_nested(
     config: Rc<ExprGenConfig>,
     depth: std::ops::Range<usize>,
-    target_type: Type,
+    target_type: TargetType,
     bindings: Bindings,
 ) -> ExprStrategy {
     let mut choices: Vec<(u32, ExprStrategy)> = Vec::new();
@@ -172,24 +182,27 @@ fn gen_unused_identifier(
 
 /// Generates a primitive of the given type.
 /// Returns `None` if there are no primitives of the target type.
-fn gen_primitive(target_type: Type) -> Option<BoxedStrategy<Primitive>> {
-    Primitive::arbitrary_of_type(target_type)
+fn gen_primitive(target_type: TargetType) -> Option<BoxedStrategy<Primitive>> {
+    match target_type {
+        TargetType::Unknown => Some(Primitive::arbitrary().boxed()),
+        TargetType::Known(t) => Primitive::arbitrary_of_type(t.as_ref()),
+    }
 }
 
 fn make_primitive_expr(value: Primitive) -> ExprStrategyValue {
     let value_type = value.get_type();
     let expr = Expr::new(0.into(), Expression::Primitive(value));
-    (expr, value_type.into())
+    (expr, value_type)
 }
 
 /// Generates a reference to a variable of the given type.
 /// Returns `None` if there are no variables of the target type.
-fn gen_variable_reference(target_type: Type, bindings: Bindings) -> Option<ExprStrategy> {
+fn gen_variable_reference(target_type: TargetType, bindings: Bindings) -> Option<ExprStrategy> {
     let bindings_of_target_type = match target_type {
-        Type::Unknown => bindings,
-        Type::Known(expected) => bindings
+        TargetType::Unknown => bindings,
+        TargetType::Known(_) => bindings
             .iter()
-            .filter(|(_, actual)| **actual == expected)
+            .filter(|(_, actual)| **actual == target_type)
             .map(|(expr, expr_type)| (expr.clone(), expr_type.clone()))
             .collect(),
     };
@@ -215,7 +228,7 @@ fn gen_variable_reference(target_type: Type, bindings: Bindings) -> Option<ExprS
 fn gen_assignment(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
-    target_type: Type,
+    target_type: TargetType,
     bindings: Bindings,
 ) -> ExprStrategy {
     gen_unused_identifier(config.clone(), bindings.clone())
@@ -227,7 +240,7 @@ fn gen_assignment(
             gen_nested(
                 config_.clone(),
                 next_depth.clone(),
-                Type::Unknown,
+                TargetType::Unknown,
                 bindings_.clone(),
             )
             .prop_flat_map(move |(value, value_type): ExprStrategyValue| {
@@ -260,26 +273,27 @@ fn gen_assignment(
 fn gen_function(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
-    target_type: Type,
+    target_type: TargetType,
     bindings: Bindings,
 ) -> Option<ExprStrategy> {
     match target_type {
         // cannot generate functions for parameters of unknown type without some kind of unification
-        Type::Known(known) => {
-            if let KnownType::Function {
-                parameter: Type::Known(parameter_type),
-                body: target_body_type,
-            } = (*known).clone()
-            {
+        TargetType::Known(known) => match known.as_ref() {
+            Type::Function {
+                parameter: ref parameter_type @ TargetType::Known(_),
+                body: ref target_body_type,
+            } => {
+                let parameter_type_ = parameter_type.clone();
+                let target_body_type_ = target_body_type.clone();
                 Some(
                     gen_unused_identifier(config.clone(), bindings.clone())
                         .prop_flat_map(move |parameter| {
                             let parameter_ = parameter.clone();
-                            let parameter_type_ = parameter_type.clone();
+                            let parameter_type__ = parameter_type_.clone();
                             gen_nested(
                                 config.clone(),
                                 next_depth.clone(),
-                                target_body_type.clone(),
+                                target_body_type_.clone(),
                                 bindings.update(parameter, parameter_type_.clone()),
                             )
                             .prop_map(move |(body, body_type)| {
@@ -290,9 +304,9 @@ fn gen_function(
                                         body,
                                     }),
                                 );
-                                let expr_type = KnownType::Function {
-                                    parameter: Type::Known(parameter_type_.clone()),
-                                    body: Type::Known(body_type),
+                                let expr_type = Type::Function {
+                                    parameter: parameter_type__.clone(),
+                                    body: body_type,
                                 }
                                 .into();
                                 (expr, expr_type)
@@ -300,10 +314,9 @@ fn gen_function(
                         })
                         .boxed(),
                 )
-            } else {
-                None
             }
-        }
+            _ => None,
+        },
         _ => None,
     }
 }
@@ -314,13 +327,13 @@ fn gen_function(
 fn gen_match(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
-    target_type: Type,
+    target_type: TargetType,
     bindings: Bindings,
 ) -> ExprStrategy {
     gen_nested(
         config.clone(),
         next_depth.clone(),
-        Type::Unknown,
+        TargetType::Unknown,
         bindings.clone(),
     )
     .prop_flat_map(move |(value, value_type): ExprStrategyValue| {
@@ -332,7 +345,7 @@ fn gen_match(
             gen_pattern(
                 config.clone(),
                 next_depth.clone(),
-                Type::Known(value_type),
+                value_type,
                 target_type.clone(),
                 bindings.clone(),
             ),
@@ -376,10 +389,10 @@ fn gen_match(
 fn gen_pattern(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
-    pattern_type: Type,
-    target_type: Type,
+    pattern_type: TargetType,
+    target_type: TargetType,
     bindings: Bindings,
-) -> impl Strategy<Value = (Pattern, Expr, Rc<KnownType>)> {
+) -> impl Strategy<Value = (Pattern, Expr, TargetType)> {
     let mut choices: Vec<BoxedStrategy<Pattern>> = vec![];
     if let Some(primitive_strategy) =
         gen_primitive(pattern_type).map(|strategy| strategy.prop_map(Pattern::Primitive))
@@ -402,22 +415,22 @@ fn gen_pattern(
 fn gen_apply(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
-    target_type: Type,
+    target_type: TargetType,
     bindings: Bindings,
 ) -> ExprStrategy {
     gen_nested(
         config.clone(),
         next_depth.clone(),
-        Type::Unknown,
+        TargetType::Unknown,
         bindings.clone(),
     )
     .prop_flat_map(move |(argument, argument_type): ExprStrategyValue| {
         gen_nested(
             config.clone(),
             next_depth.clone(),
-            Type::Known(
-                KnownType::Function {
-                    parameter: Type::Known(argument_type),
+            TargetType::Known(
+                Type::Function {
+                    parameter: argument_type,
                     body: target_type.clone(),
                 }
                 .into(),
@@ -432,11 +445,14 @@ fn gen_apply(
                     argument: argument.clone(),
                 }),
             );
-            let expr_type = match function_type.as_ref() {
-                KnownType::Function {
-                    body: Type::Known(body_type),
-                    ..
-                } => body_type.clone(),
+            let expr_type = match function_type {
+                TargetType::Known(known) => match known.as_ref() {
+                    Type::Function {
+                        body: body_type @ TargetType::Known(_),
+                        ..
+                    } => body_type.clone(),
+                    _ => panic!("No function return type provided."),
+                },
                 _ => panic!("No function return type provided."),
             };
             (expr, expr_type)
@@ -450,24 +466,24 @@ fn gen_apply(
 fn gen_infix(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
-    target_type: Type,
+    target_type: TargetType,
     bindings: Bindings,
 ) -> Option<ExprStrategy> {
     match target_type {
-        Type::Known(known) if *known == KnownType::Integer => Some(
+        TargetType::Known(known) if *known == Type::Integer => Some(
             proptest::arbitrary::any::<Operation>()
                 .prop_flat_map(move |operation| {
                     (
                         gen_nested(
                             config.clone(),
                             next_depth.clone(),
-                            Type::Known(KnownType::Integer.into()),
+                            TargetType::Known(Type::Integer.into()),
                             bindings.clone(),
                         ),
                         gen_nested(
                             config.clone(),
                             next_depth.clone(),
-                            Type::Known(KnownType::Integer.into()),
+                            TargetType::Known(Type::Integer.into()),
                             bindings.clone(),
                         ),
                     )
@@ -480,7 +496,7 @@ fn gen_infix(
                                     right,
                                 }),
                             );
-                            (expr, KnownType::Integer.into())
+                            (expr, Type::Integer.into())
                         })
                 })
                 .boxed(),

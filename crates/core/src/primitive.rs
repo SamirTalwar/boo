@@ -4,7 +4,7 @@ pub mod integer;
 
 use proptest::strategy::{BoxedStrategy, Strategy};
 
-use crate::types::{KnownType, Type};
+use crate::types::{Type, TypeRef};
 
 pub use integer::*;
 
@@ -25,9 +25,9 @@ impl std::fmt::Display for Primitive {
 
 impl Primitive {
     /// Gets the type of a primitive.
-    pub fn get_type(&self) -> KnownType {
+    pub fn get_type<Outer: TypeRef>(&self) -> Outer {
         match self {
-            Self::Integer(_) => KnownType::Integer,
+            Self::Integer(_) => Type::Integer.into(),
         }
     }
 
@@ -39,15 +39,10 @@ impl Primitive {
     /// A proptest strategy for an arbitrary primitive value of the given type.
     ///
     /// Returns `None` if there is no primitive matching the given type.
-    pub fn arbitrary_of_type(target_type: Type) -> Option<BoxedStrategy<Primitive>> {
+    pub fn arbitrary_of_type(target_type: &Type<impl TypeRef>) -> Option<BoxedStrategy<Primitive>> {
         match target_type {
-            Type::Unknown => Some(Self::arbitrary().boxed()),
-            Type::Known(known) => match *known {
-                KnownType::Integer => {
-                    Some(Integer::arbitrary().prop_map(Primitive::Integer).boxed())
-                }
-                _ => None,
-            },
+            Type::Integer => Some(Integer::arbitrary().prop_map(Primitive::Integer).boxed()),
+            _ => None,
         }
     }
 }

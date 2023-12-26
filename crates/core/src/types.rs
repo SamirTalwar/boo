@@ -1,28 +1,32 @@
-//! A representation of a value's type, for type-checking and valid program
-//! synthesis.
+//! A representation of a value's type.
+//!
+//! Used for type-checking and valid program synthesis.
 
-use std::rc::Rc;
+use std::sync::Arc;
 
-/// Types can be known or unknown.
+/// An opaque wrapper around a type.
+pub trait TypeRef: From<Type<Self>> + Sized {}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Type {
-    Unknown,
-    Known(Rc<KnownType>),
-}
+pub struct ArcType(Arc<Type<Self>>);
 
-impl Type {
-    pub fn is_known(&self) -> bool {
-        matches!(self, Type::Known(_))
-    }
-
-    pub fn is_unknown(&self) -> bool {
-        matches!(self, Type::Unknown)
+impl AsRef<Type<Self>> for ArcType {
+    fn as_ref(&self) -> &Type<Self> {
+        self.0.as_ref()
     }
 }
 
-/// The set of known types.
+impl From<Type<Self>> for ArcType {
+    fn from(value: Type<Self>) -> Self {
+        Self(Arc::new(value))
+    }
+}
+
+impl TypeRef for ArcType {}
+
+/// The set of types.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum KnownType {
+pub enum Type<Outer: TypeRef> {
     Integer,
-    Function { parameter: Type, body: Type },
+    Function { parameter: Outer, body: Outer },
 }
