@@ -9,9 +9,13 @@ use proptest::prelude::*;
 
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
-use boo_core::types::{Type, TypeRef};
+use boo_core::types::{SimpleType, Type, TypeRef};
 use boo_language::*;
 
+/// The type of the target value to be generated.
+///
+/// When generating, we may wish to generate a value of a partially- or fully-
+/// unknown type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TargetType {
     Unknown,
@@ -24,12 +28,73 @@ impl From<Type<Self>> for TargetType {
     }
 }
 
+impl From<SimpleType> for TargetType {
+    fn from(value: SimpleType) -> Self {
+        Self::Known(Arc::new(
+            Arc::try_unwrap(value.0)
+                .unwrap_or_else(|arc| (*arc).clone())
+                .transform(Self::from),
+        ))
+    }
+}
+
 impl TypeRef for TargetType {}
 
-type ExprStrategyValue = (Expr, TargetType);
+impl TargetType {
+    /// Converts to a simple type if it is known all the way down.
+    ///
+    /// If this type or any nested types are unknown, this will return `None`.
+    fn as_simple_type(&self) -> Option<SimpleType> {
+        match self {
+            TargetType::Unknown => None,
+            TargetType::Known(known) => match known.as_ref() {
+                Type::Integer => Some(Type::Integer.into()),
+                Type::Function { parameter, body } => {
+                    let simple_parameter = parameter.as_simple_type()?;
+                    let simple_body = body.as_simple_type()?;
+                    Some(
+                        Type::Function {
+                            parameter: simple_parameter,
+                            body: simple_body,
+                        }
+                        .into(),
+                    )
+                }
+            },
+        }
+    }
+
+    /// Matches against the simple type given, recursively.
+    ///
+    /// `Unknown` always matches; `Known` will match if the values match.
+    fn matches_simple_type(&self, other: &SimpleType) -> bool {
+        match self {
+            TargetType::Unknown => true,
+            TargetType::Known(known) => match (known.as_ref(), other.as_ref()) {
+                (Type::Integer, Type::Integer) => true,
+                (
+                    Type::Function {
+                        parameter: self_parameter,
+                        body: self_body,
+                    },
+                    Type::Function {
+                        parameter: other_parameter,
+                        body: other_body,
+                    },
+                ) => {
+                    self_parameter.matches_simple_type(other_parameter)
+                        && self_body.matches_simple_type(other_body)
+                }
+                _ => false,
+            },
+        }
+    }
+}
+
+type ExprStrategyValue = (Expr, SimpleType);
 type ExprStrategy = BoxedStrategy<ExprStrategyValue>;
 
-type Bindings = HashMap<Identifier, TargetType>;
+type Bindings = HashMap<Identifier, SimpleType>;
 
 /// The generator configuration.
 #[derive(Debug)]
@@ -202,7 +267,7 @@ fn gen_variable_reference(target_type: TargetType, bindings: Bindings) -> Option
         TargetType::Unknown => bindings,
         TargetType::Known(_) => bindings
             .iter()
-            .filter(|(_, actual)| **actual == target_type)
+            .filter(|(_, actual)| target_type.matches_simple_type(actual))
             .map(|(expr, expr_type)| (expr.clone(), expr_type.clone()))
             .collect(),
     };
@@ -280,21 +345,26 @@ fn gen_function(
         // cannot generate functions for parameters of unknown type without some kind of unification
         TargetType::Known(known) => match known.as_ref() {
             Type::Function {
-                parameter: ref parameter_type @ TargetType::Known(_),
+                parameter: ref parameter_type,
                 body: ref target_body_type,
             } => {
-                let parameter_type_ = parameter_type.clone();
+                let simple_parameter_type = match parameter_type.as_simple_type() {
+                    None => {
+                        return None;
+                    }
+                    Some(x) => x,
+                };
                 let target_body_type_ = target_body_type.clone();
                 Some(
                     gen_unused_identifier(config.clone(), bindings.clone())
                         .prop_flat_map(move |parameter| {
                             let parameter_ = parameter.clone();
-                            let parameter_type__ = parameter_type_.clone();
+                            let simple_parameter_type_ = simple_parameter_type.clone();
                             gen_nested(
                                 config.clone(),
                                 next_depth.clone(),
                                 target_body_type_.clone(),
-                                bindings.update(parameter, parameter_type_.clone()),
+                                bindings.update(parameter, simple_parameter_type.clone()),
                             )
                             .prop_map(move |(body, body_type)| {
                                 let expr = Expr::new(
@@ -305,7 +375,7 @@ fn gen_function(
                                     }),
                                 );
                                 let expr_type = Type::Function {
-                                    parameter: parameter_type__.clone(),
+                                    parameter: simple_parameter_type_.clone(),
                                     body: body_type,
                                 }
                                 .into();
@@ -389,13 +459,13 @@ fn gen_match(
 fn gen_pattern(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
-    pattern_type: TargetType,
+    pattern_type: SimpleType,
     target_type: TargetType,
     bindings: Bindings,
-) -> impl Strategy<Value = (Pattern, Expr, TargetType)> {
+) -> impl Strategy<Value = (Pattern, Expr, SimpleType)> {
     let mut choices: Vec<BoxedStrategy<Pattern>> = vec![];
     if let Some(primitive_strategy) =
-        gen_primitive(pattern_type).map(|strategy| strategy.prop_map(Pattern::Primitive))
+        gen_primitive(pattern_type.into()).map(|strategy| strategy.prop_map(Pattern::Primitive))
     {
         choices.push(primitive_strategy.boxed());
     };
@@ -430,7 +500,7 @@ fn gen_apply(
             next_depth.clone(),
             TargetType::Known(
                 Type::Function {
-                    parameter: argument_type,
+                    parameter: argument_type.into(),
                     body: target_type.clone(),
                 }
                 .into(),
@@ -445,14 +515,8 @@ fn gen_apply(
                     argument: argument.clone(),
                 }),
             );
-            let expr_type = match function_type {
-                TargetType::Known(known) => match known.as_ref() {
-                    Type::Function {
-                        body: body_type @ TargetType::Known(_),
-                        ..
-                    } => body_type.clone(),
-                    _ => panic!("No function return type provided."),
-                },
+            let expr_type = match function_type.as_ref() {
+                Type::Function { body, .. } => body.clone(),
                 _ => panic!("No function return type provided."),
             };
             (expr, expr_type)

@@ -7,26 +7,39 @@ use std::sync::Arc;
 /// An opaque wrapper around a type.
 pub trait TypeRef: From<Type<Self>> + Sized {}
 
+/// A simple type wrapper that allows for cycles.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ArcType(Arc<Type<Self>>);
+pub struct SimpleType(pub Arc<Type<Self>>);
 
-impl AsRef<Type<Self>> for ArcType {
+impl AsRef<Type<Self>> for SimpleType {
     fn as_ref(&self) -> &Type<Self> {
         self.0.as_ref()
     }
 }
 
-impl From<Type<Self>> for ArcType {
+impl From<Type<Self>> for SimpleType {
     fn from(value: Type<Self>) -> Self {
         Self(Arc::new(value))
     }
 }
 
-impl TypeRef for ArcType {}
+impl TypeRef for SimpleType {}
 
 /// The set of types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type<Outer: TypeRef> {
     Integer,
     Function { parameter: Outer, body: Outer },
+}
+
+impl<Outer: TypeRef> Type<Outer> {
+    pub fn transform<NewOuter: TypeRef>(self, f: impl Fn(Outer) -> NewOuter) -> Type<NewOuter> {
+        match self {
+            Type::Integer => Type::Integer,
+            Type::Function { parameter, body } => Type::Function {
+                parameter: f(parameter),
+                body: f(body),
+            },
+        }
+    }
 }
