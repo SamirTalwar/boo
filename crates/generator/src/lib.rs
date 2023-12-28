@@ -9,7 +9,7 @@ use proptest::prelude::*;
 
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
-use boo_core::types::{SimpleType, Type, TypeRef};
+use boo_core::types::{Monotype, Type, TypeRef};
 use boo_language::*;
 
 /// The type of the target value to be generated.
@@ -28,8 +28,8 @@ impl From<Type<Self>> for TargetType {
     }
 }
 
-impl From<SimpleType> for TargetType {
-    fn from(value: SimpleType) -> Self {
+impl From<Monotype> for TargetType {
+    fn from(value: Monotype) -> Self {
         Self::Known(Arc::new(
             Arc::try_unwrap(value.0)
                 .unwrap_or_else(|arc| (*arc).clone())
@@ -41,21 +41,21 @@ impl From<SimpleType> for TargetType {
 impl TypeRef for TargetType {}
 
 impl TargetType {
-    /// Converts to a simple type if it is known all the way down.
+    /// Converts to a simple monotype if it is known all the way down.
     ///
     /// If this type or any nested types are unknown, this will return `None`.
-    fn as_simple_type(&self) -> Option<SimpleType> {
+    fn as_monotype(&self) -> Option<Monotype> {
         match self {
             TargetType::Unknown => None,
             TargetType::Known(known) => match known.as_ref() {
                 Type::Integer => Some(Type::Integer.into()),
                 Type::Function { parameter, body } => {
-                    let simple_parameter = parameter.as_simple_type()?;
-                    let simple_body = body.as_simple_type()?;
+                    let mono_parameter = parameter.as_monotype()?;
+                    let mono_body = body.as_monotype()?;
                     Some(
                         Type::Function {
-                            parameter: simple_parameter,
-                            body: simple_body,
+                            parameter: mono_parameter,
+                            body: mono_body,
                         }
                         .into(),
                     )
@@ -64,10 +64,10 @@ impl TargetType {
         }
     }
 
-    /// Matches against the simple type given, recursively.
+    /// Matches against the monotype given, recursively.
     ///
     /// `Unknown` always matches; `Known` will match if the values match.
-    fn matches_simple_type(&self, other: &SimpleType) -> bool {
+    fn matches_monotype(&self, other: &Monotype) -> bool {
         match self {
             TargetType::Unknown => true,
             TargetType::Known(known) => match (known.as_ref(), other.as_ref()) {
@@ -82,8 +82,8 @@ impl TargetType {
                         body: other_body,
                     },
                 ) => {
-                    self_parameter.matches_simple_type(other_parameter)
-                        && self_body.matches_simple_type(other_body)
+                    self_parameter.matches_monotype(other_parameter)
+                        && self_body.matches_monotype(other_body)
                 }
                 _ => false,
             },
@@ -91,10 +91,10 @@ impl TargetType {
     }
 }
 
-type ExprStrategyValue = (Expr, SimpleType);
+type ExprStrategyValue = (Expr, Monotype);
 type ExprStrategy = BoxedStrategy<ExprStrategyValue>;
 
-type Bindings = HashMap<Identifier, SimpleType>;
+type Bindings = HashMap<Identifier, Monotype>;
 
 /// The generator configuration.
 #[derive(Debug)]
@@ -267,7 +267,7 @@ fn gen_variable_reference(target_type: TargetType, bindings: Bindings) -> Option
         TargetType::Unknown => bindings,
         TargetType::Known(_) => bindings
             .iter()
-            .filter(|(_, actual)| target_type.matches_simple_type(actual))
+            .filter(|(_, actual)| target_type.matches_monotype(actual))
             .map(|(expr, expr_type)| (expr.clone(), expr_type.clone()))
             .collect(),
     };
@@ -348,7 +348,7 @@ fn gen_function(
                 parameter: ref parameter_type,
                 body: ref target_body_type,
             } => {
-                let simple_parameter_type = match parameter_type.as_simple_type() {
+                let mono_parameter_type = match parameter_type.as_monotype() {
                     None => {
                         return None;
                     }
@@ -359,12 +359,12 @@ fn gen_function(
                     gen_unused_identifier(config.clone(), bindings.clone())
                         .prop_flat_map(move |parameter| {
                             let parameter_ = parameter.clone();
-                            let simple_parameter_type_ = simple_parameter_type.clone();
+                            let mono_parameter_type_ = mono_parameter_type.clone();
                             gen_nested(
                                 config.clone(),
                                 next_depth.clone(),
                                 target_body_type_.clone(),
-                                bindings.update(parameter, simple_parameter_type.clone()),
+                                bindings.update(parameter, mono_parameter_type.clone()),
                             )
                             .prop_map(move |(body, body_type)| {
                                 let expr = Expr::new(
@@ -375,7 +375,7 @@ fn gen_function(
                                     }),
                                 );
                                 let expr_type = Type::Function {
-                                    parameter: simple_parameter_type_.clone(),
+                                    parameter: mono_parameter_type_.clone(),
                                     body: body_type,
                                 }
                                 .into();
@@ -459,10 +459,10 @@ fn gen_match(
 fn gen_pattern(
     config: Rc<ExprGenConfig>,
     next_depth: std::ops::Range<usize>,
-    pattern_type: SimpleType,
+    pattern_type: Monotype,
     target_type: TargetType,
     bindings: Bindings,
-) -> impl Strategy<Value = (Pattern, Expr, SimpleType)> {
+) -> impl Strategy<Value = (Pattern, Expr, Monotype)> {
     let mut choices: Vec<BoxedStrategy<Pattern>> = vec![];
     if let Some(primitive_strategy) =
         gen_primitive(pattern_type.into()).map(|strategy| strategy.prop_map(Pattern::Primitive))

@@ -9,21 +9,21 @@ pub trait TypeRef: From<Type<Self>> + Sized {}
 
 /// A simple type wrapper that allows for cycles.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SimpleType(pub Arc<Type<Self>>);
+pub struct Monotype(pub Arc<Type<Self>>);
 
-impl AsRef<Type<Self>> for SimpleType {
+impl AsRef<Type<Self>> for Monotype {
     fn as_ref(&self) -> &Type<Self> {
         self.0.as_ref()
     }
 }
 
-impl From<Type<Self>> for SimpleType {
+impl From<Type<Self>> for Monotype {
     fn from(value: Type<Self>) -> Self {
         Self(Arc::new(value))
     }
 }
 
-impl TypeRef for SimpleType {}
+impl TypeRef for Monotype {}
 
 /// The set of types.
 #[derive(Debug, Clone, PartialEq, Eq)]
