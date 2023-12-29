@@ -1,0 +1,13 @@
+[package]
+name = "boo-types-hindley-milner"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+bench = false
+
+[dependencies]
+boo-core = { path = "../core" }
+
+im = "15.1.0"
+lazy_static = "1.4.0"

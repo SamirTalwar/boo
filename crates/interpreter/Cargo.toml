@@ -13,6 +13,7 @@ bench = false
 [dependencies]
 boo = { path = "../lib" }
 boo-naive-evaluator = { path = "../naive-evaluator" }
+boo-types-hindley-milner = { path = "../types-hindley-milner" }
 
 clap = { version = "4.4.11", features = ["derive"] }
 miette = { version = "5.10.0", features = ["fancy"] }

@@ -25,11 +25,34 @@ impl From<Type<Self>> for Monotype {
 
 impl TypeRef for Monotype {}
 
+/// A type bound by forall quantifiers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Polytype {
+    pub quantifiers: Vec<TypeVariable>,
+    pub mono: Monotype,
+}
+
+impl From<Type<Monotype>> for Polytype {
+    fn from(value: Type<Monotype>) -> Self {
+        Self::from(Monotype::from(value))
+    }
+}
+
+impl From<Monotype> for Polytype {
+    fn from(value: Monotype) -> Self {
+        Self {
+            quantifiers: vec![],
+            mono: value,
+        }
+    }
+}
+
 /// The set of types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type<Outer: TypeRef> {
     Integer,
     Function { parameter: Outer, body: Outer },
+    Variable(TypeVariable),
 }
 
 impl<Outer: TypeRef> Type<Outer> {
@@ -40,6 +63,19 @@ impl<Outer: TypeRef> Type<Outer> {
                 parameter: f(parameter),
                 body: f(body),
             },
+            Type::Variable(variable) => Type::Variable(variable),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TypeVariable(pub Arc<String>);
+
+impl TypeVariable {
+    pub fn new(value: String) -> Self {
+        Self(Arc::new(value))
+    }
+    pub fn new_from_str(value: &str) -> Self {
+        Self::new(value.to_owned())
     }
 }

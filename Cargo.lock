@@ -238,6 +238,7 @@ version = "0.1.0"
 dependencies = [
  "boo",
  "boo-naive-evaluator",
+ "boo-types-hindley-milner",
  "clap",
  "miette",
  "reedline",
@@ -304,6 +305,15 @@ name = "boo-test-helpers"
 version = "0.1.0"
 dependencies = [
  "proptest",
+]
+
+[[package]]
+name = "boo-types-hindley-milner"
+version = "0.1.0"
+dependencies = [
+ "boo-core",
+ "im",
+ "lazy_static",
 ]
 
 [[package]]

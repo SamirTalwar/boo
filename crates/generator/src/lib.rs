@@ -60,6 +60,7 @@ impl TargetType {
                         .into(),
                     )
                 }
+                Type::Variable(variable) => Some(Type::Variable(variable.clone()).into()),
             },
         }
     }

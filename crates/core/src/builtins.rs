@@ -2,6 +2,8 @@
 
 use std::rc::Rc;
 
+use lazy_static::lazy_static;
+
 use crate::ast::*;
 use crate::error::Result;
 use crate::evaluation::Evaluator;
@@ -9,28 +11,94 @@ use crate::expr::Expr;
 use crate::identifier::Identifier;
 use crate::native::Native;
 use crate::primitive::{Integer, Primitive};
+use crate::types::{Monotype, Polytype, Type, TypeVariable};
+
+lazy_static! {
+    static ref NAME_ADD: Identifier = Identifier::operator_from_str("+").unwrap();
+    static ref NAME_SUBTRACT: Identifier = Identifier::operator_from_str("-").unwrap();
+    static ref NAME_MULTIPLY: Identifier = Identifier::operator_from_str("*").unwrap();
+    static ref NAME_TRACE: Identifier = Identifier::name_from_str("trace").unwrap();
+}
 
 /// Prepares an evaluator by assigning all built-ins.
 pub fn prepare(evaluator: &mut impl Evaluator) -> Result<()> {
-    for (name, builtin) in all().into_iter().rev() {
-        evaluator.bind(name, builtin)?;
+    for builtin in all().into_iter().rev() {
+        evaluator.bind(builtin.name.clone(), builtin.implementation)?;
     }
     Ok(())
 }
 
+/// Prepares an evaluator by assigning all built-ins.
+pub fn types() -> impl Iterator<Item = (&'static Identifier, Polytype)> {
+    all()
+        .into_iter()
+        .map(|builtin| (builtin.name, builtin.assumed_type))
+}
+
+struct Builtin {
+    name: &'static Identifier,
+    assumed_type: Polytype,
+    implementation: Expr,
+}
+
 /// All the built-in expressions.
-pub fn all() -> Vec<(Identifier, Expr)> {
+fn all() -> Vec<Builtin> {
     vec![
-        (Identifier::operator_from_str("+").unwrap(), builtin_add()),
-        (
-            Identifier::operator_from_str("-").unwrap(),
-            builtin_subtract(),
-        ),
-        (
-            Identifier::operator_from_str("*").unwrap(),
-            builtin_multiply(),
-        ),
-        (Identifier::name_from_str("trace").unwrap(), builtin_trace()),
+        Builtin {
+            name: &NAME_ADD,
+            assumed_type: Type::Function {
+                parameter: Type::Integer.into(),
+                body: Type::Function {
+                    parameter: Type::Integer.into(),
+                    body: Type::Integer.into(),
+                }
+                .into(),
+            }
+            .into(),
+            implementation: builtin_add(),
+        },
+        Builtin {
+            name: &NAME_SUBTRACT,
+            assumed_type: Type::Function {
+                parameter: Type::Integer.into(),
+                body: Type::Function {
+                    parameter: Type::Integer.into(),
+                    body: Type::Integer.into(),
+                }
+                .into(),
+            }
+            .into(),
+            implementation: builtin_subtract(),
+        },
+        Builtin {
+            name: &NAME_MULTIPLY,
+            assumed_type: Type::Function {
+                parameter: Type::Integer.into(),
+                body: Type::Function {
+                    parameter: Type::Integer.into(),
+                    body: Type::Integer.into(),
+                }
+                .into(),
+            }
+            .into(),
+            implementation: builtin_multiply(),
+        },
+        Builtin {
+            name: &NAME_TRACE,
+            assumed_type: {
+                let variable = TypeVariable::new_from_str("a");
+                let variable_ref: Monotype = Type::Variable(variable.clone()).into();
+                Polytype {
+                    quantifiers: vec![variable],
+                    mono: Type::Function {
+                        parameter: variable_ref.clone(),
+                        body: variable_ref,
+                    }
+                    .into(),
+                }
+            },
+            implementation: builtin_trace(),
+        },
     ]
 }
 
