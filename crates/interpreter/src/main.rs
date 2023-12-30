@@ -74,7 +74,7 @@ fn interpret(evaluator: &dyn Evaluator, buffer: &str) -> miette::Result<()> {
     let parsed = parse(buffer)?;
     let expression = parsed.to_core()?;
     let typ = boo_types_hindley_milner::w(&expression)?;
-    println!("Type: {:?}", typ);
+    println!("Type: {typ}");
     let result = evaluator.evaluate(expression)?;
     println!("{}", result);
     Ok(())

@@ -2,10 +2,11 @@
 //!
 //! Used for type-checking and valid program synthesis.
 
+use std::fmt::Display;
 use std::sync::Arc;
 
 /// An opaque wrapper around a type.
-pub trait TypeRef: From<Type<Self>> + Sized {}
+pub trait TypeRef: From<Type<Self>> + Display + Sized {}
 
 /// A simple type wrapper that allows for cycles.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,6 +21,12 @@ impl AsRef<Type<Self>> for Monotype {
 impl From<Type<Self>> for Monotype {
     fn from(value: Type<Self>) -> Self {
         Self(Arc::new(value))
+    }
+}
+
+impl Display for Monotype {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -68,6 +75,16 @@ impl<Outer: TypeRef> Type<Outer> {
     }
 }
 
+impl<Outer: TypeRef> Display for Type<Outer> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Integer => write!(f, "Integer"),
+            Type::Function { parameter, body } => write!(f, "({parameter} -> {body})"),
+            Type::Variable(variable) => write!(f, "{variable}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeVariable(pub Arc<String>);
 
@@ -77,5 +94,11 @@ impl TypeVariable {
     }
     pub fn new_from_str(value: &str) -> Self {
         Self::new(value.to_owned())
+    }
+}
+
+impl Display for TypeVariable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }

@@ -1,6 +1,6 @@
 //! Generators for ASTs. Used for testing and program synthesis.
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -35,6 +35,15 @@ impl From<Monotype> for TargetType {
                 .unwrap_or_else(|arc| (*arc).clone())
                 .transform(Self::from),
         ))
+    }
+}
+
+impl Display for TargetType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TargetType::Unknown => write!(f, "<unknown>"),
+            TargetType::Known(known) => write!(f, "{known}"),
+        }
     }
 }
 
