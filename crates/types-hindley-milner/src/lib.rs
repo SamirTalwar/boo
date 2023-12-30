@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::iter;
 use std::sync::Arc;
 
@@ -32,6 +33,21 @@ impl FromIterator<(Identifier, Polytype)> for Env {
 impl FromIterator<(Arc<Identifier>, Polytype)> for Env {
     fn from_iter<T: IntoIterator<Item = (Arc<Identifier>, Polytype)>>(iter: T) -> Self {
         Self(im::HashMap::from_iter(iter))
+    }
+}
+
+impl Display for Env {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut items = self.0.iter();
+        if let Some((first_id, first_type)) = items.next() {
+            write!(f, "Γ ⊢ {}: {}", first_id.name(), first_type)?;
+            for (next_id, next_type) in items {
+                write!(f, ", {}: {}", next_id.name(), next_type)?;
+            }
+            Ok(())
+        } else {
+            write!(f, "Γ ⊢ ∅")
+        }
     }
 }
 

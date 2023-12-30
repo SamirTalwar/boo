@@ -81,6 +81,17 @@ impl Identifier {
         }
     }
 
+    pub fn name(&self) -> String {
+        match self {
+            Identifier::Name(name) => name.clone(),
+            Identifier::Operator(operator) => format!("({operator})"),
+            Identifier::AvoidingCapture {
+                original,
+                suffix: _,
+            } => original.name(),
+        }
+    }
+
     fn is_valid_name(name: &str) -> bool {
         !KEYWORDS.contains(name)
             && !name.chars().all(|c| c == '_')

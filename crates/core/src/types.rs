@@ -54,6 +54,21 @@ impl From<Monotype> for Polytype {
     }
 }
 
+impl Display for Polytype {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.quantifiers.is_empty() {
+            write!(f, "{}", self.mono)
+        } else {
+            write!(f, "∀")?;
+            for quantifier in self.quantifiers.iter() {
+                write!(f, " {quantifier}")?;
+            }
+            write!(f, ". ")?;
+            write!(f, "{}", self.mono)
+        }
+    }
+}
+
 /// The set of types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type<Outer: TypeRef> {
