@@ -85,7 +85,7 @@ impl<'a> NativeContext for AdditionalContext<'a> {
         if identifier == self.name.as_ref() {
             match evaluate((*self.value).clone())? {
                 Evaluated::Primitive(primitive) => Ok(primitive),
-                Evaluated::Function(_) => Err(Error::TypeError),
+                Evaluated::Function(_) => Err(Error::InvalidPrimitive { span: None }),
             }
         } else {
             self.rest.lookup_value(identifier)

@@ -186,7 +186,7 @@ impl<'a> NativeContext for InnerEvaluator<'a> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         match self.resolve(identifier, None)?.finish(self.pool) {
             Evaluated::Primitive(primitive) => Ok(primitive),
-            Evaluated::Function(_) => Err(Error::TypeError),
+            Evaluated::Function(_) => Err(Error::InvalidPrimitive { span: None }),
         }
     }
 }

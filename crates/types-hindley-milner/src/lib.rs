@@ -182,14 +182,21 @@ impl W {
                 let (argument_subst, argument_type) =
                     Self::infer(env.substitute(&function_subst, fresh), fresh, argument)?;
                 let body_type: Monotype = Type::Variable(fresh.next()).into();
+                let expected_function_type: Monotype = Type::Function {
+                    parameter: argument_type.clone(),
+                    body: body_type.clone(),
+                }
+                .into();
                 let body_subst = Self::unify(
                     &function_type.substitute(&argument_subst, fresh),
-                    &Type::Function {
-                        parameter: argument_type,
-                        body: body_type.clone(),
-                    }
-                    .into(),
-                )?;
+                    &expected_function_type,
+                )
+                .ok_or(Error::TypeUnificationError {
+                    left_span: function.span,
+                    left_type: function_type,
+                    right_span: argument.span,
+                    right_type: argument_type,
+                })?;
                 let result = body_type.substitute(&body_subst, fresh);
                 let subst = function_subst.union(argument_subst).union(body_subst);
                 Ok((subst, result))
@@ -208,7 +215,7 @@ impl W {
         }
     }
 
-    fn unify(left: &Monotype, right: &Monotype) -> Result<Subst> {
+    fn unify(left: &Monotype, right: &Monotype) -> Option<Subst> {
         match (left.as_ref(), right.as_ref()) {
             (
                 Type::Function {
@@ -226,13 +233,13 @@ impl W {
                     &left_body.substitute(&parameter_subst, &mut empty_fresh),
                     &right_body.substitute(&parameter_subst, &mut empty_fresh),
                 )?;
-                Ok(parameter_subst.union(body_subst))
+                Some(parameter_subst.union(body_subst))
             }
-            (Type::Variable(_), Type::Variable(_)) => Ok(Subst::new()),
-            (Type::Variable(var), _) => Ok(Subst::from_iter([(var.clone(), right.clone())])),
-            (_, Type::Variable(var)) => Ok(Subst::from_iter([(var.clone(), left.clone())])),
-            (Type::Integer, Type::Integer) => Ok(Subst::new()),
-            _ => Err(Error::TypeError),
+            (Type::Variable(_), Type::Variable(_)) => Some(Subst::new()),
+            (Type::Variable(var), _) => Some(Subst::from_iter([(var.clone(), right.clone())])),
+            (_, Type::Variable(var)) => Some(Subst::from_iter([(var.clone(), left.clone())])),
+            (Type::Integer, Type::Integer) => Some(Subst::new()),
+            _ => None,
         }
     }
 }

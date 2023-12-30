@@ -1,6 +1,7 @@
 //! The set of possible interpretation errors.
 
 use crate::span::Span;
+use crate::types::Monotype;
 
 /// An alias for [`Result`][std::result::Result] with the error type fixed to
 /// [`Error`].
@@ -34,6 +35,17 @@ pub enum Error {
         span: Option<Span>,
     },
 
+    #[error("Could not unify types")]
+    #[diagnostic(code(boo::type_checker::type_error))]
+    TypeUnificationError {
+        #[label("{left_type}")]
+        left_span: Option<Span>,
+        left_type: Monotype,
+        #[label("{right_type}")]
+        right_span: Option<Span>,
+        right_type: Monotype,
+    },
+
     #[error("Could not apply the function")]
     #[diagnostic(code(boo::evaluator::invalid_function_application))]
     InvalidFunctionApplication {
@@ -41,9 +53,12 @@ pub enum Error {
         span: Option<Span>,
     },
 
-    #[error("Unexpected type error during evaluation")]
+    #[error("Invalid primitive")]
     #[diagnostic(code(boo::evaluator::type_error))]
-    TypeError,
+    InvalidPrimitive {
+        #[label("invalid primitive")]
+        span: Option<Span>,
+    },
 
     #[error("Unknown variable: {name:?}")]
     #[diagnostic(code(boo::evaluator::unknown_variable))]
