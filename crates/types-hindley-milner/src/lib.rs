@@ -227,7 +227,26 @@ impl W {
                 )?;
                 Ok((value_subst.union(inner_subst), inner_type))
             }
-            Expression::Match(_) => todo!("Match"),
+            Expression::Match(expr::Match { value, patterns }) => {
+                let _ = Self::infer(env.clone(), fresh, value)?;
+                let result_placeholder = Type::Variable(fresh.next()).into();
+                let mut subst = Subst::new();
+                for expr::PatternMatch { pattern: _, result } in patterns {
+                    let (result_subst, result_type) = Self::infer(env.clone(), fresh, result)?;
+                    subst = subst.union(result_subst).union(
+                        Self::unify(&result_type, &result_placeholder).ok_or_else(|| {
+                            Error::TypeUnificationError {
+                                left_span: expr.span,
+                                left_type: result_placeholder.clone(),
+                                right_span: result.span,
+                                right_type: result_type,
+                            }
+                        })?,
+                    );
+                }
+                let result = result_placeholder.substitute(&subst, fresh);
+                Ok((subst, result))
+            }
         }
     }
 
