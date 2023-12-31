@@ -2,6 +2,7 @@
 //!
 //! Used for type-checking and valid program synthesis.
 
+use std::borrow::Borrow;
 use std::fmt::Display;
 use std::sync::Arc;
 
@@ -100,7 +101,7 @@ impl<Outer: TypeRef> Display for Type<Outer> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeVariable(pub Arc<String>);
 
 impl TypeVariable {
@@ -109,6 +110,12 @@ impl TypeVariable {
     }
     pub fn new_from_str(value: &str) -> Self {
         Self::new(value.to_owned())
+    }
+}
+
+impl Borrow<str> for TypeVariable {
+    fn borrow(&self) -> &str {
+        self.0.as_ref()
     }
 }
 

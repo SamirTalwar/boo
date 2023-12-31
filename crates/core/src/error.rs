@@ -1,7 +1,9 @@
 //! The set of possible interpretation errors.
 
+use std::collections::BTreeMap;
+
 use crate::span::Span;
-use crate::types::Monotype;
+use crate::types;
 
 /// An alias for [`Result`][std::result::Result] with the error type fixed to
 /// [`Error`].
@@ -35,15 +37,21 @@ pub enum Error {
         span: Option<Span>,
     },
 
+    #[error("Type variables overlapped: {}", variables.iter().map(|(var, (a, b))| format!("{var} ↦ {a} & {b}")).collect::<Vec<String>>().join(", "))]
+    #[diagnostic(code(boo::type_checker::type_error))]
+    TypeSubstitutionOverlapError {
+        variables: BTreeMap<types::TypeVariable, (types::Monotype, types::Monotype)>,
+    },
+
     #[error("Could not unify types")]
     #[diagnostic(code(boo::type_checker::type_error))]
     TypeUnificationError {
         #[label("{left_type}")]
         left_span: Option<Span>,
-        left_type: Monotype,
+        left_type: types::Monotype,
         #[label("{right_type}")]
         right_span: Option<Span>,
-        right_type: Monotype,
+        right_type: types::Monotype,
     },
 
     #[error("Could not apply the function")]

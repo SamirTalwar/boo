@@ -51,7 +51,68 @@ impl Display for Env {
     }
 }
 
-type Subst = im::HashMap<TypeVariable, Monotype>;
+struct Subst(im::HashMap<TypeVariable, Monotype>);
+
+impl Subst {
+    fn new() -> Self {
+        Self(im::HashMap::new())
+    }
+
+    fn get(&self, key: &TypeVariable) -> Option<&Monotype> {
+        self.0.get(key)
+    }
+
+    fn then(self, other: Self) -> Self {
+        let mut empty_fresh = FreshVariables::new();
+        Self(self.0.clone().union_with(other.0, |_, later_type| {
+            later_type.substitute(&self, &mut empty_fresh)
+        }))
+    }
+
+    fn merge(self, other: Self) -> Result<Self> {
+        {
+            let disagreeing_variables = self
+                .0
+                .clone()
+                .intersection_with(other.0.clone(), |a, b| (a, b))
+                .into_iter()
+                .filter(|(v, _)| {
+                    let mut empty_fresh = FreshVariables::new();
+                    let var = Type::Variable(v.clone());
+                    var.substitute(&self, &mut empty_fresh)
+                        != var.substitute(&other, &mut empty_fresh)
+                })
+                .collect::<std::collections::BTreeMap<_, _>>();
+            if !disagreeing_variables.is_empty() {
+                return Err(Error::TypeSubstitutionOverlapError {
+                    variables: disagreeing_variables,
+                });
+            }
+        }
+        Ok(Self(self.0.union(other.0)))
+    }
+}
+
+impl Display for Subst {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut items = self.0.iter();
+        if let Some((first_var, first_type)) = items.next() {
+            write!(f, "{} ↦ {}", first_var, first_type)?;
+            for (next_var, next_type) in items {
+                write!(f, ", {} ↦ {}", next_var, next_type)?;
+            }
+            Ok(())
+        } else {
+            write!(f, "∅")
+        }
+    }
+}
+
+impl FromIterator<(TypeVariable, Monotype)> for Subst {
+    fn from_iter<T: IntoIterator<Item = (TypeVariable, Monotype)>>(iter: T) -> Self {
+        Self(im::HashMap::from_iter(iter))
+    }
+}
 
 trait Types {
     fn free(&self) -> im::HashSet<TypeVariable>;
@@ -176,17 +237,14 @@ impl W {
                 })
                 .map(|typ| (Subst::new(), typ.substitute(&Subst::new(), fresh).mono)),
             Expression::Function(expr::Function { parameter, body }) => {
-                let parameter_type = fresh.next();
+                let parameter_type = Type::Variable(fresh.next());
                 let (subst, body_type) = Self::infer(
-                    env.update(
-                        parameter.clone(),
-                        Type::Variable(parameter_type.clone()).into(),
-                    ),
+                    env.update(parameter.clone(), parameter_type.clone().into()),
                     fresh,
                     body,
                 )?;
                 let result = Type::Function {
-                    parameter: Type::Variable(parameter_type).into(),
+                    parameter: parameter_type.into(),
                     body: body_type,
                 }
                 .substitute(&subst, fresh)
@@ -214,7 +272,7 @@ impl W {
                     right_type: argument_type,
                 })?;
                 let result = body_type.substitute(&body_subst, fresh);
-                let subst = function_subst.union(argument_subst).union(body_subst);
+                let subst = function_subst.then(argument_subst).then(body_subst);
                 Ok((subst, result))
             }
             Expression::Assign(expr::Assign { name, value, inner }) => {
@@ -225,7 +283,8 @@ impl W {
                     fresh,
                     inner,
                 )?;
-                Ok((value_subst.union(inner_subst), inner_type))
+                let subst = value_subst.then(inner_subst);
+                Ok((subst, inner_type))
             }
             Expression::Match(expr::Match { value, patterns }) => {
                 let _ = Self::infer(env.clone(), fresh, value)?;
@@ -233,16 +292,16 @@ impl W {
                 let mut subst = Subst::new();
                 for expr::PatternMatch { pattern: _, result } in patterns {
                     let (result_subst, result_type) = Self::infer(env.clone(), fresh, result)?;
-                    subst = subst.union(result_subst).union(
+                    let unified =
                         Self::unify(&result_type, &result_placeholder).ok_or_else(|| {
                             Error::TypeUnificationError {
                                 left_span: expr.span,
                                 left_type: result_placeholder.clone(),
                                 right_span: result.span,
-                                right_type: result_type,
+                                right_type: result_type.clone(),
                             }
-                        })?,
-                    );
+                        })?;
+                    subst = subst.then(result_subst).merge(unified)?;
                 }
                 let result = result_placeholder.substitute(&subst, fresh);
                 Ok((subst, result))
@@ -268,9 +327,13 @@ impl W {
                     &left_body.substitute(&parameter_subst, &mut empty_fresh),
                     &right_body.substitute(&parameter_subst, &mut empty_fresh),
                 )?;
-                Some(parameter_subst.union(body_subst))
+                let subst = parameter_subst.then(body_subst);
+                Some(subst)
             }
-            (Type::Variable(_), Type::Variable(_)) => Some(Subst::new()),
+            (Type::Variable(left), Type::Variable(right)) if left == right => Some(Subst::new()),
+            (Type::Variable(_), Type::Variable(right)) => {
+                Some(Subst::from_iter([(right.clone(), left.clone())]))
+            }
             (Type::Variable(var), _) => Some(Subst::from_iter([(var.clone(), right.clone())])),
             (_, Type::Variable(var)) => Some(Subst::from_iter([(var.clone(), left.clone())])),
             (Type::Integer, Type::Integer) => Some(Subst::new()),
