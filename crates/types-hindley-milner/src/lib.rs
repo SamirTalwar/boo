@@ -297,3 +297,38 @@ impl FreshVariables {
         self.values.next().unwrap()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use boo_test_helpers::proptest::check;
+
+    use super::*;
+
+    #[test]
+    #[ignore = "doesn't fully work yet"]
+    fn test_arbitrary_expressions() {
+        let generator = boo_generator::gen(
+            boo_generator::ExprGenConfig {
+                gen_identifier: Identifier::gen_ascii(1..=16).boxed().into(),
+                ..Default::default()
+            }
+            .into(),
+        );
+        check(&generator, |input| {
+            let rendered = format!("{}", input);
+            let expr = input.clone().to_core()?;
+
+            let actual_type = w(&expr)?;
+
+            prop_assert_eq!(
+                actual_type,
+                Type::Integer.into(),
+                "\nrendered = {}\n",
+                rendered
+            );
+            Ok(())
+        })
+    }
+}

@@ -311,9 +311,13 @@ dependencies = [
 name = "boo-types-hindley-milner"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "boo-core",
+ "boo-generator",
+ "boo-test-helpers",
  "im",
  "lazy_static",
+ "proptest",
 ]
 
 [[package]]
