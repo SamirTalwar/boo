@@ -1,27 +1,43 @@
 use boo::error::Result;
 use boo::evaluation::Evaluator;
+use boo::types::{Monotype, Type};
 use boo::*;
 use boo_naive_evaluator::NaiveEvaluator;
 use boo_optimized_evaluator::OptimizedEvaluator;
 
 #[test]
 fn test_integer() -> Result<()> {
-    check_program("integer", "123", "123")
+    check_program("integer", "123", Type::Integer.into(), "123")
 }
 
 #[test]
 fn test_mathematical_operators() -> Result<()> {
-    check_program("mathematical_operators", "7 + 3 * 5 - 2", "20")
+    check_program(
+        "mathematical_operators",
+        "7 + 3 * 5 - 2",
+        Type::Integer.into(),
+        "20",
+    )
 }
 
 #[test]
 fn test_overriding_precedence() -> Result<()> {
-    check_program("overriding_precedence", "2 * (3 + 4)", "14")
+    check_program(
+        "overriding_precedence",
+        "2 * (3 + 4)",
+        Type::Integer.into(),
+        "14",
+    )
 }
 
 #[test]
 fn test_function_application() -> Result<()> {
-    check_program("function_application", "(fn x -> x + x) 9", "18")
+    check_program(
+        "function_application",
+        "(fn x -> x + x) 9",
+        Type::Integer.into(),
+        "18",
+    )
 }
 
 #[test]
@@ -29,18 +45,29 @@ fn test_function_application_with_computation() -> Result<()> {
     check_program(
         "function_application_with_computation",
         "(fn x y -> x + y) (8 * 2) (3 * 4)",
+        Type::Integer.into(),
         "28",
     )
 }
 
 #[test]
 fn test_assignment() -> Result<()> {
-    check_program("assignment", "let seven = 7 in seven", "7")
+    check_program(
+        "assignment",
+        "let seven = 7 in seven",
+        Type::Integer.into(),
+        "7",
+    )
 }
 
 #[test]
 fn test_assignment_and_use() -> Result<()> {
-    check_program("assignment_and_use", "let eight = 8 in eight * 3", "24")
+    check_program(
+        "assignment_and_use",
+        "let eight = 8 in eight * 3",
+        Type::Integer.into(),
+        "24",
+    )
 }
 
 #[test]
@@ -48,6 +75,7 @@ fn test_named_function_application() -> Result<()> {
     check_program(
         "named_function_application",
         "let double = fn input -> input + input in double 6",
+        Type::Integer.into(),
         "12",
     )
 }
@@ -57,6 +85,7 @@ fn test_named_function_application_nested() -> Result<()> {
     check_program(
         "named_function_application_nested",
         "let double = fn input -> input + input in double (double 4)",
+        Type::Integer.into(),
         "16",
     )
 }
@@ -66,6 +95,7 @@ fn test_function_application_with_named_argument() -> Result<()> {
     check_program(
         "function_application_with_named_argument",
         "let value = 99 in (fn wibble -> wibble - 1) value",
+        Type::Integer.into(),
         "98",
     )
 }
@@ -75,6 +105,7 @@ fn test_named_function_application_with_named_argument() -> Result<()> {
     check_program(
         "named_function_application_with_named_argument",
         "let negate = fn thing -> 0 - thing in let life = 42 in negate life",
+        Type::Integer.into(),
         "-42",
     )
 }
@@ -84,6 +115,7 @@ fn test_closing_over_a_variable() -> Result<()> {
     check_program(
         "closing_over_a_variable",
         "let something = 12 in let add_something = fn target -> target + something in add_something 9",
+        Type::Integer.into(),
         "21",
     )
 }
@@ -93,11 +125,17 @@ fn test_pattern_matching_on_integers() -> Result<()> {
     check_program(
         "pattern_matching_on_integers",
         "match 2 { 1 -> 2; 2 -> 3; 3 -> 4; _ -> 0 }",
+        Type::Integer.into(),
         "3",
     )
 }
 
-fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result<()> {
+fn check_program(
+    name: &str,
+    program: &str,
+    expected_type: Monotype,
+    expected_result_str: &str,
+) -> Result<()> {
     let ast = parse(program)?.to_core()?;
     insta::with_settings!({ description => program }, {
         insta::assert_debug_snapshot!(name.to_string() + "__parse", ast);
@@ -107,6 +145,9 @@ fn check_program(name: &str, program: &str, expected_result_str: &str) -> Result
         ast::Expression::Primitive(primitive) => evaluation::Evaluated::Primitive(primitive),
         expression => panic!("Expected result that is not a primitive: {:?}", expression),
     };
+
+    let actual_type = boo_types_hindley_milner::w(&ast)?;
+    assert_eq!(actual_type, expected_type);
 
     let mut optimized_evaluator = OptimizedEvaluator::new();
     builtins::prepare(&mut optimized_evaluator)?;
