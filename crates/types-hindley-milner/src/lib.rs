@@ -55,8 +55,12 @@ impl Display for Env {
 struct Subst(im::HashMap<TypeVariable, Monotype>);
 
 impl Subst {
-    fn new() -> Self {
+    fn empty() -> Self {
         Self(im::HashMap::new())
+    }
+
+    fn of(key: TypeVariable, value: Monotype) -> Self {
+        Self(im::HashMap::from_iter([(key, value)]))
     }
 
     fn get(&self, key: &TypeVariable) -> Option<&Monotype> {
@@ -217,7 +221,7 @@ impl W {
     fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Monotype)> {
         match expr.expression.as_ref() {
             Expression::Primitive(Primitive::Integer(_)) => {
-                Ok((Subst::new(), INTEGER_TYPE.clone()))
+                Ok((Subst::empty(), INTEGER_TYPE.clone()))
             }
             Expression::Native(native) => env
                 .get(&native.unique_name)
@@ -225,14 +229,14 @@ impl W {
                     span: expr.span,
                     name: native.unique_name.to_string(),
                 })
-                .map(|typ| (Subst::new(), typ.substitute(&Subst::new(), fresh).mono)),
+                .map(|typ| (Subst::empty(), typ.substitute(&Subst::empty(), fresh).mono)),
             Expression::Identifier(identifier) => env
                 .get(identifier)
                 .ok_or_else(|| Error::UnknownVariable {
                     span: expr.span,
                     name: identifier.to_string(),
                 })
-                .map(|typ| (Subst::new(), typ.substitute(&Subst::new(), fresh).mono)),
+                .map(|typ| (Subst::empty(), typ.substitute(&Subst::empty(), fresh).mono)),
             Expression::Function(expr::Function { parameter, body }) => {
                 let parameter_type = Type::Variable(fresh.next());
                 let (subst, body_type) = Self::infer(
@@ -343,7 +347,7 @@ impl W {
 
     fn unify(left: &Monotype, right: &Monotype) -> Option<Subst> {
         match (left.as_ref(), right.as_ref()) {
-            (Type::Integer, Type::Integer) => Some(Subst::new()),
+            (Type::Integer, Type::Integer) => Some(Subst::empty()),
             (
                 Type::Function {
                     parameter: left_parameter,
@@ -363,12 +367,12 @@ impl W {
                 let subst = parameter_subst.then(body_subst);
                 Some(subst)
             }
-            (Type::Variable(left), Type::Variable(right)) if left == right => Some(Subst::new()),
+            (Type::Variable(left), Type::Variable(right)) if left == right => Some(Subst::empty()),
             (Type::Variable(_), Type::Variable(right)) => {
-                Some(Subst::from_iter([(right.clone(), left.clone())]))
+                Some(Subst::of(right.clone(), left.clone()))
             }
-            (Type::Variable(var), _) => Some(Subst::from_iter([(var.clone(), right.clone())])),
-            (_, Type::Variable(var)) => Some(Subst::from_iter([(var.clone(), left.clone())])),
+            (Type::Variable(var), _) => Some(Subst::of(var.clone(), right.clone())),
+            (_, Type::Variable(var)) => Some(Subst::of(var.clone(), left.clone())),
             _ => None,
         }
     }
