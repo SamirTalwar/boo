@@ -75,21 +75,47 @@ impl Subst {
     }
 
     fn merge(self, other: Self) -> Option<Self> {
-        let disagreeing_variables = self
+        let new_substitutions = self
             .0
             .clone()
             .intersection_with(other.0.clone(), |a, b| (a, b))
             .into_iter()
-            .filter(|(v, _)| {
+            .map(|(v, _)| {
                 let mut empty_fresh = FreshVariables::new();
                 let var = Type::Variable(v.clone());
-                var.substitute(&self, &mut empty_fresh) != var.substitute(&other, &mut empty_fresh)
+                Self::match_types(
+                    &var.substitute(&self, &mut empty_fresh).into(),
+                    &var.substitute(&other, &mut empty_fresh).into(),
+                )
             })
-            .collect::<std::collections::HashMap<_, _>>();
-        if disagreeing_variables.is_empty() {
-            Some(Self(self.0.union(other.0)))
-        } else {
-            None
+            .collect::<Option<Vec<Subst>>>()?;
+        let existing_substitutions = Self(self.0.union(other.0));
+        let all_substitutions = new_substitutions
+            .into_iter()
+            .fold(existing_substitutions, |x, y| x.then(y));
+        Some(all_substitutions)
+    }
+
+    fn match_types(left: &Monotype, right: &Monotype) -> Option<Subst> {
+        match (left.as_ref(), right.as_ref()) {
+            (Type::Integer, Type::Integer) => Some(Subst::empty()),
+            (
+                Type::Function {
+                    parameter: left_parameter,
+                    body: left_body,
+                },
+                Type::Function {
+                    parameter: right_parameter,
+                    body: right_body,
+                },
+            ) => {
+                let parameter_subst = Self::match_types(left_parameter, right_parameter)?;
+                let body_subst = Self::match_types(left_body, right_body)?;
+                parameter_subst.merge(body_subst)
+            }
+            (left, Type::Variable(right)) => Some(Subst::of(right.clone(), left.clone().into())),
+            (Type::Variable(left), right) => Some(Subst::of(left.clone(), right.clone().into())),
+            _ => None,
         }
     }
 }
@@ -406,7 +432,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore = "doesn't fully work yet"]
     fn test_arbitrary_expressions() {
         let generator = boo_generator::gen(
             boo_generator::ExprGenConfig {
@@ -417,16 +442,12 @@ mod tests {
         );
         check(&generator, |input| {
             let rendered = format!("{}", input);
+            eprintln!("rendered: {rendered}");
             let expr = input.clone().to_core()?;
 
             let actual_type = w(&expr)?;
 
-            prop_assert_eq!(
-                actual_type,
-                Type::Integer.into(),
-                "\nrendered = {}\n",
-                rendered
-            );
+            prop_assert_eq!(actual_type, Type::Integer.into());
             Ok(())
         })
     }

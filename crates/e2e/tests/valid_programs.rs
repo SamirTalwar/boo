@@ -140,6 +140,16 @@ fn test_pattern_matching_on_integers() -> Result<()> {
     )
 }
 
+#[test]
+fn test_pattern_matching_on_functions() -> Result<()> {
+    check_program(
+        "pattern_matching_on_functions",
+        "(match 1 { 1 -> fn x -> 2; _ -> fn x -> x }) 3",
+        Type::Integer.into(),
+        "2",
+    )
+}
+
 fn check_program(
     name: &str,
     program: &str,

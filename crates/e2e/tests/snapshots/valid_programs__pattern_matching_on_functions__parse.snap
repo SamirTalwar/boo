@@ -1,0 +1,131 @@
+---
+source: crates/e2e/tests/valid_programs.rs
+description: "(match 1 { 1 -> fn x -> 2; _ -> fn x -> x }) 3"
+expression: ast
+---
+Expr {
+    span: Some(
+        Span {
+            start: 1,
+            end: 46,
+        },
+    ),
+    expression: Apply(
+        Apply {
+            function: Expr {
+                span: Some(
+                    Span {
+                        start: 1,
+                        end: 43,
+                    },
+                ),
+                expression: Match(
+                    Match {
+                        value: Expr {
+                            span: Some(
+                                Span {
+                                    start: 7,
+                                    end: 8,
+                                },
+                            ),
+                            expression: Primitive(
+                                Integer(
+                                    Small(
+                                        1,
+                                    ),
+                                ),
+                            ),
+                        },
+                        patterns: [
+                            PatternMatch {
+                                pattern: Primitive(
+                                    Integer(
+                                        Small(
+                                            1,
+                                        ),
+                                    ),
+                                ),
+                                result: Expr {
+                                    span: Some(
+                                        Span {
+                                            start: 16,
+                                            end: 25,
+                                        },
+                                    ),
+                                    expression: Function(
+                                        Function {
+                                            parameter: Name(
+                                                "x",
+                                            ),
+                                            body: Expr {
+                                                span: Some(
+                                                    Span {
+                                                        start: 24,
+                                                        end: 25,
+                                                    },
+                                                ),
+                                                expression: Primitive(
+                                                    Integer(
+                                                        Small(
+                                                            2,
+                                                        ),
+                                                    ),
+                                                ),
+                                            },
+                                        },
+                                    ),
+                                },
+                            },
+                            PatternMatch {
+                                pattern: Anything,
+                                result: Expr {
+                                    span: Some(
+                                        Span {
+                                            start: 32,
+                                            end: 41,
+                                        },
+                                    ),
+                                    expression: Function(
+                                        Function {
+                                            parameter: Name(
+                                                "x",
+                                            ),
+                                            body: Expr {
+                                                span: Some(
+                                                    Span {
+                                                        start: 40,
+                                                        end: 41,
+                                                    },
+                                                ),
+                                                expression: Identifier(
+                                                    Name(
+                                                        "x",
+                                                    ),
+                                                ),
+                                            },
+                                        },
+                                    ),
+                                },
+                            },
+                        ],
+                    },
+                ),
+            },
+            argument: Expr {
+                span: Some(
+                    Span {
+                        start: 45,
+                        end: 46,
+                    },
+                ),
+                expression: Primitive(
+                    Integer(
+                        Small(
+                            3,
+                        ),
+                    ),
+                ),
+            },
+        },
+    ),
+}
