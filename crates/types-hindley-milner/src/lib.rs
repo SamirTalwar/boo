@@ -239,7 +239,10 @@ impl W {
             Expression::Function(expr::Function { parameter, body }) => {
                 let parameter_type = Type::Variable(fresh.next());
                 let (subst, body_type) = Self::infer(
-                    env.update(parameter.clone(), parameter_type.clone().into()),
+                    env.update(
+                        parameter.clone(),
+                        Polytype::unquantified(parameter_type.clone().into()),
+                    ),
                     fresh,
                     body,
                 )?;
@@ -278,8 +281,17 @@ impl W {
             Expression::Assign(expr::Assign { name, value, inner }) => {
                 let (value_subst, value_type) = Self::infer(env.clone(), fresh, value)?;
                 let (inner_subst, inner_type) = Self::infer(
-                    env.substitute(&value_subst, fresh)
-                        .update(name.clone(), value_type.into()),
+                    env.substitute(&value_subst, fresh).update(
+                        name.clone(),
+                        Polytype {
+                            quantifiers: value_type
+                                .free()
+                                .relative_complement(env.free())
+                                .into_iter()
+                                .collect(),
+                            mono: value_type,
+                        },
+                    ),
                     fresh,
                     inner,
                 )?;

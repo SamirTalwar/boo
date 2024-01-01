@@ -46,41 +46,47 @@ fn all() -> Vec<Builtin> {
     vec![
         Builtin {
             name: &NAME_ADD,
-            assumed_type: Type::Function {
-                parameter: Type::Integer.into(),
-                body: Type::Function {
+            assumed_type: Polytype::unquantified(
+                Type::Function {
                     parameter: Type::Integer.into(),
-                    body: Type::Integer.into(),
+                    body: Type::Function {
+                        parameter: Type::Integer.into(),
+                        body: Type::Integer.into(),
+                    }
+                    .into(),
                 }
                 .into(),
-            }
-            .into(),
+            ),
             implementation: builtin_add(),
         },
         Builtin {
             name: &NAME_SUBTRACT,
-            assumed_type: Type::Function {
-                parameter: Type::Integer.into(),
-                body: Type::Function {
+            assumed_type: Polytype::unquantified(
+                Type::Function {
                     parameter: Type::Integer.into(),
-                    body: Type::Integer.into(),
+                    body: Type::Function {
+                        parameter: Type::Integer.into(),
+                        body: Type::Integer.into(),
+                    }
+                    .into(),
                 }
                 .into(),
-            }
-            .into(),
+            ),
             implementation: builtin_subtract(),
         },
         Builtin {
             name: &NAME_MULTIPLY,
-            assumed_type: Type::Function {
-                parameter: Type::Integer.into(),
-                body: Type::Function {
+            assumed_type: Polytype::unquantified(
+                Type::Function {
                     parameter: Type::Integer.into(),
-                    body: Type::Integer.into(),
+                    body: Type::Function {
+                        parameter: Type::Integer.into(),
+                        body: Type::Integer.into(),
+                    }
+                    .into(),
                 }
                 .into(),
-            }
-            .into(),
+            ),
             implementation: builtin_multiply(),
         },
         Builtin {

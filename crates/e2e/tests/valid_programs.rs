@@ -121,6 +121,16 @@ fn test_closing_over_a_variable() -> Result<()> {
 }
 
 #[test]
+fn test_polymorphic_let() -> Result<()> {
+    check_program(
+        "polymorphic_let",
+        "let id = fn x -> x in id id id (id 7)",
+        Type::Integer.into(),
+        "7",
+    )
+}
+
+#[test]
 fn test_pattern_matching_on_integers() -> Result<()> {
     check_program(
         "pattern_matching_on_integers",

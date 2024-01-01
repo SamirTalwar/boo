@@ -40,17 +40,11 @@ pub struct Polytype {
     pub mono: Monotype,
 }
 
-impl From<Type<Monotype>> for Polytype {
-    fn from(value: Type<Monotype>) -> Self {
-        Self::from(Monotype::from(value))
-    }
-}
-
-impl From<Monotype> for Polytype {
-    fn from(value: Monotype) -> Self {
-        Self {
+impl Polytype {
+    pub fn unquantified(mono: Monotype) -> Self {
+        Polytype {
             quantifiers: vec![],
-            mono: value,
+            mono,
         }
     }
 }
