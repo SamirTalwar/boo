@@ -1,5 +1,5 @@
 ---
-source: crates/e2e/tests/invalid_types.rs
+source: crates/e2e/tests/invalid_expressions.rs
 description: let fun = (let one = 1 in fn param -> one + param + external) in let external = 2 in fun 3
 expression: ast
 ---

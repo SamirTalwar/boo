@@ -1,5 +1,5 @@
 ---
-source: crates/e2e/tests/invalid_types.rs
+source: crates/e2e/tests/invalid_expressions.rs
 description: 123 + xyz
 expression: ast
 ---
