@@ -1,0 +1,70 @@
+---
+source: crates/e2e/tests/invalid_types.rs
+description: 123 + xyz
+expression: ast
+---
+Expr {
+    span: Some(
+        Span {
+            start: 0,
+            end: 9,
+        },
+    ),
+    expression: Apply(
+        Apply {
+            function: Expr {
+                span: Some(
+                    Span {
+                        start: 0,
+                        end: 9,
+                    },
+                ),
+                expression: Apply(
+                    Apply {
+                        function: Expr {
+                            span: Some(
+                                Span {
+                                    start: 0,
+                                    end: 9,
+                                },
+                            ),
+                            expression: Identifier(
+                                Operator(
+                                    "+",
+                                ),
+                            ),
+                        },
+                        argument: Expr {
+                            span: Some(
+                                Span {
+                                    start: 0,
+                                    end: 3,
+                                },
+                            ),
+                            expression: Primitive(
+                                Integer(
+                                    Small(
+                                        123,
+                                    ),
+                                ),
+                            ),
+                        },
+                    },
+                ),
+            },
+            argument: Expr {
+                span: Some(
+                    Span {
+                        start: 6,
+                        end: 9,
+                    },
+                ),
+                expression: Identifier(
+                    Name(
+                        "xyz",
+                    ),
+                ),
+            },
+        },
+    ),
+}

@@ -1,0 +1,89 @@
+---
+source: crates/e2e/tests/invalid_types.rs
+description: "match 0 { 1 -> 2; _ -> fn x -> x }"
+expression: ast
+---
+Expr {
+    span: Some(
+        Span {
+            start: 0,
+            end: 34,
+        },
+    ),
+    expression: Match(
+        Match {
+            value: Expr {
+                span: Some(
+                    Span {
+                        start: 6,
+                        end: 7,
+                    },
+                ),
+                expression: Primitive(
+                    Integer(
+                        Small(
+                            0,
+                        ),
+                    ),
+                ),
+            },
+            patterns: [
+                PatternMatch {
+                    pattern: Primitive(
+                        Integer(
+                            Small(
+                                1,
+                            ),
+                        ),
+                    ),
+                    result: Expr {
+                        span: Some(
+                            Span {
+                                start: 15,
+                                end: 16,
+                            },
+                        ),
+                        expression: Primitive(
+                            Integer(
+                                Small(
+                                    2,
+                                ),
+                            ),
+                        ),
+                    },
+                },
+                PatternMatch {
+                    pattern: Anything,
+                    result: Expr {
+                        span: Some(
+                            Span {
+                                start: 23,
+                                end: 32,
+                            },
+                        ),
+                        expression: Function(
+                            Function {
+                                parameter: Name(
+                                    "x",
+                                ),
+                                body: Expr {
+                                    span: Some(
+                                        Span {
+                                            start: 31,
+                                            end: 32,
+                                        },
+                                    ),
+                                    expression: Identifier(
+                                        Name(
+                                            "x",
+                                        ),
+                                    ),
+                                },
+                            },
+                        ),
+                    },
+                },
+            ],
+        },
+    ),
+}

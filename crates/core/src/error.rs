@@ -1,7 +1,5 @@
 //! The set of possible interpretation errors.
 
-use std::collections::BTreeMap;
-
 use crate::span::Span;
 use crate::types;
 
@@ -35,12 +33,6 @@ pub enum Error {
     MatchWithoutBaseCase {
         #[label("match expression requires a base case")]
         span: Option<Span>,
-    },
-
-    #[error("Type variables overlapped: {}", variables.iter().map(|(var, (a, b))| format!("{var} ↦ {a} & {b}")).collect::<Vec<String>>().join(", "))]
-    #[diagnostic(code(boo::type_checker::type_error))]
-    TypeSubstitutionOverlapError {
-        variables: BTreeMap<types::TypeVariable, (types::Monotype, types::Monotype)>,
     },
 
     #[error("Could not unify types")]

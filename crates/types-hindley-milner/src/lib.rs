@@ -51,6 +51,7 @@ impl Display for Env {
     }
 }
 
+#[derive(Debug, Clone)]
 struct Subst(im::HashMap<TypeVariable, Monotype>);
 
 impl Subst {
@@ -69,27 +70,23 @@ impl Subst {
         }))
     }
 
-    fn merge(self, other: Self) -> Result<Self> {
-        {
-            let disagreeing_variables = self
-                .0
-                .clone()
-                .intersection_with(other.0.clone(), |a, b| (a, b))
-                .into_iter()
-                .filter(|(v, _)| {
-                    let mut empty_fresh = FreshVariables::new();
-                    let var = Type::Variable(v.clone());
-                    var.substitute(&self, &mut empty_fresh)
-                        != var.substitute(&other, &mut empty_fresh)
-                })
-                .collect::<std::collections::BTreeMap<_, _>>();
-            if !disagreeing_variables.is_empty() {
-                return Err(Error::TypeSubstitutionOverlapError {
-                    variables: disagreeing_variables,
-                });
-            }
+    fn merge(self, other: Self) -> Option<Self> {
+        let disagreeing_variables = self
+            .0
+            .clone()
+            .intersection_with(other.0.clone(), |a, b| (a, b))
+            .into_iter()
+            .filter(|(v, _)| {
+                let mut empty_fresh = FreshVariables::new();
+                let var = Type::Variable(v.clone());
+                var.substitute(&self, &mut empty_fresh) != var.substitute(&other, &mut empty_fresh)
+            })
+            .collect::<std::collections::HashMap<_, _>>();
+        if disagreeing_variables.is_empty() {
+            Some(Self(self.0.union(other.0)))
+        } else {
+            None
         }
-        Ok(Self(self.0.union(other.0)))
     }
 }
 
@@ -301,8 +298,24 @@ impl W {
             Expression::Match(expr::Match { value, patterns }) => {
                 let _ = Self::infer(env.clone(), fresh, value)?;
                 let result_placeholder = Type::Variable(fresh.next()).into();
-                let mut subst = Subst::new();
-                for expr::PatternMatch { pattern: _, result } in patterns {
+                let mut pattern_iter = patterns.iter();
+                let expr::PatternMatch {
+                    pattern: _,
+                    result: first_result,
+                } = pattern_iter
+                    .next()
+                    .ok_or(Error::MatchWithoutBaseCase { span: expr.span })?;
+                let (first_result_subst, first_result_type) =
+                    Self::infer(env.clone(), fresh, first_result)?;
+                let first_unified = Self::unify(&first_result_type, &result_placeholder)
+                    .ok_or_else(|| Error::TypeUnificationError {
+                        left_span: expr.span,
+                        left_type: result_placeholder.clone(),
+                        right_span: first_result.span,
+                        right_type: first_result_type.clone(),
+                    })?;
+                let mut subst = first_result_subst.then(first_unified);
+                for expr::PatternMatch { pattern: _, result } in pattern_iter {
                     let (result_subst, result_type) = Self::infer(env.clone(), fresh, result)?;
                     let unified =
                         Self::unify(&result_type, &result_placeholder).ok_or_else(|| {
@@ -313,7 +326,14 @@ impl W {
                                 right_type: result_type.clone(),
                             }
                         })?;
-                    subst = subst.then(result_subst).merge(unified)?;
+                    subst = subst.merge(result_subst.then(unified)).ok_or_else(|| {
+                        Error::TypeUnificationError {
+                            left_span: first_result.span,
+                            left_type: first_result_type.clone(),
+                            right_span: result.span,
+                            right_type: result_type,
+                        }
+                    })?;
                 }
                 let result = result_placeholder.substitute(&subst, fresh);
                 Ok((subst, result))
@@ -323,6 +343,7 @@ impl W {
 
     fn unify(left: &Monotype, right: &Monotype) -> Option<Subst> {
         match (left.as_ref(), right.as_ref()) {
+            (Type::Integer, Type::Integer) => Some(Subst::new()),
             (
                 Type::Function {
                     parameter: left_parameter,
@@ -348,7 +369,6 @@ impl W {
             }
             (Type::Variable(var), _) => Some(Subst::from_iter([(var.clone(), right.clone())])),
             (_, Type::Variable(var)) => Some(Subst::from_iter([(var.clone(), left.clone())])),
-            (Type::Integer, Type::Integer) => Some(Subst::new()),
             _ => None,
         }
     }
