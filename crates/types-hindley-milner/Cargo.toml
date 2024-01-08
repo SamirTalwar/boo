@@ -10,7 +10,6 @@ bench = false
 boo-core = { path = "../core" }
 
 im = "15.1.0"
-lazy_static = "1.4.0"
 
 [dev-dependencies]
 boo-generator = { path = "../generator" }

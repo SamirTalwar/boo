@@ -166,7 +166,7 @@ fn check_program(
         expression => panic!("Expected result that is not a primitive: {:?}", expression),
     };
 
-    let actual_type = boo_types_hindley_milner::w(&ast)?;
+    let actual_type = boo_types_hindley_milner::type_of(&ast)?;
     assert_eq!(actual_type, expected_type);
 
     let mut optimized_evaluator = OptimizedEvaluator::new();

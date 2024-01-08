@@ -317,7 +317,6 @@ dependencies = [
  "boo-generator",
  "boo-test-helpers",
  "im",
- "lazy_static",
  "proptest",
 ]
 

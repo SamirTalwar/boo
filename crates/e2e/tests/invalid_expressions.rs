@@ -34,7 +34,7 @@ fn expect_error(name: &str, program: &str, expected_error: Error) -> Result<()> 
         insta::assert_debug_snapshot!(name.to_string() + "__parse", ast);
     });
 
-    let type_check_result = boo_types_hindley_milner::w(&ast);
+    let type_check_result = boo_types_hindley_milner::type_of(&ast);
     assert_eq!(type_check_result, Err(expected_error.clone()));
 
     let mut optimized_evaluator = OptimizedEvaluator::new();
