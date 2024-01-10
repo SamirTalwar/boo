@@ -315,6 +315,7 @@ dependencies = [
  "anyhow",
  "boo-core",
  "boo-generator",
+ "boo-parser",
  "boo-test-helpers",
  "im",
  "proptest",

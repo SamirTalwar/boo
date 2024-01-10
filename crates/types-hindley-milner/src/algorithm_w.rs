@@ -178,6 +178,8 @@ mod tests {
     use proptest::prelude::*;
 
     use boo_core::identifier::Identifier;
+    use boo_core::types::TypeVariable;
+    use boo_parser::parse;
     use boo_test_helpers::proptest::check;
 
     use super::*;
@@ -201,5 +203,55 @@ mod tests {
             prop_assert_eq!(actual_type, Type::Integer.into());
             Ok(())
         })
+    }
+
+    #[test]
+    fn test_rejects_incorrect_types() -> Result<()> {
+        let program = "1 + (fn x -> 3)";
+        let ast = parse(program)?.to_core()?;
+
+        let result = type_of(&ast);
+
+        assert_eq!(
+            result,
+            Err(Error::TypeUnificationError {
+                left_span: Some((0..14).into()),
+                left_type: Type::Function {
+                    parameter: Type::Integer.into(),
+                    body: Type::Integer.into(),
+                }
+                .into(),
+                right_span: Some((5..14).into()),
+                right_type: Type::Function {
+                    parameter: Type::Variable(TypeVariable::new_from_str("_3")).into(),
+                    body: Type::Integer.into(),
+                }
+                .into(),
+            }),
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_match_expressions_must_be_of_the_same_type() -> Result<()> {
+        let program = "match 0 { 1 -> 2; _ -> fn x -> x }";
+        let ast = parse(program)?.to_core()?;
+
+        let result = type_of(&ast);
+
+        assert_eq!(
+            result,
+            Err(Error::TypeUnificationError {
+                left_span: Some((15..16).into()),
+                left_type: Type::Integer.into(),
+                right_span: Some((23..32).into()),
+                right_type: Type::Function {
+                    parameter: Type::Variable(TypeVariable::new_from_str("_1")).into(),
+                    body: Type::Variable(TypeVariable::new_from_str("_1")).into(),
+                }
+                .into(),
+            }),
+        );
+        Ok(())
     }
 }
