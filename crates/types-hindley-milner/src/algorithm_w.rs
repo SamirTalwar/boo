@@ -74,7 +74,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                 right_type: argument_type,
             })?;
             let result = body_type.substitute(&body_subst, fresh);
-            let subst = function_subst.then(argument_subst).then(body_subst);
+            let subst = function_subst.then(&argument_subst).then(&body_subst);
             Ok((subst, result))
         }
         Expression::Assign(expr::Assign { name, value, inner }) => {
@@ -94,7 +94,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                 fresh,
                 inner,
             )?;
-            let subst = value_subst.then(inner_subst);
+            let subst = value_subst.then(&inner_subst);
             Ok((subst, inner_type))
         }
         Expression::Match(expr::Match { value, patterns }) => {
@@ -117,7 +117,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                         right_type: first_result_type.clone(),
                     }
                 })?;
-            let mut subst = first_result_subst.then(first_unified);
+            let mut subst = first_result_subst.then(&first_unified);
             for expr::PatternMatch { pattern: _, result } in pattern_iter {
                 let (result_subst, result_type) = infer(env.clone(), fresh, result)?;
                 let unified = unify(&result_type, &result_placeholder).ok_or_else(|| {
@@ -128,7 +128,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                         right_type: result_type.clone(),
                     }
                 })?;
-                subst = subst.merge(result_subst.then(unified)).ok_or_else(|| {
+                subst = subst.merge(&result_subst.then(&unified)).ok_or_else(|| {
                     Error::TypeUnificationError {
                         left_span: first_result.span,
                         left_type: first_result_type.clone(),
@@ -162,7 +162,7 @@ fn unify(left: &Monotype, right: &Monotype) -> Option<Subst> {
                 &left_body.substitute(&parameter_subst, &mut empty_fresh),
                 &right_body.substitute(&parameter_subst, &mut empty_fresh),
             )?;
-            let subst = parameter_subst.then(body_subst);
+            let subst = parameter_subst.then(&body_subst);
             Some(subst)
         }
         (Type::Variable(left), Type::Variable(right)) if left == right => Some(Subst::empty()),
