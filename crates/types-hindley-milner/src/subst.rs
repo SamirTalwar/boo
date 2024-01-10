@@ -1,8 +1,8 @@
-use boo_core::types::{Monotype, Type, TypeVariable};
 use std::fmt::Display;
 
-use crate::fresh::FreshVariables;
-use crate::types::Types;
+use boo_core::types::{Monotype, Type, TypeVariable};
+
+use crate::types::Monomorphic;
 
 #[derive(Debug, Clone)]
 pub struct Subst(im::HashMap<TypeVariable, Monotype>);
@@ -21,10 +21,11 @@ impl Subst {
     }
 
     pub fn then(&self, other: &Self) -> Self {
-        let mut empty_fresh = FreshVariables::new();
-        Self(self.0.clone().union_with(other.0.clone(), |_, later_type| {
-            later_type.substitute(self, &mut empty_fresh)
-        }))
+        Self(
+            self.0
+                .clone()
+                .union_with(other.0.clone(), |_, later_type| later_type.substitute(self)),
+        )
     }
 
     pub fn merge(&self, other: &Self) -> Option<Self> {
@@ -34,12 +35,8 @@ impl Subst {
             .intersection_with(other.0.clone(), |a, b| (a, b))
             .into_iter()
             .map(|(v, _)| {
-                let mut empty_fresh = FreshVariables::new();
                 let var = Type::Variable(v.clone());
-                match_types(
-                    &var.substitute(self, &mut empty_fresh).into(),
-                    &var.substitute(other, &mut empty_fresh).into(),
-                )
+                match_types(&var.substitute(self).into(), &var.substitute(other).into())
             })
             .collect::<Option<Vec<Subst>>>()?;
         let existing_substitutions = Self(self.0.clone().union(other.0.clone()));

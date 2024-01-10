@@ -7,7 +7,7 @@ use boo_core::types::{Monotype, Polytype, Type};
 use crate::env::Env;
 use crate::fresh::FreshVariables;
 use crate::subst::Subst;
-use crate::types::Types;
+use crate::types::{FreeVariables, Monomorphic, Polymorphic};
 
 pub fn type_of(expr: &Expr) -> Result<Monotype> {
     let base_context = builtins::types()
@@ -49,7 +49,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                 parameter: parameter_type.into(),
                 body: body_type,
             }
-            .substitute(&subst, fresh)
+            .substitute(&subst)
             .into();
             Ok((subst, result))
         }
@@ -64,7 +64,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
             }
             .into();
             let body_subst = unify(
-                &function_type.substitute(&argument_subst, fresh),
+                &function_type.substitute(&argument_subst),
                 &expected_function_type,
             )
             .ok_or(Error::TypeUnificationError {
@@ -73,7 +73,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                 right_span: argument.span,
                 right_type: argument_type,
             })?;
-            let result = body_type.substitute(&body_subst, fresh);
+            let result = body_type.substitute(&body_subst);
             let subst = function_subst.then(&argument_subst).then(&body_subst);
             Ok((subst, result))
         }
@@ -137,7 +137,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                     }
                 })?;
             }
-            let result = result_placeholder.substitute(&subst, fresh);
+            let result = result_placeholder.substitute(&subst);
             Ok((subst, result))
         }
     }
@@ -156,11 +156,10 @@ fn unify(left: &Monotype, right: &Monotype) -> Option<Subst> {
                 body: right_body,
             },
         ) => {
-            let mut empty_fresh = FreshVariables::new();
             let parameter_subst = unify(left_parameter, right_parameter)?;
             let body_subst = unify(
-                &left_body.substitute(&parameter_subst, &mut empty_fresh),
-                &right_body.substitute(&parameter_subst, &mut empty_fresh),
+                &left_body.substitute(&parameter_subst),
+                &right_body.substitute(&parameter_subst),
             )?;
             let subst = parameter_subst.then(&body_subst);
             Some(subst)

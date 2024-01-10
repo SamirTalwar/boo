@@ -6,7 +6,7 @@ use boo_core::types::{Polytype, TypeVariable};
 
 use crate::fresh::FreshVariables;
 use crate::subst::Subst;
-use crate::types::Types;
+use crate::types::{FreeVariables, Polymorphic};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Env(im::HashMap<Arc<Identifier>, Polytype>);
@@ -21,11 +21,13 @@ impl Env {
     }
 }
 
-impl Types for Env {
+impl FreeVariables for Env {
     fn free(&self) -> im::HashSet<TypeVariable> {
         self.0.values().flat_map(|t| t.free().into_iter()).collect()
     }
+}
 
+impl Polymorphic for Env {
     fn substitute(&self, substitutions: &Subst, fresh: &mut FreshVariables) -> Self {
         self.0
             .iter()
