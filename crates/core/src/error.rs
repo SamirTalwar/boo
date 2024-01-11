@@ -36,7 +36,16 @@ pub enum Error {
     },
 
     #[error("Could not unify types")]
-    #[diagnostic(code(boo::type_checker::type_error))]
+    #[diagnostic(code(boo::type_checker::type_mismatch))]
+    TypeMismatch {
+        #[label("expected {expected_type} but got {actual_type}")]
+        span: Option<Span>,
+        expected_type: types::Monotype,
+        actual_type: types::Monotype,
+    },
+
+    #[error("Could not unify types")]
+    #[diagnostic(code(boo::type_checker::type_unification_error))]
     TypeUnificationError {
         #[label("{left_type}")]
         left_span: Option<Span>,

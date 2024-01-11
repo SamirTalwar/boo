@@ -1,3 +1,4 @@
+mod algorithm_m;
 mod algorithm_w;
 mod env;
 mod fresh;
