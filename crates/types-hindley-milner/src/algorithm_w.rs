@@ -21,13 +21,7 @@ pub fn type_of(expr: &Expr) -> Result<Monotype> {
 fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Monotype)> {
     match expr.expression.as_ref() {
         Expression::Primitive(Primitive::Integer(_)) => Ok((Subst::empty(), Type::Integer.into())),
-        Expression::Native(native) => env
-            .get(&native.unique_name)
-            .ok_or_else(|| Error::UnknownVariable {
-                span: expr.span,
-                name: native.unique_name.to_string(),
-            })
-            .map(|typ| (Subst::empty(), typ.substitute(&Subst::empty(), fresh).mono)),
+        Expression::Native(_) => unreachable!("Native expression without a type."),
         Expression::Identifier(identifier) => env
             .get(identifier)
             .ok_or_else(|| Error::UnknownVariable {

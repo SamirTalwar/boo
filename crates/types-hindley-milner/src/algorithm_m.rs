@@ -42,20 +42,7 @@ fn infer(
                 expected_type: target_type,
                 actual_type: Type::Integer.into(),
             }),
-        Expression::Native(native) => env
-            .get(&native.unique_name)
-            .ok_or_else(|| Error::UnknownVariable {
-                span: expr.span,
-                name: native.unique_name.to_string(),
-            })
-            .and_then(|typ| {
-                let source_type = typ.substitute(&Subst::empty(), fresh).mono;
-                unify(&target_type, &source_type).ok_or(Error::TypeMismatch {
-                    span: expr.span,
-                    expected_type: target_type,
-                    actual_type: source_type,
-                })
-            }),
+        Expression::Native(_) => unreachable!("Native expression without a type."),
         Expression::Identifier(identifier) => env
             .get(identifier)
             .ok_or_else(|| Error::UnknownVariable {
