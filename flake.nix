@@ -59,6 +59,16 @@
       });
       packages.default = self.packages.${system}.boo;
 
+      apps.interpreter = {
+        type = "app";
+        program = "${self.packages.${system}.boo}/bin/interpreter";
+      };
+      apps.random-program = {
+        type = "app";
+        program = "${self.packages.${system}.boo}/bin/random-program";
+      };
+      apps.default = self.apps.${system}.interpreter;
+
       formatter = pkgs.nixpkgs-fmt;
 
       devShells.default = pkgs.mkShell {
