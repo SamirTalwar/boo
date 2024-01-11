@@ -5,13 +5,17 @@ use miette::IntoDiagnostic;
 use reedline::*;
 
 use boo::evaluation::Evaluator;
-use boo::*;
 
 #[derive(Debug, Parser)]
 struct Args {
     /// Use the naive evaluator instead of the optimized one
     #[arg(long)]
     naive: bool,
+}
+
+enum Command<'a> {
+    Evaluate(&'a dyn Evaluator),
+    ShowType,
 }
 
 fn main() {
@@ -21,7 +25,7 @@ fn main() {
         boo::builtins::prepare(&mut evaluator).unwrap();
         Box::new(evaluator)
     } else {
-        let mut evaluator = OptimizedEvaluator::new();
+        let mut evaluator = boo::OptimizedEvaluator::new();
         boo::builtins::prepare(&mut evaluator).unwrap();
         Box::new(evaluator)
     };
@@ -43,7 +47,7 @@ fn read_and_interpret(
 ) -> miette::Result<()> {
     let mut buffer = String::new();
     input.read_to_string(&mut buffer).into_diagnostic()?;
-    interpret(evaluator, &buffer).map_err(|report| report.with_source_code(buffer))
+    interpret(evaluator, &buffer)
 }
 
 fn repl(evaluator: &dyn Evaluator) {
@@ -58,7 +62,7 @@ fn repl(evaluator: &dyn Evaluator) {
         match sig {
             Ok(Signal::Success(buffer)) => match interpret(evaluator, &buffer) {
                 Ok(()) => (),
-                Err(report) => eprintln!("{:?}", report.with_source_code(buffer)),
+                Err(report) => eprintln!("{:?}", report),
             },
             Ok(Signal::CtrlD) | Ok(Signal::CtrlC) => {
                 break;
@@ -71,11 +75,37 @@ fn repl(evaluator: &dyn Evaluator) {
 }
 
 fn interpret(evaluator: &dyn Evaluator, buffer: &str) -> miette::Result<()> {
-    let parsed = parse(buffer)?;
-    let expression = parsed.to_core()?;
-    let typ = boo_types_hindley_milner::type_of(&expression)?;
-    println!("Type: {typ}");
-    let result = evaluator.evaluate(expression)?;
-    println!("{}", result);
+    let (command, expression) = if buffer.starts_with(':') {
+        let (first, rest) = buffer.split_once(' ').unwrap_or((buffer, ""));
+        let command_name = &first[1..];
+        match command_name {
+            "evaluate" => Ok((Command::Evaluate(evaluator), rest)),
+            "type" | "t" => Ok((Command::ShowType, rest)),
+            _ => Err(miette::miette!("Unknown command: {command_name:?}")),
+        }
+    } else {
+        Ok((Command::Evaluate(evaluator), buffer))
+    }?;
+
+    interpret_command(command, expression)
+        .map_err(|err| err.with_source_code(expression.to_string()))
+}
+
+fn interpret_command(command: Command, expression: &str) -> miette::Result<()> {
+    match command {
+        Command::Evaluate(evaluator) => {
+            let parsed = boo::parse(expression)?;
+            let expression = parsed.to_core()?;
+            boo_types_hindley_milner::validate(&expression)?;
+            let result = evaluator.evaluate(expression)?;
+            println!("{result}");
+        }
+        Command::ShowType => {
+            let parsed = boo::parse(expression)?;
+            let expression = parsed.to_core()?;
+            let expression_type = boo_types_hindley_milner::type_of(&expression)?;
+            println!("{expression_type}");
+        }
+    }
     Ok(())
 }

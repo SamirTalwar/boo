@@ -12,3 +12,7 @@ use boo_core::types::Monotype;
 pub fn type_of(expr: &Expr) -> Result<Monotype> {
     algorithm_w::type_of(expr)
 }
+
+pub fn validate(expr: &Expr) -> Result<()> {
+    type_of(expr).map(|_| ())
+}
