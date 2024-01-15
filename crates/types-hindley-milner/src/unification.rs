@@ -1,7 +1,7 @@
-use boo_core::types::{Monotype, Type};
+use boo_core::types::{Monotype, Type, TypeVariable};
 
 use crate::subst::Subst;
-use crate::types::Monomorphic;
+use crate::types::{FreeVariables, Monomorphic};
 
 pub fn unify(left: &Monotype, right: &Monotype) -> Option<Subst> {
     match (left.as_ref(), right.as_ref()) {
@@ -24,10 +24,17 @@ pub fn unify(left: &Monotype, right: &Monotype) -> Option<Subst> {
             let subst = parameter_subst.then(&body_subst);
             Some(subst)
         }
-        (Type::Variable(left), Type::Variable(right)) if left == right => Some(Subst::empty()),
-        (Type::Variable(_), Type::Variable(right)) => Some(Subst::of(right.clone(), left.clone())),
-        (Type::Variable(var), _) => Some(Subst::of(var.clone(), right.clone())),
-        (_, Type::Variable(var)) => Some(Subst::of(var.clone(), left.clone())),
+        (Type::Variable(l), Type::Variable(r)) if l == r => Some(Subst::empty()),
+        (Type::Variable(var), _) => var_bind(var, right),
+        (_, Type::Variable(var)) => var_bind(var, left),
         _ => None,
+    }
+}
+
+fn var_bind(var: &TypeVariable, typ: &Monotype) -> Option<Subst> {
+    if typ.free().contains(var) {
+        None
+    } else {
+        Some(Subst::of(var.clone(), typ.clone()))
     }
 }

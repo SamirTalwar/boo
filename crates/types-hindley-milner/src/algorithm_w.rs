@@ -198,6 +198,25 @@ mod tests {
     }
 
     #[test]
+    fn test_parameters_are_monomorphic() -> Result<()> {
+        let program = "fn x -> x x";
+        let ast = parse(program)?.to_core()?;
+
+        let result = type_of(&ast);
+
+        assert_eq!(
+            result,
+            Err(Error::TypeUnificationError {
+                left_span: Some((8..9).into()),
+                left_type: Type::Variable(TypeVariable::new_from_str("_0")).into(),
+                right_span: Some((10..11).into()),
+                right_type: Type::Variable(TypeVariable::new_from_str("_0")).into(),
+            }),
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_match_expressions_must_be_of_the_same_type() -> Result<()> {
         let program = "match 0 { 1 -> 2; _ -> fn x -> x }";
         let ast = parse(program)?.to_core()?;
