@@ -14,10 +14,10 @@ use regex::Regex;
 /// non-underscore character is required.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Identifier {
-    Name(String),
-    Operator(String),
+    Name(Arc<String>),
+    Operator(Arc<String>),
     AvoidingCapture {
-        original: Arc<Identifier>,
+        original: Box<Identifier>,
         suffix: u32,
     },
 }
@@ -55,7 +55,7 @@ impl Identifier {
     /// returns [`IdentifierError::InvalidIdentifier`].
     pub fn name_from_string(name: String) -> Result<Self, IdentifierError> {
         if Self::is_valid_name(&name) {
-            Ok(Self::Name(name))
+            Ok(Self::Name(Arc::new(name)))
         } else {
             Err(IdentifierError::InvalidIdentifier)
         }
@@ -65,7 +65,7 @@ impl Identifier {
     /// returns [`IdentifierError::InvalidIdentifier`].
     pub fn name_from_str(name: &str) -> Result<Self, IdentifierError> {
         if Self::is_valid_name(name) {
-            Ok(Self::Name(name.to_string()))
+            Ok(Self::Name(Arc::new(name.to_string())))
         } else {
             Err(IdentifierError::InvalidIdentifier)
         }
@@ -75,7 +75,7 @@ impl Identifier {
     /// returns [`IdentifierError::InvalidIdentifier`].
     pub fn operator_from_str(operator: &str) -> Result<Self, IdentifierError> {
         if Self::is_valid_operator(operator) {
-            Ok(Self::Operator(operator.to_string()))
+            Ok(Self::Operator(Arc::new(operator.to_string())))
         } else {
             Err(IdentifierError::InvalidIdentifier)
         }
@@ -83,7 +83,7 @@ impl Identifier {
 
     pub fn name(&self) -> String {
         match self {
-            Identifier::Name(name) => name.clone(),
+            Identifier::Name(name) => name.to_string(),
             Identifier::Operator(operator) => format!("({operator})"),
             Identifier::AvoidingCapture {
                 original,
@@ -166,7 +166,7 @@ mod tests {
     fn test_alphabetic_names_are_allowed() {
         assert_eq!(
             Identifier::name_from_str("name"),
-            Ok(Identifier::Name("name".to_string()))
+            Ok(Identifier::Name(Arc::new("name".to_string())))
         );
     }
 
@@ -174,7 +174,7 @@ mod tests {
     fn test_numbers_are_allowed() {
         assert_eq!(
             Identifier::name_from_str("name123"),
-            Ok(Identifier::Name("name123".to_string()))
+            Ok(Identifier::Name(Arc::new("name123".to_string())))
         );
     }
 
@@ -182,7 +182,7 @@ mod tests {
     fn test_underscores_are_allowed() {
         assert_eq!(
             Identifier::name_from_str("x_y_z"),
-            Ok(Identifier::Name("x_y_z".to_string()))
+            Ok(Identifier::Name(Arc::new("x_y_z".to_string())))
         );
     }
 
