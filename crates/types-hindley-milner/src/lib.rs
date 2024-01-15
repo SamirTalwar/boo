@@ -4,6 +4,7 @@ mod env;
 mod fresh;
 mod subst;
 mod types;
+mod unification;
 
 use boo_core::error::Result;
 use boo_core::expr::Expr;
