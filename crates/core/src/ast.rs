@@ -33,6 +33,24 @@ pub enum Expression<Outer> {
     Match(Match<Outer>),
 }
 
+/// Represents a function definition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Function<Outer> {
+    /// The name of the function parameter.
+    pub parameter: Identifier,
+    /// The body of the function.
+    pub body: Outer,
+}
+
+/// Applies an argument to a function.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Apply<Outer> {
+    /// The function.
+    pub function: Outer,
+    /// The argument.
+    pub argument: Outer,
+}
+
 /// Represents assignment.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Assign<Outer> {
@@ -42,15 +60,6 @@ pub struct Assign<Outer> {
     pub value: Outer,
     /// The rest of the expression.
     pub inner: Outer,
-}
-
-/// Represents a function definition.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Function<Outer> {
-    /// The name of the function parameter.
-    pub parameter: Identifier,
-    /// The body of the function.
-    pub body: Outer,
 }
 
 /// A set of patterns matched against a value.
@@ -78,15 +87,6 @@ pub enum Pattern {
     Primitive(Primitive),
 }
 
-/// Applies an argument to a function.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Apply<Outer> {
-    /// The function.
-    pub function: Outer,
-    /// The argument.
-    pub argument: Outer,
-}
-
 impl<Outer: Display> std::fmt::Display for Expression<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -101,6 +101,18 @@ impl<Outer: Display> std::fmt::Display for Expression<Outer> {
     }
 }
 
+impl<Outer: Display> std::fmt::Display for Function<Outer> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "fn {} -> ({})", self.parameter, self.body)
+    }
+}
+
+impl<Outer: Display> std::fmt::Display for Apply<Outer> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}) ({})", self.function, self.argument)
+    }
+}
+
 impl<Outer: Display> std::fmt::Display for Assign<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -108,12 +120,6 @@ impl<Outer: Display> std::fmt::Display for Assign<Outer> {
             "let {} = ({}) in ({})",
             self.name, self.value, self.inner
         )
-    }
-}
-
-impl<Outer: Display> std::fmt::Display for Function<Outer> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "fn {} -> ({})", self.parameter, self.body)
     }
 }
 
@@ -141,11 +147,5 @@ impl std::fmt::Display for Pattern {
             Pattern::Primitive(x) => x.fmt(f),
             Pattern::Anything => write!(f, "_"),
         }
-    }
-}
-
-impl<Outer: Display> std::fmt::Display for Apply<Outer> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}) ({})", self.function, self.argument)
     }
 }
