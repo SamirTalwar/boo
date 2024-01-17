@@ -194,6 +194,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
                 },
             }
         }
+        Expression::Typed(Typed { expression, typ: _ }) => Ok(Progress::Next(expression)),
     }
 }
 
@@ -267,6 +268,13 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
                     .collect(),
             }),
         ),
+        Expression::Typed(Typed { expression, typ }) => Expr::new(
+            expr.span,
+            Expression::Typed(Typed {
+                expression: substitute(substitution, expression, bound),
+                typ,
+            }),
+        ),
     }
 }
 
@@ -311,6 +319,10 @@ fn avoid_alpha_capture(expr: Expr, bound: HashSet<Identifier>) -> Expr {
                         result: avoid_alpha_capture(result, bound.clone()),
                     })
                     .collect(),
+            }),
+            Expression::Typed(Typed { expression, typ }) => Expression::Typed(Typed {
+                expression: avoid_alpha_capture(expression, bound),
+                typ,
             }),
         },
     )

@@ -10,7 +10,7 @@ use std::sync::Arc;
 pub trait TypeRef: From<Type<Self>> + Display + Sized {}
 
 /// A simple type wrapper that allows for cycles.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Monotype(pub Arc<Type<Self>>);
 
 impl AsRef<Type<Self>> for Monotype {
@@ -65,7 +65,7 @@ impl Display for Polytype {
 }
 
 /// The set of types.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type<Outer: TypeRef> {
     Integer,
     Function { parameter: Outer, body: Outer },

@@ -150,6 +150,16 @@ fn test_pattern_matching_on_functions() -> Result<()> {
     )
 }
 
+#[test]
+fn test_expression_type_annotations() -> Result<()> {
+    check_program(
+        "expression_type_annotations",
+        "let id_int = fn x -> (x: Integer) in id_int (1 + (2: Integer))",
+        Type::Integer.into(),
+        "3",
+    )
+}
+
 fn check_program(
     name: &str,
     program: &str,

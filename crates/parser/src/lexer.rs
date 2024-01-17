@@ -31,10 +31,12 @@ pub enum Token<'a> {
     Fn,
     #[token(r"match")]
     Match,
-    #[token(r"=")]
-    Assign,
     #[token(r"->")]
     Arrow,
+    #[token(r"=")]
+    Assign,
+    #[token(r":")]
+    Annotate,
     #[regex(r"-?[0-9](_?[0-9])*", |token|
         str::replace(token.slice(), "_", "").parse::<Integer>().ok()
     )]

@@ -52,6 +52,10 @@ pub fn remove_spans(expr: Expr) -> Expr {
                 left: remove_spans(left),
                 right: remove_spans(right),
             }),
+            Expression::Typed(Typed { expression, typ }) => Expression::Typed(Typed {
+                expression: remove_spans(expression),
+                typ,
+            }),
         },
     )
 }

@@ -135,6 +135,19 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
             let result = result_placeholder.substitute(&subst);
             Ok((subst, result))
         }
+        Expression::Typed(expr::Typed { expression, typ }) => {
+            let (expression_subst, expression_type) = infer(env.clone(), fresh, expression)?;
+            let subst = unify(&expression_type, typ)
+                .and_then(|typ_subst| expression_subst.merge(&typ_subst))
+                .ok_or_else(|| Error::TypeUnificationError {
+                    left_span: expression.span,
+                    left_type: expression_type.clone(),
+                    right_span: None,
+                    right_type: typ.clone(),
+                })?;
+            let result_type = expression_type.substitute(&subst);
+            Ok((subst, result_type))
+        }
     }
 }
 
@@ -234,6 +247,29 @@ mod tests {
                     body: Type::Variable(TypeVariable::new_from_str("_1")).into(),
                 }
                 .into(),
+            }),
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_type_annotations_are_respected() -> Result<()> {
+        let program = "(fn x -> x + 1): Integer";
+        let ast = parse(program)?.to_core()?;
+
+        let result = type_of(&ast);
+
+        assert_eq!(
+            result,
+            Err(Error::TypeUnificationError {
+                left_span: Some((1..14).into()),
+                left_type: Type::Function {
+                    parameter: Type::Integer.into(),
+                    body: Type::Integer.into()
+                }
+                .into(),
+                right_span: None, // TODO: should be `Some((17..24).into())`
+                right_type: Type::Integer.into(),
             }),
         );
         Ok(())

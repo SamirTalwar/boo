@@ -40,6 +40,12 @@ pub fn verify(expr: &expr::Expr) -> Result<()> {
                 verify(result)?;
             }
         }
+        expr::Expression::Typed(expr::Typed {
+            ref expression,
+            typ: _,
+        }) => {
+            verify(expression)?;
+        }
     };
     Ok(())
 }

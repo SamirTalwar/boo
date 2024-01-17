@@ -224,12 +224,22 @@ fn gen_nested(
         // generate infix computations
         if let Some(strategy) = gen_infix(
             config.clone(),
-            next_depth,
+            next_depth.clone(),
             target_type.clone(),
             bindings.clone(),
         ) {
             choices.push((2, strategy));
         }
+
+        choices.push((
+            1,
+            gen_typed(
+                config.clone(),
+                next_depth,
+                target_type.clone(),
+                bindings.clone(),
+            ),
+        ));
     }
 
     if choices.is_empty() {
@@ -577,4 +587,25 @@ fn gen_infix(
         ),
         _ => None,
     }
+}
+
+/// Generates an expression along with its valid type.
+fn gen_typed(
+    config: Rc<ExprGenConfig>,
+    next_depth: std::ops::Range<usize>,
+    target_type: TargetType,
+    bindings: Bindings,
+) -> ExprStrategy {
+    gen_nested(config, next_depth, target_type, bindings)
+        .prop_map(|(expr, typ)| {
+            let typed_expr = Expr::new(
+                expr.span,
+                Expression::Typed(Typed {
+                    expression: expr,
+                    typ: typ.clone(),
+                }),
+            );
+            (typed_expr, typ)
+        })
+        .boxed()
 }

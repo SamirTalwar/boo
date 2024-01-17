@@ -36,6 +36,10 @@ pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
                 })
                 .collect(),
         }),
+        Expression::Typed(Typed { expression, typ }) => Expression::Typed(Typed {
+            expression: add_expr(pool, expression),
+            typ,
+        }),
     };
     Expr::insert(pool, expr.span, expression)
 }
@@ -71,6 +75,10 @@ pub fn unpool_expr(pool: &ExprPool, expr: Expr) -> boo_core::expr::Expr {
                         result: unpool_expr(pool, *result),
                     })
                     .collect(),
+            }),
+            Expression::Typed(Typed { expression, typ }) => Expression::Typed(Typed {
+                expression: unpool_expr(pool, *expression),
+                typ: typ.clone(),
             }),
         },
     )

@@ -1,8 +1,10 @@
 //! Parses tokens into an AST.
 
 use boo_core::error::*;
+use boo_core::identifier::*;
 use boo_core::primitive::*;
 use boo_core::span::*;
+use boo_core::types::*;
 use boo_language::*;
 
 use crate::lexer::*;
@@ -12,9 +14,39 @@ peg::parser! {
         pub rule root() -> Expr = e:expr() { e }
 
         pub rule expr() -> Expr = precedence! {
-            x:function() { x }
+            let_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Let }] } / expected!("let"))
+            name:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] { name } } / expected!("an identifier"))
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::Assign }] } / expected!("="))
+            value:expr()
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::In }] } / expected!("in"))
+            inner:@ {
+                Expr::new(
+                    let_.annotation | inner.span,
+                    Expression::Assign(Assign {
+                        name: name.clone(),
+                        value,
+                        inner,
+                    }),
+                )
+            }
             --
-            x:assign() { x }
+            expression:@ (quiet! { [AnnotatedToken { annotation: _, token: Token::Annotate }] } / expected!("':'")) typ:typ() {
+                Expr::new(expression.span, Expression::Typed(Typed {
+                    expression,
+                    typ,
+                }))
+            }
+            --
+            fn_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Fn }] } / expected!("fn"))
+            parameters:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] { name } } / expected!("an identifier"))+
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::Arrow }] } / expected!("->"))
+            body:@ {
+                let span = fn_.annotation | body.span;
+                Expr::new(span, Expression::Function(Function {
+                    parameters: parameters.into_iter().cloned().collect(),
+                    body,
+                }))
+            }
             --
             x:match_() { x }
             --
@@ -43,7 +75,7 @@ peg::parser! {
         }
 
         rule atomic_expr() -> Expr =
-            e:(primitive_expr() / identifier() / group()) { e }
+            e:(primitive_expr() / identifier_expr() / group()) { e }
 
         rule group() -> Expr =
             (quiet! { [AnnotatedToken { annotation: _, token: Token::StartGroup }] } / expected!("'('"))
@@ -62,52 +94,15 @@ peg::parser! {
                 (*annotation, Primitive::Integer(n.clone()))
             } } / expected!("an integer")
 
-        rule identifier() -> Expr =
+        rule identifier_expr() -> Expr =
+            identifier:identifier() {
+                Expr::new(identifier.0, Expression::Identifier(identifier.1))
+            }
+
+        rule identifier() -> (Span, Identifier) =
             quiet! { [AnnotatedToken { annotation, token: Token::Identifier(name) }] {
-                Expr::new(
-                    *annotation,
-                    Expression::Identifier(name.clone()),
-                )
+                (*annotation, name.clone())
             } } / expected!("an identifier")
-
-        rule function() -> Expr =
-            fn_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Fn }] } / expected!("fn"))
-            parameters_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] } / expected!("an identifier"))+
-            (quiet! { [AnnotatedToken { annotation: _, token: Token::Arrow }] } / expected!("->"))
-            body:expr() {
-                let span = fn_.annotation | body.span;
-                let parameters = parameters_.into_iter().map(|parameter|
-                    match &parameter.token {
-                        Token::Identifier(identifier) => identifier.clone(),
-                        _ => unreachable!(),
-                    }
-                ).collect();
-                Expr::new(fn_.annotation | body.span, Expression::Function(Function {
-                    parameters,
-                    body,
-                }))
-            }
-
-        rule assign() -> Expr =
-            let_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Let }] } / expected!("let"))
-            name:(quiet! { [AnnotatedToken { annotation: _, token: Token::Identifier(name) }] } / expected!("an identifier"))
-            (quiet! { [AnnotatedToken { annotation: _, token: Token::Assign }] } / expected!("="))
-            value:expr()
-            (quiet! { [AnnotatedToken { annotation: _, token: Token::In }] } / expected!("in"))
-            inner:expr() {
-                let n = match &name.token {
-                    Token::Identifier(name) => name,
-                    _ => unreachable!(),
-                };
-                Expr::new(
-                    let_.annotation | inner.span,
-                    Expression::Assign(Assign {
-                        name: n.clone(),
-                        value,
-                        inner,
-                    }),
-                )
-            }
 
         rule match_() -> Expr =
             match_:(quiet! { [AnnotatedToken { annotation: _, token: Token::Match }] } / expected!("match"))
@@ -142,6 +137,30 @@ peg::parser! {
         rule pattern_anything() -> Pattern =
             (quiet! { [AnnotatedToken { annotation: _, token: Token::Anything }] } / expected!("_")) {
                 Pattern::Anything
+            }
+
+        rule typ() -> Monotype = precedence! {
+            typ:typ_name() { typ }
+            --
+            parameter:@
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::Arrow }] } / expected!("->"))
+            body:(@) {
+                Type::Function { parameter, body }.into()
+            }
+            --
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::StartGroup }] } / expected!("'('"))
+            typ:typ()
+            (quiet! { [AnnotatedToken { annotation: _, token: Token::EndGroup }] } / expected!(")'")) {
+                typ
+            }
+        }
+
+        rule typ_name() -> Monotype =
+            i:identifier() { ?
+                 match i.1 {
+                    Identifier::Name(name) if name.as_ref() == "Integer" => Ok(Type::Integer.into()),
+                    _ => Err("unknown type"),
+                }
             }
     }
 }

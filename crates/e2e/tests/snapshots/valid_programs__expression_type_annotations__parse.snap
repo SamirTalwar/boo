@@ -1,0 +1,170 @@
+---
+source: crates/e2e/tests/valid_programs.rs
+description: "let id_int = fn x -> (x: Integer) in id_int (1 + (2: Integer))"
+expression: ast
+---
+Expr {
+    span: Some(
+        Span {
+            start: 0,
+            end: 51,
+        },
+    ),
+    expression: Assign(
+        Assign {
+            name: Name(
+                "id_int",
+            ),
+            value: Expr {
+                span: Some(
+                    Span {
+                        start: 13,
+                        end: 23,
+                    },
+                ),
+                expression: Function(
+                    Function {
+                        parameter: Name(
+                            "x",
+                        ),
+                        body: Expr {
+                            span: Some(
+                                Span {
+                                    start: 22,
+                                    end: 23,
+                                },
+                            ),
+                            expression: Typed(
+                                Typed {
+                                    expression: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 22,
+                                                end: 23,
+                                            },
+                                        ),
+                                        expression: Identifier(
+                                            Name(
+                                                "x",
+                                            ),
+                                        ),
+                                    },
+                                    typ: Monotype(
+                                        Integer,
+                                    ),
+                                },
+                            ),
+                        },
+                    },
+                ),
+            },
+            inner: Expr {
+                span: Some(
+                    Span {
+                        start: 37,
+                        end: 51,
+                    },
+                ),
+                expression: Apply(
+                    Apply {
+                        function: Expr {
+                            span: Some(
+                                Span {
+                                    start: 37,
+                                    end: 43,
+                                },
+                            ),
+                            expression: Identifier(
+                                Name(
+                                    "id_int",
+                                ),
+                            ),
+                        },
+                        argument: Expr {
+                            span: Some(
+                                Span {
+                                    start: 45,
+                                    end: 51,
+                                },
+                            ),
+                            expression: Apply(
+                                Apply {
+                                    function: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 45,
+                                                end: 51,
+                                            },
+                                        ),
+                                        expression: Apply(
+                                            Apply {
+                                                function: Expr {
+                                                    span: Some(
+                                                        Span {
+                                                            start: 45,
+                                                            end: 51,
+                                                        },
+                                                    ),
+                                                    expression: Identifier(
+                                                        Operator(
+                                                            "+",
+                                                        ),
+                                                    ),
+                                                },
+                                                argument: Expr {
+                                                    span: Some(
+                                                        Span {
+                                                            start: 45,
+                                                            end: 46,
+                                                        },
+                                                    ),
+                                                    expression: Primitive(
+                                                        Integer(
+                                                            Small(
+                                                                1,
+                                                            ),
+                                                        ),
+                                                    ),
+                                                },
+                                            },
+                                        ),
+                                    },
+                                    argument: Expr {
+                                        span: Some(
+                                            Span {
+                                                start: 50,
+                                                end: 51,
+                                            },
+                                        ),
+                                        expression: Typed(
+                                            Typed {
+                                                expression: Expr {
+                                                    span: Some(
+                                                        Span {
+                                                            start: 50,
+                                                            end: 51,
+                                                        },
+                                                    ),
+                                                    expression: Primitive(
+                                                        Integer(
+                                                            Small(
+                                                                2,
+                                                            ),
+                                                        ),
+                                                    ),
+                                                },
+                                                typ: Monotype(
+                                                    Integer,
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                    },
+                ),
+            },
+        },
+    ),
+}

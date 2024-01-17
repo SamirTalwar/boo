@@ -64,6 +64,12 @@ pub fn rewrite(expr: crate::Expr) -> Result<core::Expr> {
             })),
             argument: rewrite(right)?,
         })),
+        crate::Expression::Typed(crate::Typed { expression, typ }) => {
+            wrap(core::Expression::Typed(core::Typed {
+                expression: rewrite(expression)?,
+                typ,
+            }))
+        }
     })
 }
 

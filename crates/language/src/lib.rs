@@ -8,6 +8,7 @@ use boo_core::error::Result;
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
 use boo_core::span::Span;
+use boo_core::types::Monotype;
 use boo_core::verification;
 
 pub use crate::operation::Operation;
@@ -46,6 +47,7 @@ pub enum Expression {
     Assign(Assign),
     Match(Match),
     Infix(Infix),
+    Typed(Typed),
 }
 
 /// Represents assignment.
@@ -113,6 +115,15 @@ pub struct Infix {
     pub right: Expr,
 }
 
+/// An expression annotated with a type.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Typed {
+    /// The expression.
+    pub expression: Expr,
+    /// The stated type of the expression.
+    pub typ: Monotype,
+}
+
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.expression.fmt(f)
@@ -129,6 +140,7 @@ impl std::fmt::Display for Expression {
             Expression::Assign(x) => x.fmt(f),
             Expression::Match(x) => x.fmt(f),
             Expression::Infix(x) => x.fmt(f),
+            Expression::Typed(x) => x.fmt(f),
         }
     }
 }
@@ -189,5 +201,11 @@ impl std::fmt::Display for Apply {
 impl std::fmt::Display for Infix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}) {} ({})", self.left, self.operation, self.right)
+    }
+}
+
+impl std::fmt::Display for Typed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}): {}", self.expression, self.typ)
     }
 }

@@ -321,6 +321,7 @@ mod tests {
                     "'*'",
                     "'+'",
                     "'-'",
+                    "':'",
                     "an identifier",
                     "an integer",
                     "in",
@@ -1060,6 +1061,185 @@ mod tests {
                                 },
                             },
                         ],
+                    },
+                ),
+            },
+        )
+        "###);
+    }
+
+    #[test]
+    fn test_parsing_an_expression_type_annotation() {
+        let input =
+            "let id = fn x -> x: (Integer -> Integer) in id (1: Integer) + (2 + 3: Integer)";
+        let parsed = parse(input);
+
+        insta::assert_debug_snapshot!(parsed, @r###"
+        Ok(
+            Expr {
+                span: Span {
+                    start: 0,
+                    end: 68,
+                },
+                expression: Assign(
+                    Assign {
+                        name: Name(
+                            "id",
+                        ),
+                        value: Expr {
+                            span: Span {
+                                start: 9,
+                                end: 18,
+                            },
+                            expression: Typed(
+                                Typed {
+                                    expression: Expr {
+                                        span: Span {
+                                            start: 9,
+                                            end: 18,
+                                        },
+                                        expression: Function(
+                                            Function {
+                                                parameters: [
+                                                    Name(
+                                                        "x",
+                                                    ),
+                                                ],
+                                                body: Expr {
+                                                    span: Span {
+                                                        start: 17,
+                                                        end: 18,
+                                                    },
+                                                    expression: Identifier(
+                                                        Name(
+                                                            "x",
+                                                        ),
+                                                    ),
+                                                },
+                                            },
+                                        ),
+                                    },
+                                    typ: Monotype(
+                                        Function {
+                                            parameter: Monotype(
+                                                Integer,
+                                            ),
+                                            body: Monotype(
+                                                Integer,
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                        inner: Expr {
+                            span: Span {
+                                start: 44,
+                                end: 68,
+                            },
+                            expression: Infix(
+                                Infix {
+                                    operation: Add,
+                                    left: Expr {
+                                        span: Span {
+                                            start: 44,
+                                            end: 49,
+                                        },
+                                        expression: Apply(
+                                            Apply {
+                                                function: Expr {
+                                                    span: Span {
+                                                        start: 44,
+                                                        end: 46,
+                                                    },
+                                                    expression: Identifier(
+                                                        Name(
+                                                            "id",
+                                                        ),
+                                                    ),
+                                                },
+                                                argument: Expr {
+                                                    span: Span {
+                                                        start: 48,
+                                                        end: 49,
+                                                    },
+                                                    expression: Typed(
+                                                        Typed {
+                                                            expression: Expr {
+                                                                span: Span {
+                                                                    start: 48,
+                                                                    end: 49,
+                                                                },
+                                                                expression: Primitive(
+                                                                    Integer(
+                                                                        Small(
+                                                                            1,
+                                                                        ),
+                                                                    ),
+                                                                ),
+                                                            },
+                                                            typ: Monotype(
+                                                                Integer,
+                                                            ),
+                                                        },
+                                                    ),
+                                                },
+                                            },
+                                        ),
+                                    },
+                                    right: Expr {
+                                        span: Span {
+                                            start: 63,
+                                            end: 68,
+                                        },
+                                        expression: Typed(
+                                            Typed {
+                                                expression: Expr {
+                                                    span: Span {
+                                                        start: 63,
+                                                        end: 68,
+                                                    },
+                                                    expression: Infix(
+                                                        Infix {
+                                                            operation: Add,
+                                                            left: Expr {
+                                                                span: Span {
+                                                                    start: 63,
+                                                                    end: 64,
+                                                                },
+                                                                expression: Primitive(
+                                                                    Integer(
+                                                                        Small(
+                                                                            2,
+                                                                        ),
+                                                                    ),
+                                                                ),
+                                                            },
+                                                            right: Expr {
+                                                                span: Span {
+                                                                    start: 67,
+                                                                    end: 68,
+                                                                },
+                                                                expression: Primitive(
+                                                                    Integer(
+                                                                        Small(
+                                                                            3,
+                                                                        ),
+                                                                    ),
+                                                                ),
+                                                            },
+                                                        },
+                                                    ),
+                                                },
+                                                typ: Monotype(
+                                                    Integer,
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
                     },
                 ),
             },

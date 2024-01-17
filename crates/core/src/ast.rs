@@ -6,6 +6,7 @@ use std::fmt::Display;
 use crate::identifier::Identifier;
 use crate::native::Native;
 use crate::primitive::Primitive;
+use crate::types::Monotype;
 
 /// A Boo expression. These can be nested arbitrarily.
 ///
@@ -31,6 +32,7 @@ pub enum Expression<Outer> {
     Apply(Apply<Outer>),
     Assign(Assign<Outer>),
     Match(Match<Outer>),
+    Typed(Typed<Outer>),
 }
 
 /// Represents a function definition.
@@ -80,6 +82,15 @@ pub struct PatternMatch<Outer> {
     pub result: Outer,
 }
 
+/// An expression annotated with a type.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Typed<Outer> {
+    /// The expression.
+    pub expression: Outer,
+    /// The stated type of the expression.
+    pub typ: Monotype,
+}
+
 /// A single pattern.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Pattern {
@@ -87,7 +98,7 @@ pub enum Pattern {
     Primitive(Primitive),
 }
 
-impl<Outer: Display> std::fmt::Display for Expression<Outer> {
+impl<Outer: Display> Display for Expression<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expression::Primitive(x) => x.fmt(f),
@@ -97,23 +108,24 @@ impl<Outer: Display> std::fmt::Display for Expression<Outer> {
             Expression::Apply(x) => x.fmt(f),
             Expression::Assign(x) => x.fmt(f),
             Expression::Match(x) => x.fmt(f),
+            Expression::Typed(x) => x.fmt(f),
         }
     }
 }
 
-impl<Outer: Display> std::fmt::Display for Function<Outer> {
+impl<Outer: Display> Display for Function<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "fn {} -> ({})", self.parameter, self.body)
     }
 }
 
-impl<Outer: Display> std::fmt::Display for Apply<Outer> {
+impl<Outer: Display> Display for Apply<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}) ({})", self.function, self.argument)
     }
 }
 
-impl<Outer: Display> std::fmt::Display for Assign<Outer> {
+impl<Outer: Display> Display for Assign<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -123,7 +135,7 @@ impl<Outer: Display> std::fmt::Display for Assign<Outer> {
     }
 }
 
-impl<Outer: Display> std::fmt::Display for Match<Outer> {
+impl<Outer: Display> Display for Match<Outer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "match {} {{", self.value)?;
         let mut pattern_iter = self.patterns.iter();
@@ -141,11 +153,17 @@ impl<Outer: Display> std::fmt::Display for Match<Outer> {
     }
 }
 
-impl std::fmt::Display for Pattern {
+impl Display for Pattern {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Pattern::Primitive(x) => x.fmt(f),
             Pattern::Anything => write!(f, "_"),
         }
+    }
+}
+
+impl<Outer: Display> Display for Typed<Outer> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}): {}", self.expression, self.typ)
     }
 }

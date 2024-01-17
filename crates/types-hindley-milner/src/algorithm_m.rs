@@ -132,6 +132,16 @@ fn infer(
                 },
             )
         }
+        Expression::Typed(expr::Typed { expression, typ }) => {
+            let expression_subst = infer(env.clone(), fresh, expression, target_type.clone())?;
+            unify(&target_type, typ)
+                .and_then(|typ_subst| expression_subst.merge(&typ_subst))
+                .ok_or_else(|| Error::TypeMismatch {
+                    span: expression.span,
+                    expected_type: typ.clone(),
+                    actual_type: target_type.substitute(&expression_subst),
+                })
+        }
     }
 }
 
@@ -227,6 +237,28 @@ mod tests {
                 actual_type: Type::Function {
                     parameter: Type::Variable(TypeVariable::new_from_str("_2")).into(),
                     body: Type::Variable(TypeVariable::new_from_str("_3")).into(), // TOOD: should be `"_2"`
+                }
+                .into(),
+            }),
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_type_annotations_are_respected() -> Result<()> {
+        let program = "(fn x -> x + 1): Integer";
+        let ast = parse(program)?.to_core()?;
+
+        let result = type_of(&ast);
+
+        assert_eq!(
+            result,
+            Err(Error::TypeMismatch {
+                span: Some((1..14).into()),
+                expected_type: Type::Integer.into(),
+                actual_type: Type::Function {
+                    parameter: Type::Variable(TypeVariable::new_from_str("_1")).into(), // TOOD: should be `Type::Integer`
+                    body: Type::Variable(TypeVariable::new_from_str("_2")).into(), // TOOD: should be `Type::Integer`
                 }
                 .into(),
             }),

@@ -144,6 +144,7 @@ impl<'a> InnerEvaluator<'a> {
                 }
                 Err(Error::MatchWithoutBaseCase { span: expr.span })
             }
+            Expression::Typed(Typed { expression, typ: _ }) => self.evaluate(*expression),
         }
     }
 
