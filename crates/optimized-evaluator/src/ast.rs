@@ -1,15 +1,11 @@
 //! An AST based on a [`Pool`].
 
 use boo_core::ast::Expression;
-use boo_core::span::Span;
+use boo_core::span::{Span, Spanned};
 
 use super::pool::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Inner {
-    pub span: Option<Span>,
-    pub expression: Expression<Expr>,
-}
+pub type Inner = Spanned<Expression<Expr>>;
 
 /// A wrapped expression where each child node is a reference to elsewhere in the pool.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -39,7 +35,10 @@ impl ExprPool {
     }
 
     fn add(&mut self, span: Option<Span>, expression: Expression<Expr>) -> PoolRef<Inner> {
-        self.0.add(Inner { span, expression })
+        self.0.add(Spanned {
+            span,
+            value: expression,
+        })
     }
 
     fn get(&self, pool_ref: PoolRef<Inner>) -> &Inner {

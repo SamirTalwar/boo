@@ -52,3 +52,10 @@ impl From<Span> for miette::SourceSpan {
         val.range().into()
     }
 }
+
+/// A value, optionally associated with a span.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Spanned<Value> {
+    pub span: Option<Span>,
+    pub value: Value,
+}

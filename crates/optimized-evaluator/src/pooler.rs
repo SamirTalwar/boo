@@ -46,7 +46,10 @@ pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
 
 // Recreates a core expression from the flattened variant.
 pub fn unpool_expr(pool: &ExprPool, expr: Expr) -> boo_core::expr::Expr {
-    let Inner { span, expression } = expr.read_from(pool);
+    let Inner {
+        span,
+        value: expression,
+    } = expr.read_from(pool);
     boo_core::expr::Expr::new(
         *span,
         match expression {

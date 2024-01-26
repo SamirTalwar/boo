@@ -76,7 +76,7 @@ impl<'a> InnerEvaluator<'a> {
     /// identifier, and captured by closures when a function is evaluated.
     fn evaluate(&self, expr_ref: Expr) -> Result<EvaluationProgress<'a>> {
         let expr = expr_ref.read_from(self.pool);
-        match &expr.expression {
+        match &expr.value {
             Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
             Expression::Native(Native { implementation, .. }) => {
                 implementation(self).map(|value| EvaluationProgress::Primitive(Cow::Owned(value)))
