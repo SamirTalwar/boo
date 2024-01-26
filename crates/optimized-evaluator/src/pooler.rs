@@ -9,7 +9,8 @@ use crate::ast::*;
 /// The leaf expressions will always be added before their parents, so that the
 /// references are always valid.
 pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
-    let expression = match *expr.expression {
+    let span = expr.span();
+    let expression = match expr.take() {
         Expression::Primitive(x) => Expression::Primitive(x),
         Expression::Native(x) => Expression::Native(x),
         Expression::Identifier(x) => Expression::Identifier(x),
@@ -41,7 +42,7 @@ pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
             typ,
         }),
     };
-    Expr::insert(pool, expr.span, expression)
+    Expr::insert(pool, span, expression)
 }
 
 // Recreates a core expression from the flattened variant.

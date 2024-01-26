@@ -2,7 +2,7 @@ use crate::error::{Error, Result};
 use crate::expr;
 
 pub fn verify(expr: &expr::Expr) -> Result<()> {
-    match *expr.expression {
+    match expr.expression() {
         expr::Expression::Primitive(_)
         | expr::Expression::Native(_)
         | expr::Expression::Identifier(_) => (),
@@ -33,7 +33,7 @@ pub fn verify(expr: &expr::Expr) -> Result<()> {
         }) => {
             match patterns.back().map(|p| &p.pattern) {
                 Some(expr::Pattern::Anything) => Ok(()),
-                _ => Err(Error::MatchWithoutBaseCase { span: expr.span }),
+                _ => Err(Error::MatchWithoutBaseCase { span: expr.span() }),
             }?;
             verify(value)?;
             for expr::PatternMatch { pattern: _, result } in patterns {

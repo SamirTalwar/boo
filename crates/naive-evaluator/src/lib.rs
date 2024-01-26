@@ -100,7 +100,7 @@ fn evaluate(expr: Expr) -> Result<Evaluated> {
                 progress = next;
             }
             Progress::Complete(complete) => {
-                return match *complete.expression {
+                return match complete.take() {
                     Expression::Primitive(primitive) => Ok(Evaluated::Primitive(primitive)),
                     Expression::Function(function) => Ok(Evaluated::Function(function)),
                     _ => unreachable!("Evaluated to a non-final expression."),
@@ -111,27 +111,28 @@ fn evaluate(expr: Expr) -> Result<Evaluated> {
 }
 
 fn step(expr: Expr) -> Result<Progress<Expr>> {
-    match *expr.expression {
+    let span = expr.span();
+    match expr.take() {
         expression @ Expression::Primitive(_) | expression @ Expression::Function(_) => {
-            Ok(Progress::Complete(Expr::new(expr.span, expression)))
+            Ok(Progress::Complete(Expr::new(span, expression)))
         }
         Expression::Native(Native { implementation, .. }) => implementation(&EmptyContext {})
-            .map(|x| Progress::Complete(Expr::new(expr.span, Expression::Primitive(x)))),
+            .map(|x| Progress::Complete(Expr::new(span, Expression::Primitive(x)))),
         Expression::Identifier(name) => Err(Error::UnknownVariable {
-            span: expr.span,
+            span,
             name: name.to_string(),
         }),
         Expression::Apply(Apply { function, argument }) => {
             let function_result = step(function)?;
             match function_result {
                 Progress::Next(function_next) => Ok(Progress::Next(Expr::new(
-                    expr.span,
+                    span,
                     Expression::Apply(Apply {
                         function: function_next,
                         argument,
                     }),
                 ))),
-                Progress::Complete(function_complete) => match *function_complete.expression {
+                Progress::Complete(function_complete) => match function_complete.take() {
                     Expression::Function(Function { parameter, body }) => {
                         let substituted_body = substitute(
                             Substitution {
@@ -143,7 +144,7 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
                         );
                         Ok(Progress::Next(substituted_body))
                     }
-                    _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
+                    _ => Err(Error::InvalidFunctionApplication { span }),
                 },
             }
         }
@@ -164,12 +165,12 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
         }) => {
             let PatternMatch { pattern, result } = patterns
                 .pop_front()
-                .ok_or(Error::MatchWithoutBaseCase { span: expr.span })?;
+                .ok_or(Error::MatchWithoutBaseCase { span })?;
             match pattern {
                 Pattern::Anything => Ok(Progress::Next(result)),
                 _ => match step(value)? {
                     Progress::Next(value_next) => Ok(Progress::Next(Expr::new(
-                        expr.span,
+                        span,
                         Expression::Match(Match {
                             value: value_next,
                             patterns,
@@ -177,13 +178,13 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
                     ))),
                     Progress::Complete(value_complete) => match pattern {
                         Pattern::Anything => unreachable!("Case should be handled already."),
-                        Pattern::Primitive(expected) => match *value_complete.expression {
-                            Expression::Primitive(actual) if actual == expected => {
+                        Pattern::Primitive(expected) => match value_complete.expression() {
+                            Expression::Primitive(actual) if actual == &expected => {
                                 Ok(Progress::Next(result))
                             }
                             // if not matched, try again, having discarded the first pattern
                             _ => Ok(Progress::Next(Expr::new(
-                                expr.span,
+                                span,
                                 Expression::Match(Match {
                                     value: value_complete,
                                     patterns,
@@ -205,13 +206,14 @@ struct Substitution {
 }
 
 fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>) -> Expr {
-    match *expr.expression {
-        expression @ Expression::Primitive(_) => Expr::new(expr.span, expression),
+    let span = expr.span();
+    match expr.take() {
+        expression @ Expression::Primitive(_) => Expr::new(span, expression),
         Expression::Native(Native {
             unique_name,
             implementation,
         }) => Expr::new(
-            expr.span,
+            span,
             Expression::Native(Native {
                 unique_name,
                 implementation: Rc::new(move |context| {
@@ -226,19 +228,19 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
         Expression::Identifier(name) if name == *substitution.name => {
             avoid_alpha_capture((*substitution.value).clone(), bound)
         }
-        expression @ Expression::Identifier(_) => Expr::new(expr.span, expression),
+        expression @ Expression::Identifier(_) => Expr::new(span, expression),
         Expression::Function(Function { parameter, body }) if parameter != *substitution.name => {
             Expr::new(
-                expr.span,
+                span,
                 Expression::Function(Function {
                     parameter: parameter.clone(),
                     body: substitute(substitution, body, bound.update(parameter)),
                 }),
             )
         }
-        expression @ Expression::Function(_) => Expr::new(expr.span, expression),
+        expression @ Expression::Function(_) => Expr::new(span, expression),
         Expression::Apply(Apply { function, argument }) => Expr::new(
-            expr.span,
+            span,
             Expression::Apply(Apply {
                 function: substitute(substitution.clone(), function, bound.clone()),
                 argument: substitute(substitution, argument, bound),
@@ -246,7 +248,7 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
         ),
         Expression::Assign(Assign { name, value, inner }) if name != *substitution.name => {
             Expr::new(
-                expr.span,
+                span,
                 Expression::Assign(Assign {
                     name: name.clone(),
                     value: substitute(substitution.clone(), value, bound.clone()),
@@ -254,9 +256,9 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
                 }),
             )
         }
-        expression @ Expression::Assign(_) => Expr::new(expr.span, expression),
+        expression @ Expression::Assign(_) => Expr::new(span, expression),
         Expression::Match(Match { value, patterns }) => Expr::new(
-            expr.span,
+            span,
             Expression::Match(Match {
                 value: substitute(substitution.clone(), value, bound.clone()),
                 patterns: patterns
@@ -269,7 +271,7 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
             }),
         ),
         Expression::Typed(Typed { expression, typ }) => Expr::new(
-            expr.span,
+            span,
             Expression::Typed(Typed {
                 expression: substitute(substitution, expression, bound),
                 typ,
@@ -280,8 +282,8 @@ fn substitute(substitution: Substitution, expr: Expr, bound: HashSet<Identifier>
 
 fn avoid_alpha_capture(expr: Expr, bound: HashSet<Identifier>) -> Expr {
     Expr::new(
-        expr.span,
-        match *expr.expression {
+        expr.span(),
+        match expr.take() {
             expression @ Expression::Primitive(_) | expression @ Expression::Native(_) => {
                 expression
             }

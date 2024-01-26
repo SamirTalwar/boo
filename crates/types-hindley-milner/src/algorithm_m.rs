@@ -36,10 +36,10 @@ fn infer(
     expr: &Expr,
     target_type: Monotype,
 ) -> Result<Subst> {
-    match expr.expression.as_ref() {
+    match expr.expression() {
         Expression::Primitive(Primitive::Integer(_)) => unify(&target_type, &Type::Integer.into())
             .ok_or_else(|| Error::TypeMismatch {
-                span: expr.span,
+                span: expr.span(),
                 expected_type: target_type,
                 actual_type: Type::Integer.into(),
             }),
@@ -47,13 +47,13 @@ fn infer(
         Expression::Identifier(identifier) => env
             .get(identifier)
             .ok_or_else(|| Error::UnknownVariable {
-                span: expr.span,
+                span: expr.span(),
                 name: identifier.to_string(),
             })
             .and_then(|typ| {
                 let source_type = typ.substitute(&Subst::empty(), fresh).mono;
                 unify(&target_type, &source_type).ok_or(Error::TypeMismatch {
-                    span: expr.span,
+                    span: expr.span(),
                     expected_type: target_type,
                     actual_type: source_type,
                 })
@@ -66,7 +66,7 @@ fn infer(
                 body: body_type.clone(),
             });
             let function_subst = unify(&target_type, &source_type).ok_or(Error::TypeMismatch {
-                span: expr.span,
+                span: expr.span(),
                 expected_type: target_type,
                 actual_type: source_type,
             })?;
@@ -91,7 +91,7 @@ fn infer(
             function_subst
                 .merge(&argument_subst)
                 .ok_or_else(|| Error::TypeMismatch {
-                    span: argument.span,
+                    span: argument.span(),
                     expected_type: target_type.substitute(&function_subst),
                     actual_type: argument_type.substitute(&function_subst.then(&argument_subst)),
                 })
@@ -125,7 +125,7 @@ fn infer(
                     subst
                         .merge(&result_subst)
                         .ok_or_else(|| Error::TypeMismatch {
-                            span: expr.span,
+                            span: expr.span(),
                             expected_type: target_type.substitute(&subst),
                             actual_type: target_type.substitute(&result_subst),
                         })
@@ -137,7 +137,7 @@ fn infer(
             unify(&target_type, typ)
                 .and_then(|typ_subst| expression_subst.merge(&typ_subst))
                 .ok_or_else(|| Error::TypeMismatch {
-                    span: expression.span,
+                    span: expression.span(),
                     expected_type: typ.clone(),
                     actual_type: target_type.substitute(&expression_subst),
                 })

@@ -171,7 +171,7 @@ fn check_program(
         insta::assert_debug_snapshot!(name.to_string() + "__parse", ast);
     });
 
-    let expected_result = match *parse(expected_result_str)?.to_core()?.expression {
+    let expected_result = match parse(expected_result_str)?.to_core()?.take() {
         ast::Expression::Primitive(primitive) => evaluation::Evaluated::Primitive(primitive),
         expression => panic!("Expected result that is not a primitive: {:?}", expression),
     };

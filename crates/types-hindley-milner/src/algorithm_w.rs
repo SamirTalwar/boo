@@ -20,13 +20,13 @@ pub fn type_of(expr: &Expr) -> Result<Monotype> {
 }
 
 fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Monotype)> {
-    match expr.expression.as_ref() {
+    match expr.expression() {
         Expression::Primitive(Primitive::Integer(_)) => Ok((Subst::empty(), Type::Integer.into())),
         Expression::Native(_) => unreachable!("Native expression without a type."),
         Expression::Identifier(identifier) => env
             .get(identifier)
             .ok_or_else(|| Error::UnknownVariable {
-                span: expr.span,
+                span: expr.span(),
                 name: identifier.to_string(),
             })
             .map(|typ| (Subst::empty(), typ.substitute(&Subst::empty(), fresh).mono)),
@@ -63,9 +63,9 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                 &expected_function_type,
             )
             .ok_or(Error::TypeUnificationError {
-                left_span: function.span,
+                left_span: function.span(),
                 left_type: function_type,
-                right_span: argument.span,
+                right_span: argument.span(),
                 right_type: argument_type,
             })?;
             let result = body_type.substitute(&body_subst);
@@ -101,14 +101,14 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                 result: first_result,
             } = pattern_iter
                 .next()
-                .ok_or(Error::MatchWithoutBaseCase { span: expr.span })?;
+                .ok_or(Error::MatchWithoutBaseCase { span: expr.span() })?;
             let (first_result_subst, first_result_type) = infer(env.clone(), fresh, first_result)?;
             let first_unified =
                 unify(&first_result_type, &result_placeholder).ok_or_else(|| {
                     Error::TypeUnificationError {
-                        left_span: expr.span,
+                        left_span: expr.span(),
                         left_type: result_placeholder.clone(),
-                        right_span: first_result.span,
+                        right_span: first_result.span(),
                         right_type: first_result_type.clone(),
                     }
                 })?;
@@ -117,17 +117,17 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
                 let (result_subst, result_type) = infer(env.clone(), fresh, result)?;
                 let unified = unify(&result_type, &result_placeholder).ok_or_else(|| {
                     Error::TypeUnificationError {
-                        left_span: expr.span,
+                        left_span: expr.span(),
                         left_type: result_placeholder.clone(),
-                        right_span: result.span,
+                        right_span: result.span(),
                         right_type: result_type.clone(),
                     }
                 })?;
                 subst = subst.merge(&result_subst.then(&unified)).ok_or_else(|| {
                     Error::TypeUnificationError {
-                        left_span: first_result.span,
+                        left_span: first_result.span(),
                         left_type: first_result_type.clone(),
-                        right_span: result.span,
+                        right_span: result.span(),
                         right_type: result_type,
                     }
                 })?;
@@ -140,7 +140,7 @@ fn infer(env: Env, fresh: &mut FreshVariables, expr: &Expr) -> Result<(Subst, Mo
             let subst = unify(&expression_type, typ)
                 .and_then(|typ_subst| expression_subst.merge(&typ_subst))
                 .ok_or_else(|| Error::TypeUnificationError {
-                    left_span: expression.span,
+                    left_span: expression.span(),
                     left_type: expression_type.clone(),
                     right_span: None,
                     right_type: typ.clone(),
