@@ -54,7 +54,7 @@ impl Evaluator for OptimizedEvaluator {
             self.bindings
                 .iter()
                 .fold(Bindings::new(), |bindings, (identifier, pool_ref)| {
-                    bindings.with(Cow::Borrowed(identifier), *pool_ref, Bindings::new())
+                    bindings.with(identifier.clone(), *pool_ref, Bindings::new())
                 });
         let inner = InnerEvaluator {
             pool: &pool,
@@ -101,7 +101,7 @@ impl<'a> InnerEvaluator<'a> {
                         // the body is executed in the context of the function,
                         // but the argument must be evaluated in the outer context
                         .switch(function_bindings.with(
-                            Cow::Borrowed(parameter),
+                            parameter.clone(),
                             *argument_ref,
                             self.bindings.clone(),
                         ))
@@ -113,7 +113,12 @@ impl<'a> InnerEvaluator<'a> {
                 name,
                 value: value_ref,
                 inner: inner_ref,
-            }) => self.with(name, *value_ref).evaluate(*inner_ref),
+            }) => self
+                .switch(
+                    self.bindings
+                        .with(name.clone(), *value_ref, self.bindings.clone()),
+                )
+                .evaluate(*inner_ref),
             Expression::Match(Match {
                 value: value_ref,
                 patterns,
@@ -165,14 +170,6 @@ impl<'a> InnerEvaluator<'a> {
             self.switch(thunk_bindings.clone()).evaluate(*value_ref)
         });
         Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
-    }
-
-    fn with(&self, identifier: &'a Identifier, expression: Expr) -> Self {
-        self.switch(self.bindings.with(
-            Cow::Borrowed(identifier),
-            expression,
-            self.bindings.clone(),
-        ))
     }
 
     fn switch(&self, new_bindings: Bindings<'a>) -> Self {

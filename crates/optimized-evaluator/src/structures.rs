@@ -45,7 +45,7 @@ pub type Binding<'a> = Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>;
 /// the underlying expression. This expression is evaluated lazily, but only
 /// once, using [`Thunk`].
 #[derive(Debug, Clone)]
-pub struct Bindings<'a>(HashMap<Cow<'a, Identifier>, Binding<'a>>);
+pub struct Bindings<'a>(HashMap<Identifier, Binding<'a>>);
 
 impl<'a> Bindings<'a> {
     /// Constructs an empty set of bindings.
@@ -63,7 +63,7 @@ impl<'a> Bindings<'a> {
     /// Adds a new binding to the set.
     pub fn with(
         &self,
-        identifier: Cow<'a, Identifier>,
+        identifier: Identifier,
         expression: Expr,
         expression_bindings: Self,
     ) -> Self {
