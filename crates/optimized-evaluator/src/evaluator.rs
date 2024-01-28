@@ -13,7 +13,7 @@ use boo_core::primitive::*;
 use boo_core::span::Span;
 use boo_core::span::Spanned;
 
-use crate::ast::{Expr, ExprPool};
+use crate::ast;
 use crate::pooler::add_expr;
 use crate::structures::Binding;
 use crate::structures::{Bindings, EvaluatedBinding, EvaluationProgress};
@@ -21,14 +21,14 @@ use crate::structures::{Bindings, EvaluatedBinding, EvaluationProgress};
 /// An expression pool together with the current bound context, which can
 /// evaluate a given expression reference from the pool.
 pub struct OptimizedEvaluator {
-    pool: ExprPool,
-    bindings: collections::HashMap<Identifier, Expr>,
+    pool: ast::ExprPool,
+    bindings: collections::HashMap<Identifier, ast::Expr>,
 }
 
 impl OptimizedEvaluator {
     pub fn new() -> Self {
         Self {
-            pool: ExprPool::new(),
+            pool: ast::ExprPool::new(),
             bindings: collections::HashMap::new(),
         }
     }
@@ -64,87 +64,70 @@ impl Evaluator for OptimizedEvaluator {
     }
 }
 
-struct InnerEvaluator<'a, Reader: ExpressionReader<Expr = Expr>> {
+struct InnerEvaluator<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> {
     reader: Reader,
-    bindings: Bindings<'a>,
+    bindings: Bindings<'a, Expr>,
 }
 
-impl<'a, Reader: ExpressionReader<Expr = Expr>> InnerEvaluator<'a, Reader> {
+impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> InnerEvaluator<'a, Expr, Reader> {
     /// Evaluates an expression from a pool in a given scope.
     ///
     /// The bindings are modified by assignment, accessed when evaluating an
     /// identifier, and captured by closures when a function is evaluated.
-    fn evaluate(&self, expr_ref: Expr) -> Result<EvaluationProgress<'a>> {
+    fn evaluate(&self, expr: Expr) -> Result<EvaluationProgress<'a, Expr>> {
         let Spanned {
             span,
             value: expression,
-        } = self.reader.read(expr_ref);
+        } = self.reader.read(expr);
         match expression.as_ref() {
             Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(value.clone())),
             Expression::Native(Native { implementation, .. }) => {
                 implementation(self).map(EvaluationProgress::Primitive)
             }
             Expression::Identifier(name) => self.resolve(name, span),
-            Expression::Function(Function {
-                parameter,
-                body: body_ref,
-            }) => Ok(EvaluationProgress::Closure {
+            Expression::Function(Function { parameter, body }) => Ok(EvaluationProgress::Closure {
                 parameter: parameter.clone(),
-                body: *body_ref,
+                body: body.clone(),
                 bindings: self.bindings.clone(),
             }),
-            Expression::Apply(Apply {
-                function: function_ref,
-                argument: argument_ref,
-            }) => {
-                let function_result = self.evaluate(*function_ref)?;
+            Expression::Apply(Apply { function, argument }) => {
+                let function_result = self.evaluate(function.clone())?;
                 match function_result {
                     EvaluationProgress::Closure {
                         parameter,
-                        body: body_ref,
+                        body,
                         bindings: function_bindings,
                     } => self
                         // the body is executed in the context of the function,
                         // but the argument must be evaluated in the outer context
                         .switch(function_bindings.with(
                             parameter.clone(),
-                            *argument_ref,
+                            argument.clone(),
                             self.bindings.clone(),
                         ))
-                        .evaluate(body_ref),
+                        .evaluate(body),
                     _ => Err(Error::InvalidFunctionApplication { span }),
                 }
             }
-            Expression::Assign(Assign {
-                name,
-                value: value_ref,
-                inner: inner_ref,
-            }) => self
+            Expression::Assign(Assign { name, value, inner }) => self
                 .switch(
                     self.bindings
-                        .with(name.clone(), *value_ref, self.bindings.clone()),
+                        .with(name.clone(), value.clone(), self.bindings.clone()),
                 )
-                .evaluate(*inner_ref),
-            Expression::Match(Match {
-                value: value_ref,
-                patterns,
-            }) => {
+                .evaluate(inner.clone()),
+            Expression::Match(Match { value, patterns }) => {
                 // Ensure we only evaluate the value once.
-                let mut value = Binding::unresolved((*value_ref, self.bindings.clone()));
-                for PatternMatch {
-                    pattern,
-                    result: result_ref,
-                } in patterns
-                {
+                let mut value = Binding::unresolved((value.clone(), self.bindings.clone()));
+                for PatternMatch { pattern, result } in patterns {
                     match pattern {
                         Pattern::Anything => {
-                            return self.evaluate(*result_ref);
+                            return self.evaluate(result.clone());
                         }
                         Pattern::Primitive(expected) => {
                             let resolved_value = self.resolve_binding(&mut value)?;
                             match resolved_value {
                                 EvaluationProgress::Primitive(actual) if actual == *expected => {
-                                    return self.evaluate(*result_ref);
+                                    return self.evaluate(result.clone());
                                 }
                                 _ => {}
                             }
@@ -153,12 +136,12 @@ impl<'a, Reader: ExpressionReader<Expr = Expr>> InnerEvaluator<'a, Reader> {
                 }
                 Err(Error::MatchWithoutBaseCase { span })
             }
-            Expression::Typed(Typed { expression, typ: _ }) => self.evaluate(*expression),
+            Expression::Typed(Typed { expression, typ: _ }) => self.evaluate(expression.clone()),
         }
     }
 
     /// Resolves a given identifier by evaluating it in the context of the bindings.
-    fn resolve(&self, identifier: &Identifier, span: Option<Span>) -> EvaluatedBinding<'a> {
+    fn resolve(&self, identifier: &Identifier, span: Option<Span>) -> EvaluatedBinding<'a, Expr> {
         match self.bindings.clone().read(identifier) {
             Some(binding) => self.resolve_binding(binding),
             None => Err(Error::UnknownVariable {
@@ -169,14 +152,14 @@ impl<'a, Reader: ExpressionReader<Expr = Expr>> InnerEvaluator<'a, Reader> {
     }
 
     /// Resolves a given binding in context.
-    fn resolve_binding(&self, binding: &mut Binding<'a>) -> EvaluatedBinding<'a> {
-        let result = binding.resolve_by(move |(value_ref, thunk_bindings)| {
-            self.switch(thunk_bindings.clone()).evaluate(*value_ref)
+    fn resolve_binding(&self, binding: &mut Binding<'a, Expr>) -> EvaluatedBinding<'a, Expr> {
+        let result = binding.resolve_by(move |(value, thunk_bindings)| {
+            self.switch(thunk_bindings.clone()).evaluate(value.clone())
         });
         Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
     }
 
-    fn switch(&self, new_bindings: Bindings<'a>) -> Self {
+    fn switch(&self, new_bindings: Bindings<'a, Expr>) -> Self {
         Self {
             reader: self.reader,
             bindings: new_bindings,
@@ -184,7 +167,9 @@ impl<'a, Reader: ExpressionReader<Expr = Expr>> InnerEvaluator<'a, Reader> {
     }
 }
 
-impl<'a, Reader: ExpressionReader<Expr = Expr>> NativeContext for InnerEvaluator<'a, Reader> {
+impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> NativeContext
+    for InnerEvaluator<'a, Expr, Reader>
+{
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         match self.resolve(identifier, None)?.finish(self.reader) {
             Evaluated::Primitive(primitive) => Ok(primitive),

@@ -8,22 +8,21 @@ use boo_core::expr::Function;
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
 
-use crate::ast::Expr;
 use crate::thunk::Thunk;
 
 /// An interim evaluation result, with the same lifetime as the pool being
 /// evaluated.
 #[derive(Debug, Clone)]
-pub enum EvaluationProgress<'a> {
+pub enum EvaluationProgress<'a, Expr: Clone> {
     Primitive(Primitive),
     Closure {
         parameter: Identifier,
         body: Expr,
-        bindings: Bindings<'a>,
+        bindings: Bindings<'a, Expr>,
     },
 }
 
-impl<'a> EvaluationProgress<'a> {
+impl<'a, Expr: Clone> EvaluationProgress<'a, Expr> {
     /// Concludes evaluation.
     pub fn finish<Reader: ExpressionReader<Expr = Expr>>(self, reader: Reader) -> Evaluated {
         match self {
@@ -40,9 +39,9 @@ impl<'a> EvaluationProgress<'a> {
     }
 }
 
-pub type UnevaluatedBinding<'a> = (Expr, Bindings<'a>);
-pub type EvaluatedBinding<'a> = Result<EvaluationProgress<'a>>;
-pub type Binding<'a> = Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>;
+pub type UnevaluatedBinding<'a, Expr> = (Expr, Bindings<'a, Expr>);
+pub type EvaluatedBinding<'a, Expr> = Result<EvaluationProgress<'a, Expr>>;
+pub type Binding<'a, Expr> = Thunk<UnevaluatedBinding<'a, Expr>, EvaluatedBinding<'a, Expr>>;
 
 /// The set of bindings in a given scope.
 ///
@@ -50,9 +49,9 @@ pub type Binding<'a> = Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>;
 /// the underlying expression. This expression is evaluated lazily, but only
 /// once, using [`Thunk`].
 #[derive(Debug, Clone)]
-pub struct Bindings<'a>(HashMap<Identifier, Binding<'a>>);
+pub struct Bindings<'a, Expr: Clone>(HashMap<Identifier, Binding<'a, Expr>>);
 
-impl<'a> Bindings<'a> {
+impl<'a, Expr: Clone> Bindings<'a, Expr> {
     /// Constructs an empty set of bindings.
     pub fn new() -> Self {
         Self(HashMap::new())
@@ -61,7 +60,7 @@ impl<'a> Bindings<'a> {
     pub fn read(
         &mut self,
         identifier: &Identifier,
-    ) -> Option<&mut Thunk<UnevaluatedBinding<'a>, EvaluatedBinding<'a>>> {
+    ) -> Option<&mut Thunk<UnevaluatedBinding<'a, Expr>, EvaluatedBinding<'a, Expr>>> {
         self.0.get_mut(identifier)
     }
 
@@ -79,7 +78,7 @@ impl<'a> Bindings<'a> {
     }
 }
 
-impl<'a> Default for Bindings<'a> {
+impl<'a, Expr: Clone> Default for Bindings<'a, Expr> {
     fn default() -> Self {
         Self::new()
     }

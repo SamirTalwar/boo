@@ -42,7 +42,7 @@ pub trait ExpressionReader: Copy {
     // Recreates a core expression from the specified variant.
     fn to_core(&self, expr: Self::Expr) -> Expr
     where
-        Self::Expr: Copy,
+        Self::Expr: Clone,
     {
         let Spanned {
             span,
@@ -61,37 +61,37 @@ pub trait ExpressionReader: Copy {
                 ast::Expression::Function(ast::Function { parameter, body }) => {
                     ast::Expression::Function(ast::Function {
                         parameter: parameter.clone(),
-                        body: self.to_core(*body),
+                        body: self.to_core(body.clone()),
                     })
                 }
                 ast::Expression::Apply(ast::Apply { function, argument }) => {
                     ast::Expression::Apply(ast::Apply {
-                        function: self.to_core(*function),
-                        argument: self.to_core(*argument),
+                        function: self.to_core(function.clone()),
+                        argument: self.to_core(argument.clone()),
                     })
                 }
                 ast::Expression::Assign(ast::Assign { name, value, inner }) => {
                     ast::Expression::Assign(ast::Assign {
                         name: name.clone(),
-                        value: self.to_core(*value),
-                        inner: self.to_core(*inner),
+                        value: self.to_core(value.clone()),
+                        inner: self.to_core(inner.clone()),
                     })
                 }
                 ast::Expression::Match(ast::Match { value, patterns }) => {
                     ast::Expression::Match(ast::Match {
-                        value: self.to_core(*value),
+                        value: self.to_core(value.clone()),
                         patterns: patterns
                             .iter()
                             .map(|ast::PatternMatch { pattern, result }| ast::PatternMatch {
                                 pattern: pattern.clone(),
-                                result: self.to_core(*result),
+                                result: self.to_core(result.clone()),
                             })
                             .collect(),
                     })
                 }
                 ast::Expression::Typed(ast::Typed { expression, typ }) => {
                     ast::Expression::Typed(ast::Typed {
-                        expression: self.to_core(*expression),
+                        expression: self.to_core(expression.clone()),
                         typ: typ.clone(),
                     })
                 }
