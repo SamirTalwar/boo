@@ -3,13 +3,12 @@
 use im::HashMap;
 
 use boo_core::error::Result;
-use boo_core::evaluation::Evaluated;
+use boo_core::evaluation::{Evaluated, ExpressionReader};
 use boo_core::expr::Function;
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
 
-use crate::ast::{Expr, ExprPool};
-use crate::pooler::unpool_expr;
+use crate::ast::Expr;
 use crate::thunk::Thunk;
 
 /// An interim evaluation result, with the same lifetime as the pool being
@@ -26,7 +25,7 @@ pub enum EvaluationProgress<'a> {
 
 impl<'a> EvaluationProgress<'a> {
     /// Concludes evaluation.
-    pub fn finish(self, pool: &ExprPool) -> Evaluated {
+    pub fn finish<Reader: ExpressionReader<Expr = Expr>>(self, reader: Reader) -> Evaluated {
         match self {
             Self::Primitive(primitive) => Evaluated::Primitive(primitive),
             Self::Closure {
@@ -35,7 +34,7 @@ impl<'a> EvaluationProgress<'a> {
                 bindings: _,
             } => Evaluated::Function(Function {
                 parameter,
-                body: unpool_expr(pool, body),
+                body: reader.to_core(body),
             }),
         }
     }

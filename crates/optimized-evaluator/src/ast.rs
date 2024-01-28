@@ -1,6 +1,7 @@
 //! An AST based on a [`Pool`].
 
 use boo_core::ast::Expression;
+use boo_core::evaluation::ExpressionReader;
 use boo_core::span::{Span, Spanned};
 
 use super::pool::*;
@@ -43,5 +44,20 @@ impl ExprPool {
 
     fn get(&self, pool_ref: PoolRef<Inner>) -> &Inner {
         self.0.get(pool_ref)
+    }
+}
+
+impl Default for ExprPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a> ExpressionReader for &'a ExprPool {
+    type Expr = self::Expr;
+    type Target = &'a Expression<Self::Expr>;
+
+    fn read(&self, expr: Self::Expr) -> Spanned<Self::Target> {
+        expr.read_from(self).as_ref()
     }
 }

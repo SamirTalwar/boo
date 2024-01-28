@@ -11,6 +11,7 @@ use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
 use boo_core::span::Span;
+use boo_core::span::Spanned;
 
 use crate::ast::{Expr, ExprPool};
 use crate::pooler::add_expr;
@@ -56,31 +57,34 @@ impl Evaluator for OptimizedEvaluator {
                     bindings.with(identifier.clone(), *pool_ref, Bindings::new())
                 });
         let inner = InnerEvaluator {
-            pool: &pool,
+            reader: &pool,
             bindings,
         };
         inner.evaluate(root).map(|progress| progress.finish(&pool))
     }
 }
 
-struct InnerEvaluator<'a> {
-    pool: &'a ExprPool,
+struct InnerEvaluator<'a, Reader: ExpressionReader<Expr = Expr>> {
+    reader: Reader,
     bindings: Bindings<'a>,
 }
 
-impl<'a> InnerEvaluator<'a> {
+impl<'a, Reader: ExpressionReader<Expr = Expr>> InnerEvaluator<'a, Reader> {
     /// Evaluates an expression from a pool in a given scope.
     ///
     /// The bindings are modified by assignment, accessed when evaluating an
     /// identifier, and captured by closures when a function is evaluated.
     fn evaluate(&self, expr_ref: Expr) -> Result<EvaluationProgress<'a>> {
-        let expr = expr_ref.read_from(self.pool);
-        match &expr.value {
+        let Spanned {
+            span,
+            value: expression,
+        } = self.reader.read(expr_ref);
+        match expression.as_ref() {
             Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(value.clone())),
             Expression::Native(Native { implementation, .. }) => {
                 implementation(self).map(EvaluationProgress::Primitive)
             }
-            Expression::Identifier(name) => self.resolve(name, expr.span),
+            Expression::Identifier(name) => self.resolve(name, span),
             Expression::Function(Function {
                 parameter,
                 body: body_ref,
@@ -108,7 +112,7 @@ impl<'a> InnerEvaluator<'a> {
                             self.bindings.clone(),
                         ))
                         .evaluate(body_ref),
-                    _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
+                    _ => Err(Error::InvalidFunctionApplication { span }),
                 }
             }
             Expression::Assign(Assign {
@@ -147,7 +151,7 @@ impl<'a> InnerEvaluator<'a> {
                         }
                     }
                 }
-                Err(Error::MatchWithoutBaseCase { span: expr.span })
+                Err(Error::MatchWithoutBaseCase { span })
             }
             Expression::Typed(Typed { expression, typ: _ }) => self.evaluate(*expression),
         }
@@ -174,15 +178,15 @@ impl<'a> InnerEvaluator<'a> {
 
     fn switch(&self, new_bindings: Bindings<'a>) -> Self {
         Self {
-            pool: self.pool,
+            reader: self.reader,
             bindings: new_bindings,
         }
     }
 }
 
-impl<'a> NativeContext for InnerEvaluator<'a> {
+impl<'a, Reader: ExpressionReader<Expr = Expr>> NativeContext for InnerEvaluator<'a, Reader> {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
-        match self.resolve(identifier, None)?.finish(self.pool) {
+        match self.resolve(identifier, None)?.finish(self.reader) {
             Evaluated::Primitive(primitive) => Ok(primitive),
             Evaluated::Function(_) => Err(Error::InvalidPrimitive { span: None }),
         }

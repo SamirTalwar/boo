@@ -35,6 +35,12 @@ pub enum Expression<Outer> {
     Typed(Typed<Outer>),
 }
 
+impl<Outer> AsRef<Expression<Outer>> for Expression<Outer> {
+    fn as_ref(&self) -> &Expression<Outer> {
+        self
+    }
+}
+
 /// Represents a function definition.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function<Outer> {

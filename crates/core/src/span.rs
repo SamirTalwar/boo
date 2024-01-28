@@ -59,3 +59,12 @@ pub struct Spanned<Value> {
     pub span: Option<Span>,
     pub value: Value,
 }
+
+impl<Value> Spanned<Value> {
+    pub fn as_ref(&self) -> Spanned<&Value> {
+        Spanned {
+            span: self.span,
+            value: &self.value,
+        }
+    }
+}

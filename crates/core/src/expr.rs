@@ -1,6 +1,7 @@
 //! The core Boo AST, represented as a wrapped [`Expression`].
 
 pub use crate::ast::*;
+use crate::evaluation::ExpressionReader;
 use crate::span::*;
 
 /// Wraps an expression with a span.
@@ -34,5 +35,24 @@ impl Expr {
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.expression().fmt(f)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ExprReader {}
+
+impl ExpressionReader for ExprReader {
+    type Expr = self::Expr;
+    type Target = Expression<Self::Expr>;
+
+    fn read(&self, expr: Self::Expr) -> Spanned<Self::Target> {
+        Spanned {
+            span: expr.span,
+            value: *expr.expression,
+        }
+    }
+
+    fn to_core(&self, expr: Self::Expr) -> Expr {
+        expr
     }
 }
