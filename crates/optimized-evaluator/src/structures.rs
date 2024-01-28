@@ -1,7 +1,5 @@
 //! Core data structures used by the evaluator.
 
-use std::borrow::Cow;
-
 use im::HashMap;
 
 use boo_core::error::Result;
@@ -18,18 +16,26 @@ use crate::thunk::Thunk;
 /// evaluated.
 #[derive(Debug, Clone)]
 pub enum EvaluationProgress<'a> {
-    Primitive(Cow<'a, Primitive>),
-    Closure(&'a Function<Expr>, Bindings<'a>),
+    Primitive(Primitive),
+    Closure {
+        parameter: Identifier,
+        body: Expr,
+        bindings: Bindings<'a>,
+    },
 }
 
 impl<'a> EvaluationProgress<'a> {
     /// Concludes evaluation.
     pub fn finish(self, pool: &ExprPool) -> Evaluated {
         match self {
-            Self::Primitive(x) => Evaluated::Primitive(x.into_owned()),
-            Self::Closure(Function { parameter, body }, _) => Evaluated::Function(Function {
-                parameter: parameter.clone(),
-                body: unpool_expr(pool, *body),
+            Self::Primitive(primitive) => Evaluated::Primitive(primitive),
+            Self::Closure {
+                parameter,
+                body,
+                bindings: _,
+            } => Evaluated::Function(Function {
+                parameter,
+                body: unpool_expr(pool, body),
             }),
         }
     }

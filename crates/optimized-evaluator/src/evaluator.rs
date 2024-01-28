@@ -1,6 +1,5 @@
 //! Evaluates a [pooled `Expr`][super::pooler::ast::Expr].
 
-use std::borrow::Cow;
 use std::collections;
 use std::sync::Arc;
 
@@ -77,27 +76,30 @@ impl<'a> InnerEvaluator<'a> {
     fn evaluate(&self, expr_ref: Expr) -> Result<EvaluationProgress<'a>> {
         let expr = expr_ref.read_from(self.pool);
         match &expr.value {
-            Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(Cow::Borrowed(value))),
+            Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(value.clone())),
             Expression::Native(Native { implementation, .. }) => {
-                implementation(self).map(|value| EvaluationProgress::Primitive(Cow::Owned(value)))
+                implementation(self).map(EvaluationProgress::Primitive)
             }
             Expression::Identifier(name) => self.resolve(name, expr.span),
-            Expression::Function(function) => {
-                Ok(EvaluationProgress::Closure(function, self.bindings.clone()))
-            }
+            Expression::Function(Function {
+                parameter,
+                body: body_ref,
+            }) => Ok(EvaluationProgress::Closure {
+                parameter: parameter.clone(),
+                body: *body_ref,
+                bindings: self.bindings.clone(),
+            }),
             Expression::Apply(Apply {
                 function: function_ref,
                 argument: argument_ref,
             }) => {
                 let function_result = self.evaluate(*function_ref)?;
                 match function_result {
-                    EvaluationProgress::Closure(
-                        Function {
-                            parameter,
-                            body: body_ref,
-                        },
-                        function_bindings,
-                    ) => self
+                    EvaluationProgress::Closure {
+                        parameter,
+                        body: body_ref,
+                        bindings: function_bindings,
+                    } => self
                         // the body is executed in the context of the function,
                         // but the argument must be evaluated in the outer context
                         .switch(function_bindings.with(
@@ -105,7 +107,7 @@ impl<'a> InnerEvaluator<'a> {
                             *argument_ref,
                             self.bindings.clone(),
                         ))
-                        .evaluate(*body_ref),
+                        .evaluate(body_ref),
                     _ => Err(Error::InvalidFunctionApplication { span: expr.span }),
                 }
             }
@@ -137,9 +139,7 @@ impl<'a> InnerEvaluator<'a> {
                         Pattern::Primitive(expected) => {
                             let resolved_value = self.resolve_binding(&mut value)?;
                             match resolved_value {
-                                EvaluationProgress::Primitive(actual)
-                                    if actual.as_ref() == expected =>
-                                {
+                                EvaluationProgress::Primitive(actual) if actual == *expected => {
                                     return self.evaluate(*result_ref);
                                 }
                                 _ => {}
