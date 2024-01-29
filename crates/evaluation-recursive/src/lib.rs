@@ -21,12 +21,28 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
     pub fn new(reader: Reader, bindings: Bindings<'a, Expr>) -> Self {
         Self { reader, bindings }
     }
+}
+
+impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> Evaluator<Expr>
+    for RecursiveEvaluator<'a, Expr, Reader>
+{
+    fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
+        self.bindings = self.bindings.with(identifier, expr, Bindings::new());
+        Ok(())
+    }
 
     /// Evaluates an expression from a pool in a given scope.
     ///
     /// The bindings are modified by assignment, accessed when evaluating an
     /// identifier, and captured by closures when a function is evaluated.
-    pub fn evaluate(&self, expr: Expr) -> Result<CompletedEvaluation<'a, Expr>> {
+    fn evaluate(&self, expr: Expr) -> Result<Evaluated<Expr>> {
+        self.evaluate_inner(expr)
+            .map(|completed| completed.finish())
+    }
+}
+
+impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<'a, Expr, Reader> {
+    fn evaluate_inner(&self, expr: Expr) -> Result<CompletedEvaluation<'a, Expr>> {
         let Spanned {
             span,
             value: expression,
@@ -45,7 +61,7 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
                 })
             }
             Expression::Apply(Apply { function, argument }) => {
-                let function_result = self.evaluate(function.clone())?;
+                let function_result = self.evaluate_inner(function.clone())?;
                 match function_result {
                     CompletedEvaluation::Closure {
                         parameter,
@@ -59,7 +75,7 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
                             argument.clone(),
                             self.bindings.clone(),
                         ))
-                        .evaluate(body),
+                        .evaluate_inner(body),
                     _ => Err(Error::InvalidFunctionApplication { span }),
                 }
             }
@@ -68,20 +84,20 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
                     self.bindings
                         .with(name.clone(), value.clone(), self.bindings.clone()),
                 )
-                .evaluate(inner.clone()),
+                .evaluate_inner(inner.clone()),
             Expression::Match(Match { value, patterns }) => {
                 // Ensure we only evaluate the value once.
                 let mut value = Binding::unresolved((value.clone(), self.bindings.clone()));
                 for PatternMatch { pattern, result } in patterns {
                     match pattern {
                         Pattern::Anything => {
-                            return self.evaluate(result.clone());
+                            return self.evaluate_inner(result.clone());
                         }
                         Pattern::Primitive(expected) => {
                             let resolved_value = self.resolve_binding(&mut value)?;
                             match resolved_value {
                                 CompletedEvaluation::Primitive(actual) if actual == *expected => {
-                                    return self.evaluate(result.clone());
+                                    return self.evaluate_inner(result.clone());
                                 }
                                 _ => {}
                             }
@@ -90,7 +106,9 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
                 }
                 Err(Error::MatchWithoutBaseCase { span })
             }
-            Expression::Typed(Typed { expression, typ: _ }) => self.evaluate(expression.clone()),
+            Expression::Typed(Typed { expression, typ: _ }) => {
+                self.evaluate_inner(expression.clone())
+            }
         }
     }
 
@@ -108,7 +126,8 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
     /// Resolves a given binding in context.
     fn resolve_binding(&self, binding: &mut Binding<'a, Expr>) -> EvaluatedBinding<'a, Expr> {
         let result = binding.resolve_by(move |(value, thunk_bindings)| {
-            self.switch(thunk_bindings.clone()).evaluate(value.clone())
+            self.switch(thunk_bindings.clone())
+                .evaluate_inner(value.clone())
         });
         Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
     }
@@ -125,7 +144,7 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> NativeContext
     for RecursiveEvaluator<'a, Expr, Reader>
 {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
-        match self.resolve(identifier, None)?.finish(self.reader) {
+        match self.resolve(identifier, None)?.finish() {
             Evaluated::Primitive(primitive) => Ok(primitive),
             Evaluated::Function(_) => Err(Error::InvalidPrimitive { span: None }),
         }

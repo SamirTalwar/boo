@@ -4,7 +4,7 @@ use std::collections;
 
 use boo_core::error::*;
 use boo_core::evaluation::*;
-use boo_core::expr::Expr as CoreExpr;
+use boo_core::expr::Expr;
 use boo_core::identifier::*;
 use boo_evaluation_lazy::Bindings;
 use boo_evaluation_recursive::RecursiveEvaluator;
@@ -35,13 +35,13 @@ impl Default for PoolingEvaluator {
 }
 
 impl Evaluator for PoolingEvaluator {
-    fn bind(&mut self, identifier: Identifier, expr: CoreExpr) -> Result<()> {
+    fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
         let pool_ref = add_expr(&mut self.pool, expr);
         self.bindings.insert(identifier, pool_ref);
         Ok(())
     }
 
-    fn evaluate(&self, expr: CoreExpr) -> Result<Evaluated> {
+    fn evaluate(&self, expr: Expr) -> Result<Evaluated> {
         let mut pool = self.pool.clone();
         let root = add_expr(&mut pool, expr);
         let bindings =
@@ -51,6 +51,6 @@ impl Evaluator for PoolingEvaluator {
                     bindings.with(identifier.clone(), *pool_ref, Bindings::new())
                 });
         let inner = RecursiveEvaluator::new(&pool, bindings);
-        inner.evaluate(root).map(|progress| progress.finish(&pool))
+        inner.evaluate(root).map(|result| result.to_core(&pool))
     }
 }

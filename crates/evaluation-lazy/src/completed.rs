@@ -1,6 +1,6 @@
 //! Represents the result of evaluating an expression.
 
-use boo_core::evaluation::{Evaluated, ExpressionReader};
+use boo_core::evaluation::Evaluated;
 use boo_core::expr::Function;
 use boo_core::identifier::Identifier;
 use boo_core::primitive::Primitive;
@@ -20,17 +20,14 @@ pub enum CompletedEvaluation<'a, Expr: Clone> {
 
 impl<'a, Expr: Clone> CompletedEvaluation<'a, Expr> {
     /// Concludes evaluation.
-    pub fn finish<Reader: ExpressionReader<Expr = Expr>>(self, reader: Reader) -> Evaluated {
+    pub fn finish(self) -> Evaluated<Expr> {
         match self {
             Self::Primitive(primitive) => Evaluated::Primitive(primitive),
             Self::Closure {
                 parameter,
                 body,
                 bindings: _,
-            } => Evaluated::Function(Function {
-                parameter,
-                body: reader.to_core(body),
-            }),
+            } => Evaluated::Function(Function { parameter, body }),
         }
     }
 }

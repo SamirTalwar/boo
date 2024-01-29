@@ -8,22 +8,36 @@ use crate::span::Spanned;
 /// An evaluator knows how to evaluate expressions within a context.
 ///
 /// Context can be added in the form of top-level bindings to other expressions.
-pub trait Evaluator {
+pub trait Evaluator<Ex = Expr> {
     /// Bind a new top-level expression.
-    fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()>;
+    fn bind(&mut self, identifier: Identifier, expr: Ex) -> Result<()>;
 
     /// Evaluate the given expression.
-    fn evaluate(&self, expr: Expr) -> Result<Evaluated>;
+    fn evaluate(&self, expr: Ex) -> Result<Evaluated<Ex>>;
 }
 
 /// An evaluation result. This can be either a primitive value or a closure.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Evaluated {
+pub enum Evaluated<Ex = Expr> {
     Primitive(Primitive),
-    Function(ast::Function<Expr>),
+    Function(ast::Function<Ex>),
 }
 
-impl std::fmt::Display for Evaluated {
+impl<Ex: Clone> Evaluated<Ex> {
+    pub fn to_core(self, reader: impl ExpressionReader<Expr = Ex>) -> Evaluated<Expr> {
+        match self {
+            Evaluated::Primitive(primitive) => Evaluated::Primitive(primitive),
+            Evaluated::Function(ast::Function { parameter, body }) => {
+                Evaluated::Function(ast::Function {
+                    parameter,
+                    body: reader.to_core(body),
+                })
+            }
+        }
+    }
+}
+
+impl<Ex: std::fmt::Display> std::fmt::Display for Evaluated<Ex> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Evaluated::Primitive(x) => x.fmt(f),
