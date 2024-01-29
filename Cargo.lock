@@ -224,6 +224,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "boo-evaluation-lazy"
+version = "0.1.0"
+dependencies = [
+ "boo-core",
+ "im",
+]
+
+[[package]]
 name = "boo-generator"
 version = "0.1.0"
 dependencies = [
@@ -268,12 +276,12 @@ name = "boo-optimized-evaluator"
 version = "0.1.0"
 dependencies = [
  "boo-core",
+ "boo-evaluation-lazy",
  "boo-generator",
  "boo-language",
  "boo-naive-evaluator",
  "boo-parser",
  "boo-test-helpers",
- "im",
  "proptest",
 ]
 

@@ -3,44 +3,13 @@
 use im::HashMap;
 
 use boo_core::error::Result;
-use boo_core::evaluation::{Evaluated, ExpressionReader};
-use boo_core::expr::Function;
 use boo_core::identifier::Identifier;
-use boo_core::primitive::Primitive;
 
+use crate::completed::CompletedEvaluation;
 use crate::thunk::Thunk;
 
-/// An interim evaluation result, with the same lifetime as the pool being
-/// evaluated.
-#[derive(Debug, Clone)]
-pub enum EvaluationProgress<'a, Expr: Clone> {
-    Primitive(Primitive),
-    Closure {
-        parameter: Identifier,
-        body: Expr,
-        bindings: Bindings<'a, Expr>,
-    },
-}
-
-impl<'a, Expr: Clone> EvaluationProgress<'a, Expr> {
-    /// Concludes evaluation.
-    pub fn finish<Reader: ExpressionReader<Expr = Expr>>(self, reader: Reader) -> Evaluated {
-        match self {
-            Self::Primitive(primitive) => Evaluated::Primitive(primitive),
-            Self::Closure {
-                parameter,
-                body,
-                bindings: _,
-            } => Evaluated::Function(Function {
-                parameter,
-                body: reader.to_core(body),
-            }),
-        }
-    }
-}
-
 pub type UnevaluatedBinding<'a, Expr> = (Expr, Bindings<'a, Expr>);
-pub type EvaluatedBinding<'a, Expr> = Result<EvaluationProgress<'a, Expr>>;
+pub type EvaluatedBinding<'a, Expr> = Result<CompletedEvaluation<'a, Expr>>;
 pub type Binding<'a, Expr> = Thunk<UnevaluatedBinding<'a, Expr>, EvaluatedBinding<'a, Expr>>;
 
 /// The set of bindings in a given scope.

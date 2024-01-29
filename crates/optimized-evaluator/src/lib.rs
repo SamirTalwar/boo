@@ -10,7 +10,5 @@ mod ast;
 mod evaluator;
 mod pool;
 mod pooler;
-mod structures;
-mod thunk;
 
 pub use evaluator::OptimizedEvaluator;

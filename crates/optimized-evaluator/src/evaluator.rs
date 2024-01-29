@@ -12,11 +12,10 @@ use boo_core::native::*;
 use boo_core::primitive::*;
 use boo_core::span::Span;
 use boo_core::span::Spanned;
+use boo_evaluation_lazy::{Binding, Bindings, CompletedEvaluation, EvaluatedBinding};
 
 use crate::ast;
 use crate::pooler::add_expr;
-use crate::structures::Binding;
-use crate::structures::{Bindings, EvaluatedBinding, EvaluationProgress};
 
 /// An expression pool together with the current bound context, which can
 /// evaluate a given expression reference from the pool.
@@ -74,26 +73,28 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> InnerEvaluator<'a, 
     ///
     /// The bindings are modified by assignment, accessed when evaluating an
     /// identifier, and captured by closures when a function is evaluated.
-    fn evaluate(&self, expr: Expr) -> Result<EvaluationProgress<'a, Expr>> {
+    fn evaluate(&self, expr: Expr) -> Result<CompletedEvaluation<'a, Expr>> {
         let Spanned {
             span,
             value: expression,
         } = self.reader.read(expr);
         match expression.as_ref() {
-            Expression::Primitive(value) => Ok(EvaluationProgress::Primitive(value.clone())),
+            Expression::Primitive(value) => Ok(CompletedEvaluation::Primitive(value.clone())),
             Expression::Native(Native { implementation, .. }) => {
-                implementation(self).map(EvaluationProgress::Primitive)
+                implementation(self).map(CompletedEvaluation::Primitive)
             }
             Expression::Identifier(name) => self.resolve(name, span),
-            Expression::Function(Function { parameter, body }) => Ok(EvaluationProgress::Closure {
-                parameter: parameter.clone(),
-                body: body.clone(),
-                bindings: self.bindings.clone(),
-            }),
+            Expression::Function(Function { parameter, body }) => {
+                Ok(CompletedEvaluation::Closure {
+                    parameter: parameter.clone(),
+                    body: body.clone(),
+                    bindings: self.bindings.clone(),
+                })
+            }
             Expression::Apply(Apply { function, argument }) => {
                 let function_result = self.evaluate(function.clone())?;
                 match function_result {
-                    EvaluationProgress::Closure {
+                    CompletedEvaluation::Closure {
                         parameter,
                         body,
                         bindings: function_bindings,
@@ -126,7 +127,7 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> InnerEvaluator<'a, 
                         Pattern::Primitive(expected) => {
                             let resolved_value = self.resolve_binding(&mut value)?;
                             match resolved_value {
-                                EvaluationProgress::Primitive(actual) if actual == *expected => {
+                                CompletedEvaluation::Primitive(actual) if actual == *expected => {
                                     return self.evaluate(result.clone());
                                 }
                                 _ => {}
