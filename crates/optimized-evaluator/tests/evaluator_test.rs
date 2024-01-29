@@ -3,14 +3,14 @@ use proptest::prelude::*;
 use boo_core::builtins;
 use boo_core::evaluation::*;
 use boo_naive_evaluator::NaiveEvaluator;
-use boo_optimized_evaluator::OptimizedEvaluator;
+use boo_optimized_evaluator::PoolingEvaluator;
 use boo_test_helpers::proptest::*;
 
 #[test]
 fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
     let mut naive_evaluator = NaiveEvaluator::new();
     builtins::prepare(&mut naive_evaluator).unwrap();
-    let mut optimized_evaluator = OptimizedEvaluator::new();
+    let mut optimized_evaluator = PoolingEvaluator::new();
     builtins::prepare(&mut optimized_evaluator).unwrap();
 
     check(&boo_generator::arbitrary(), |expr| {

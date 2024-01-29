@@ -9,6 +9,7 @@ bench = false
 [dependencies]
 boo-core = { path = "../core" }
 boo-evaluation-lazy = { path = "../evaluation-lazy" }
+boo-evaluation-recursive = { path = "../evaluation-recursive" }
 
 proptest = "1.4.0"
 

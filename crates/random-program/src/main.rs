@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
 
     let core_expr = expr.to_core()?;
 
-    let mut evaluator = OptimizedEvaluator::new();
+    let mut evaluator = PoolingEvaluator::new();
     builtins::prepare(&mut evaluator)?;
 
     let start_time = Instant::now();

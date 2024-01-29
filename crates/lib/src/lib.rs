@@ -10,7 +10,7 @@ pub use boo_core::types;
 pub use boo_language::Expr;
 
 pub use boo_optimized_evaluator as evaluator;
-pub use boo_optimized_evaluator::OptimizedEvaluator;
+pub use boo_optimized_evaluator::PoolingEvaluator;
 
 pub use boo_parser as parser;
 pub use boo_parser::parse;

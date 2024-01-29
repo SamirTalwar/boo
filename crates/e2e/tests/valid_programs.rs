@@ -3,7 +3,7 @@ use boo::evaluation::Evaluator;
 use boo::types::{Monotype, Type};
 use boo::*;
 use boo_naive_evaluator::NaiveEvaluator;
-use boo_optimized_evaluator::OptimizedEvaluator;
+use boo_optimized_evaluator::PoolingEvaluator;
 
 #[test]
 fn test_integer() -> Result<()> {
@@ -179,7 +179,7 @@ fn check_program(
     let actual_type = boo_types_hindley_milner::type_of(&ast)?;
     assert_eq!(actual_type, expected_type);
 
-    let mut optimized_evaluator = OptimizedEvaluator::new();
+    let mut optimized_evaluator = PoolingEvaluator::new();
     builtins::prepare(&mut optimized_evaluator)?;
     let mut naive_evaluator = NaiveEvaluator::new();
     builtins::prepare(&mut naive_evaluator)?;

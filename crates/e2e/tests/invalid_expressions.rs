@@ -2,7 +2,7 @@ use boo::error::{Error, Result};
 use boo::evaluation::Evaluator;
 use boo::*;
 use boo_naive_evaluator::NaiveEvaluator;
-use boo_optimized_evaluator::OptimizedEvaluator;
+use boo_optimized_evaluator::PoolingEvaluator;
 
 #[test]
 fn test_unknown_variable() -> Result<()> {
@@ -37,7 +37,7 @@ fn expect_error(name: &str, program: &str, expected_error: Error) -> Result<()> 
     let type_check_result = boo_types_hindley_milner::type_of(&ast);
     assert_eq!(type_check_result, Err(expected_error.clone()));
 
-    let mut optimized_evaluator = OptimizedEvaluator::new();
+    let mut optimized_evaluator = PoolingEvaluator::new();
     builtins::prepare(&mut optimized_evaluator)?;
     let mut naive_evaluator = NaiveEvaluator::new();
     builtins::prepare(&mut naive_evaluator)?;

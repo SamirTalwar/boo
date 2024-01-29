@@ -7,12 +7,12 @@ use proptest::test_runner::TestRunner;
 use boo_core::evaluation::Evaluator;
 use boo_core::expr::Expr;
 use boo_naive_evaluator::NaiveEvaluator;
-use boo_optimized_evaluator::OptimizedEvaluator;
+use boo_optimized_evaluator::PoolingEvaluator;
 
 const BENCHMARK_COUNT: usize = 8;
 
 pub fn evaluate_benchmark(c: &mut Criterion) {
-    let optimized_evaluator = OptimizedEvaluator::new();
+    let optimized_evaluator = PoolingEvaluator::new();
     let naive_evaluator = NaiveEvaluator::new();
 
     let mut group = c.benchmark_group("evaluate");

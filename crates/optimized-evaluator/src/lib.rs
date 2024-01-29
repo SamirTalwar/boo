@@ -11,4 +11,4 @@ mod evaluator;
 mod pool;
 mod pooler;
 
-pub use evaluator::OptimizedEvaluator;
+pub use evaluator::PoolingEvaluator;
