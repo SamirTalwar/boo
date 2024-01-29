@@ -8,9 +8,9 @@ use boo_core::identifier::Identifier;
 use crate::completed::CompletedEvaluation;
 use crate::thunk::Thunk;
 
-pub type UnevaluatedBinding<'a, Expr> = (Expr, Bindings<'a, Expr>);
-pub type EvaluatedBinding<'a, Expr> = Result<CompletedEvaluation<'a, Expr>>;
-pub type Binding<'a, Expr> = Thunk<UnevaluatedBinding<'a, Expr>, EvaluatedBinding<'a, Expr>>;
+pub type UnevaluatedBinding<Expr> = (Expr, Bindings<Expr>);
+pub type EvaluatedBinding<Expr> = Result<CompletedEvaluation<Expr>>;
+pub type Binding<Expr> = Thunk<UnevaluatedBinding<Expr>, EvaluatedBinding<Expr>>;
 
 /// The set of bindings in a given scope.
 ///
@@ -18,9 +18,9 @@ pub type Binding<'a, Expr> = Thunk<UnevaluatedBinding<'a, Expr>, EvaluatedBindin
 /// the underlying expression. This expression is evaluated lazily, but only
 /// once, using [`Thunk`].
 #[derive(Debug, Clone)]
-pub struct Bindings<'a, Expr: Clone>(HashMap<Identifier, Binding<'a, Expr>>);
+pub struct Bindings<Expr: Clone>(HashMap<Identifier, Binding<Expr>>);
 
-impl<'a, Expr: Clone> Bindings<'a, Expr> {
+impl<Expr: Clone> Bindings<Expr> {
     /// Constructs an empty set of bindings.
     pub fn new() -> Self {
         Self(HashMap::new())
@@ -29,7 +29,7 @@ impl<'a, Expr: Clone> Bindings<'a, Expr> {
     pub fn read(
         &mut self,
         identifier: &Identifier,
-    ) -> Option<&mut Thunk<UnevaluatedBinding<'a, Expr>, EvaluatedBinding<'a, Expr>>> {
+    ) -> Option<&mut Thunk<UnevaluatedBinding<Expr>, EvaluatedBinding<Expr>>> {
         self.0.get_mut(identifier)
     }
 
@@ -47,7 +47,7 @@ impl<'a, Expr: Clone> Bindings<'a, Expr> {
     }
 }
 
-impl<'a, Expr: Clone> Default for Bindings<'a, Expr> {
+impl<Expr: Clone> Default for Bindings<Expr> {
     fn default() -> Self {
         Self::new()
     }

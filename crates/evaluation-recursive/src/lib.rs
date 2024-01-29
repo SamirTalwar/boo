@@ -12,19 +12,19 @@ use boo_core::span::Span;
 use boo_core::span::Spanned;
 use boo_evaluation_lazy::{Binding, Bindings, CompletedEvaluation, EvaluatedBinding};
 
-pub struct RecursiveEvaluator<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> {
+pub struct RecursiveEvaluator<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> {
     reader: Reader,
-    bindings: Bindings<'a, Expr>,
+    bindings: Bindings<Expr>,
 }
 
-impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<'a, Expr, Reader> {
-    pub fn new(reader: Reader, bindings: Bindings<'a, Expr>) -> Self {
+impl<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<Expr, Reader> {
+    pub fn new(reader: Reader, bindings: Bindings<Expr>) -> Self {
         Self { reader, bindings }
     }
 }
 
-impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> Evaluator<Expr>
-    for RecursiveEvaluator<'a, Expr, Reader>
+impl<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> Evaluator<Expr>
+    for RecursiveEvaluator<Expr, Reader>
 {
     fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
         self.bindings = self.bindings.with(identifier, expr, Bindings::new());
@@ -41,8 +41,8 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> Evaluator<Expr>
     }
 }
 
-impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<'a, Expr, Reader> {
-    fn evaluate_inner(&self, expr: Expr) -> Result<CompletedEvaluation<'a, Expr>> {
+impl<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<Expr, Reader> {
+    fn evaluate_inner(&self, expr: Expr) -> Result<CompletedEvaluation<Expr>> {
         let Spanned {
             span,
             value: expression,
@@ -113,7 +113,7 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
     }
 
     /// Resolves a given identifier by evaluating it in the context of the bindings.
-    fn resolve(&self, identifier: &Identifier, span: Option<Span>) -> EvaluatedBinding<'a, Expr> {
+    fn resolve(&self, identifier: &Identifier, span: Option<Span>) -> EvaluatedBinding<Expr> {
         match self.bindings.clone().read(identifier) {
             Some(binding) => self.resolve_binding(binding),
             None => Err(Error::UnknownVariable {
@@ -124,7 +124,7 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
     }
 
     /// Resolves a given binding in context.
-    fn resolve_binding(&self, binding: &mut Binding<'a, Expr>) -> EvaluatedBinding<'a, Expr> {
+    fn resolve_binding(&self, binding: &mut Binding<Expr>) -> EvaluatedBinding<Expr> {
         let result = binding.resolve_by(move |(value, thunk_bindings)| {
             self.switch(thunk_bindings.clone())
                 .evaluate_inner(value.clone())
@@ -132,7 +132,7 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
         Arc::try_unwrap(result).unwrap_or_else(|arc| (*arc).clone())
     }
 
-    fn switch(&self, new_bindings: Bindings<'a, Expr>) -> Self {
+    fn switch(&self, new_bindings: Bindings<Expr>) -> Self {
         Self {
             reader: self.reader,
             bindings: new_bindings,
@@ -140,8 +140,8 @@ impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<
     }
 }
 
-impl<'a, Expr: Clone, Reader: ExpressionReader<Expr = Expr>> NativeContext
-    for RecursiveEvaluator<'a, Expr, Reader>
+impl<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> NativeContext
+    for RecursiveEvaluator<Expr, Reader>
 {
     fn lookup_value(&self, identifier: &Identifier) -> Result<Primitive> {
         match self.resolve(identifier, None)?.finish() {

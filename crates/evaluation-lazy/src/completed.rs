@@ -9,16 +9,16 @@ use crate::bindings::Bindings;
 
 /// An interim evaluation result.
 #[derive(Debug, Clone)]
-pub enum CompletedEvaluation<'a, Expr: Clone> {
+pub enum CompletedEvaluation<Expr: Clone> {
     Primitive(Primitive),
     Closure {
         parameter: Identifier,
         body: Expr,
-        bindings: Bindings<'a, Expr>,
+        bindings: Bindings<Expr>,
     },
 }
 
-impl<'a, Expr: Clone> CompletedEvaluation<'a, Expr> {
+impl<Expr: Clone> CompletedEvaluation<Expr> {
     /// Concludes evaluation.
     pub fn finish(self) -> Evaluated<Expr> {
         match self {
