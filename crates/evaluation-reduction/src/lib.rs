@@ -17,7 +17,7 @@ use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
 
-pub fn new() -> impl Evaluator {
+pub fn new() -> impl EvaluationContext {
     ReducingEvaluator::new()
 }
 
@@ -38,12 +38,20 @@ impl Default for ReducingEvaluator {
     }
 }
 
-impl Evaluator for ReducingEvaluator {
+impl EvaluationContext for ReducingEvaluator {
+    type Eval = Self;
+
     fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
         self.bindings.push((identifier, expr));
         Ok(())
     }
 
+    fn evaluator(self) -> Self::Eval {
+        self
+    }
+}
+
+impl Evaluator for ReducingEvaluator {
     fn evaluate(&self, expr: Expr) -> Result<Evaluated> {
         let mut prepared = expr;
         for (identifier, value) in self.bindings.iter().rev() {

@@ -4,7 +4,7 @@ use clap::Parser;
 use miette::IntoDiagnostic;
 use reedline::*;
 
-use boo::evaluation::Evaluator;
+use boo::evaluation::{EvaluationContext, Evaluator};
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -21,13 +21,13 @@ enum Command<'a> {
 fn main() {
     let args = Args::parse();
     let evaluator: Box<dyn Evaluator> = if args.reduction {
-        let mut evaluator = boo_evaluation_reduction::new();
-        boo::builtins::prepare(&mut evaluator).unwrap();
-        Box::new(evaluator)
+        let mut context = boo_evaluation_reduction::new();
+        boo::builtins::prepare(&mut context).unwrap();
+        Box::new(context.evaluator())
     } else {
-        let mut evaluator = boo::evaluator::new();
-        boo::builtins::prepare(&mut evaluator).unwrap();
-        Box::new(evaluator)
+        let mut context = boo::evaluator::new();
+        boo::builtins::prepare(&mut context).unwrap();
+        Box::new(context.evaluator())
     };
 
     let stdin = std::io::stdin();

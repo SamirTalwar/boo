@@ -5,13 +5,21 @@ use crate::identifier::Identifier;
 use crate::primitive::Primitive;
 use crate::span::Spanned;
 
-/// An evaluator knows how to evaluate expressions within a context.
+/// A context in which expressions can be evaluated.
 ///
 /// Context can be added in the form of top-level bindings to other expressions.
-pub trait Evaluator<Ex = Expr> {
+pub trait EvaluationContext<Ex = Expr> {
+    type Eval: Evaluator<Ex>;
+
     /// Bind a new top-level expression.
     fn bind(&mut self, identifier: Identifier, expr: Ex) -> Result<()>;
 
+    /// Consume the context to produce an [Evaluator].
+    fn evaluator(self) -> Self::Eval;
+}
+
+/// An evaluator knows how to evaluate expressions within a context.
+pub trait Evaluator<Ex = Expr> {
     /// Evaluate the given expression.
     fn evaluate(&self, expr: Ex) -> Result<Evaluated<Ex>>;
 }

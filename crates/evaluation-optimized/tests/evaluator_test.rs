@@ -6,10 +6,16 @@ use boo_test_helpers::proptest::*;
 
 #[test]
 fn test_evaluation_gets_the_same_result_as_reducing_evaluation() {
-    let mut reducing_evaluator = boo_evaluation_reduction::new();
-    builtins::prepare(&mut reducing_evaluator).unwrap();
-    let mut optimized_evaluator = boo_evaluation_optimized::new();
-    builtins::prepare(&mut optimized_evaluator).unwrap();
+    let reducing_evaluator = {
+        let mut context = boo_evaluation_reduction::new();
+        builtins::prepare(&mut context).unwrap();
+        context.evaluator()
+    };
+    let optimized_evaluator = {
+        let mut context = boo_evaluation_optimized::new();
+        builtins::prepare(&mut context).unwrap();
+        context.evaluator()
+    };
 
     check(&boo_generator::arbitrary(), |expr| {
         let core_expr = expr.clone().to_core()?;

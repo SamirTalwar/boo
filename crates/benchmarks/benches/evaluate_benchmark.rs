@@ -5,7 +5,7 @@ use proptest::strategy::{Strategy, ValueTree};
 use proptest::test_runner::TestRunner;
 
 use boo_core::builtins;
-use boo_core::evaluation::Evaluator;
+use boo_core::evaluation::{EvaluationContext, Evaluator};
 use boo_core::expr::Expr;
 
 const BENCHMARK_COUNT: usize = 8;
@@ -37,9 +37,9 @@ pub fn evaluate_benchmark(c: &mut Criterion) {
     group.finish();
 }
 
-fn prepare(mut evaluator: impl Evaluator + 'static) -> Box<dyn Evaluator> {
-    builtins::prepare(&mut evaluator).unwrap();
-    Box::new(evaluator)
+fn prepare(mut context: impl EvaluationContext + 'static) -> Box<dyn Evaluator> {
+    builtins::prepare(&mut context).unwrap();
+    Box::new(context.evaluator())
 }
 
 #[allow(dead_code)]

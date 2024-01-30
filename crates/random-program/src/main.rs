@@ -5,7 +5,7 @@ use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
 
-use boo::evaluation::Evaluator;
+use boo::evaluation::{EvaluationContext, Evaluator};
 use boo::identifier::*;
 use boo::*;
 
@@ -27,8 +27,11 @@ fn main() -> anyhow::Result<()> {
 
     let core_expr = expr.to_core()?;
 
-    let mut evaluator = boo::evaluator::new();
-    builtins::prepare(&mut evaluator)?;
+    let evaluator = {
+        let mut context = boo::evaluator::new();
+        builtins::prepare(&mut context)?;
+        context.evaluator()
+    };
 
     let start_time = Instant::now();
     let result = evaluator

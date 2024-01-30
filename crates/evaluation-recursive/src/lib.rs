@@ -12,7 +12,7 @@ use boo_core::span::Span;
 use boo_core::span::Spanned;
 use boo_evaluation_lazy::{Binding, Bindings, CompletedEvaluation, EvaluatedBinding};
 
-pub fn new() -> impl Evaluator {
+pub fn new() -> impl EvaluationContext {
     RecursiveEvaluator::new(boo_core::expr::ExprReader, Bindings::new())
 }
 
@@ -27,14 +27,24 @@ impl<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> RecursiveEvaluator<Expr
     }
 }
 
-impl<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> Evaluator<Expr>
+impl<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> EvaluationContext<Expr>
     for RecursiveEvaluator<Expr, Reader>
 {
+    type Eval = Self;
+
     fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
         self.bindings = self.bindings.with(identifier, expr, Bindings::new());
         Ok(())
     }
 
+    fn evaluator(self) -> Self::Eval {
+        self
+    }
+}
+
+impl<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> Evaluator<Expr>
+    for RecursiveEvaluator<Expr, Reader>
+{
     /// Evaluates an expression from a pool in a given scope.
     ///
     /// The bindings are modified by assignment, accessed when evaluating an

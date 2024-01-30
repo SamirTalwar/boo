@@ -1,8 +1,8 @@
-use boo_core::evaluation::Evaluator;
+use boo_core::evaluation::EvaluationContext;
 use boo_evaluation_lazy::Bindings;
 use boo_evaluation_pooling::{ast, NewInnerEvaluator, PoolingEvaluator};
 
-pub fn new() -> impl Evaluator {
+pub fn new() -> impl EvaluationContext {
     PoolingEvaluator::<NewRecursiveEvaluator>::new()
 }
 

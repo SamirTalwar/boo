@@ -1,5 +1,5 @@
 use boo::error::Result;
-use boo::evaluation::Evaluator;
+use boo::evaluation::{EvaluationContext, Evaluator};
 use boo::types::{Monotype, Type};
 use boo::*;
 
@@ -178,16 +178,18 @@ fn check_program(
     assert_eq!(actual_type, expected_type);
 
     {
-        let mut reducing_evaluator = boo_evaluation_reduction::new();
-        builtins::prepare(&mut reducing_evaluator)?;
-        let actual_result = reducing_evaluator.evaluate(ast.clone())?;
-        assert_eq!(actual_result, expected_result);
+        let mut context = boo_evaluation_reduction::new();
+        builtins::prepare(&mut context)?;
+        let evaluator = context.evaluator();
+        let actual_result = evaluator.evaluate(ast.clone())?;
+        assert_eq!(actual_result, expected_result.clone());
     }
 
     {
-        let mut optimized_evaluator = boo_evaluation_optimized::new();
-        builtins::prepare(&mut optimized_evaluator)?;
-        let actual_result = optimized_evaluator.evaluate(ast)?;
+        let mut context = boo_evaluation_optimized::new();
+        builtins::prepare(&mut context)?;
+        let evaluator = context.evaluator();
+        let actual_result = evaluator.evaluate(ast)?;
         assert_eq!(actual_result, expected_result);
     }
 

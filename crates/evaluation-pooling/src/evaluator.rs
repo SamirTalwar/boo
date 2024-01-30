@@ -35,13 +35,23 @@ impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> Default for PoolingEvaluator
     }
 }
 
-impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> Evaluator for PoolingEvaluator<NewInner> {
+impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> EvaluationContext
+    for PoolingEvaluator<NewInner>
+{
+    type Eval = Self;
+
     fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
         let pool_ref = add_expr(&mut self.pool, expr);
         self.bindings = self.bindings.with(identifier, pool_ref, Bindings::new());
         Ok(())
     }
 
+    fn evaluator(self) -> Self::Eval {
+        self
+    }
+}
+
+impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> Evaluator for PoolingEvaluator<NewInner> {
     fn evaluate(&self, expr: Expr) -> Result<Evaluated> {
         let mut pool = self.pool.clone();
         let root = add_expr(&mut pool, expr);

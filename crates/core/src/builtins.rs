@@ -6,7 +6,7 @@ use lazy_static::lazy_static;
 
 use crate::ast::*;
 use crate::error::Result;
-use crate::evaluation::Evaluator;
+use crate::evaluation::EvaluationContext;
 use crate::expr::Expr;
 use crate::identifier::Identifier;
 use crate::native::Native;
@@ -20,10 +20,10 @@ lazy_static! {
     static ref NAME_TRACE: Identifier = Identifier::name_from_str("trace").unwrap();
 }
 
-/// Prepares an evaluator by assigning all built-ins.
-pub fn prepare(evaluator: &mut impl Evaluator) -> Result<()> {
+/// Prepares an [EvaluationContext] by assigning all built-ins.
+pub fn prepare(context: &mut impl EvaluationContext) -> Result<()> {
     for builtin in all().into_iter().rev() {
-        evaluator.bind(builtin.name.clone(), builtin.implementation)?;
+        context.bind(builtin.name.clone(), builtin.implementation)?;
     }
     Ok(())
 }
