@@ -7,9 +7,10 @@ mod evaluator;
 mod pool;
 mod pooler;
 
-use boo_core::evaluation::Evaluator;
-pub use evaluator::{NewInnerEvaluator, PoolingEvaluator};
+use boo_core::evaluation::EvaluationContext;
 
-pub fn new<NewInner: for<'pool> NewInnerEvaluator<'pool>>() -> impl Evaluator {
-    PoolingEvaluator::<NewInner>::new()
+pub use evaluator::{NewInnerEvaluator, PoolingEvaluationContext, PoolingEvaluator};
+
+pub fn new<NewInner: for<'pool> evaluator::NewInnerEvaluator<'pool>>() -> impl EvaluationContext {
+    evaluator::PoolingEvaluationContext::<NewInner>::new()
 }

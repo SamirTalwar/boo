@@ -11,52 +11,64 @@ use boo_evaluation_lazy::Bindings;
 use crate::ast;
 use crate::pooler::add_expr;
 
-/// An expression pool together with the current bound context, which can
-/// evaluate a given expression reference from the pool.
-pub struct PoolingEvaluator<NewInner: for<'pool> NewInnerEvaluator<'pool>> {
-    pool: ast::ExprPool,
+/// An expression pool together with its bound context.
+pub struct PoolingEvaluationContext<NewInner: for<'pool> NewInnerEvaluator<'pool>> {
+    pool_builder: ast::ExprPoolBuilder,
     bindings: Bindings<ast::Expr>,
     new_inner_marker: PhantomData<NewInner>,
 }
 
-impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> PoolingEvaluator<NewInner> {
+impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> PoolingEvaluationContext<NewInner> {
     pub fn new() -> Self {
         Self {
-            pool: ast::ExprPool::new(),
+            pool_builder: ast::ExprPoolBuilder::new(),
             bindings: Bindings::new(),
             new_inner_marker: PhantomData,
         }
     }
 }
 
-impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> Default for PoolingEvaluator<NewInner> {
+impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> Default for PoolingEvaluationContext<NewInner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> EvaluationContext
-    for PoolingEvaluator<NewInner>
+    for PoolingEvaluationContext<NewInner>
 {
-    type Eval = Self;
+    type Eval = PoolingEvaluator<NewInner>;
 
     fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
-        let pool_ref = add_expr(&mut self.pool, expr);
+        let pool_ref = add_expr(&mut self.pool_builder, expr);
         self.bindings = self.bindings.with(identifier, pool_ref, Bindings::new());
         Ok(())
     }
 
     fn evaluator(self) -> Self::Eval {
-        self
+        PoolingEvaluator {
+            pool: self.pool_builder.build(),
+            bindings: self.bindings,
+            new_inner_marker: PhantomData,
+        }
     }
+}
+
+/// An expression pool together with its bound context.
+/// We can use these to evaluate a given expression reference from the pool.
+pub struct PoolingEvaluator<NewInner: for<'pool> NewInnerEvaluator<'pool>> {
+    pool: ast::ExprPool,
+    bindings: Bindings<ast::Expr>,
+    new_inner_marker: PhantomData<NewInner>,
 }
 
 impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> Evaluator for PoolingEvaluator<NewInner> {
     fn evaluate(&self, expr: Expr) -> Result<Evaluated> {
-        let mut pool = self.pool.clone();
-        let root = add_expr(&mut pool, expr);
-        let inner = NewInner::new(&pool, self.bindings.clone());
-        inner.evaluate(root).map(|result| result.to_core(&pool))
+        let mut builder = self.pool.fork();
+        let root = add_expr(&mut builder, expr);
+        let fork = builder.build();
+        let inner = NewInner::new(&fork, self.bindings.clone());
+        inner.evaluate(root).map(|result| result.to_core(&fork))
     }
 }
 

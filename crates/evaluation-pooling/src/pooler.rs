@@ -8,7 +8,7 @@ use crate::ast::*;
 ///
 /// The leaf expressions will always be added before their parents, so that the
 /// references are always valid.
-pub fn add_expr(pool: &mut ExprPool, expr: boo_core::expr::Expr) -> Expr {
+pub fn add_expr(pool: &mut ExprPoolBuilder, expr: boo_core::expr::Expr) -> Expr {
     let span = expr.span();
     let expression = match expr.take() {
         Expression::Primitive(x) => Expression::Primitive(x),

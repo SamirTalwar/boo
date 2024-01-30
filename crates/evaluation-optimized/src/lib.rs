@@ -1,9 +1,9 @@
 use boo_core::evaluation::EvaluationContext;
 use boo_evaluation_lazy::Bindings;
-use boo_evaluation_pooling::{ast, NewInnerEvaluator, PoolingEvaluator};
+use boo_evaluation_pooling::{ast, NewInnerEvaluator, PoolingEvaluationContext};
 
 pub fn new() -> impl EvaluationContext {
-    PoolingEvaluator::<NewRecursiveEvaluator>::new()
+    PoolingEvaluationContext::<NewRecursiveEvaluator>::new()
 }
 
 pub struct NewRecursiveEvaluator {}

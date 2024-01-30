@@ -14,8 +14,15 @@ pub struct Expr(PoolRef<Inner>);
 
 impl Expr {
     /// Inserts a new expression into the pool.
-    pub fn insert(pool: &mut ExprPool, span: Option<Span>, expression: Expression<Expr>) -> Self {
-        Self(pool.add(span, expression))
+    pub fn insert(
+        builder: &mut ExprPoolBuilder,
+        span: Option<Span>,
+        expression: Expression<Expr>,
+    ) -> Self {
+        Self(builder.add(Spanned {
+            span,
+            value: expression,
+        }))
     }
 
     /// Reads the entry from the pool.
@@ -26,32 +33,11 @@ impl Expr {
 
 impl Copy for Expr {}
 
+/// A builder for [ExprPool][].
+pub type ExprPoolBuilder = PoolBuilder<Inner>;
+
 /// An expression pool is a pool scoped to spanned expressions.
-#[derive(Clone)]
-pub struct ExprPool(Pool<Inner>);
-
-impl ExprPool {
-    pub fn new() -> Self {
-        Self(Pool::new())
-    }
-
-    fn add(&mut self, span: Option<Span>, expression: Expression<Expr>) -> PoolRef<Inner> {
-        self.0.add(Spanned {
-            span,
-            value: expression,
-        })
-    }
-
-    fn get(&self, pool_ref: PoolRef<Inner>) -> &Inner {
-        self.0.get(pool_ref)
-    }
-}
-
-impl Default for ExprPool {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub type ExprPool = Pool<Inner>;
 
 impl<'a> ExpressionReader for &'a ExprPool {
     type Expr = self::Expr;
