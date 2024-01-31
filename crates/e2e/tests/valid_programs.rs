@@ -179,7 +179,7 @@ fn check_program(
     let actual_type = boo_types_hindley_milner::type_of(&ast)?;
     assert_eq!(actual_type, expected_type);
 
-    let mut optimized_evaluator = PoolingEvaluator::new();
+    let mut optimized_evaluator = PoolingEvaluator::new_recursive();
     builtins::prepare(&mut optimized_evaluator)?;
     let mut naive_evaluator = NaiveEvaluator::new();
     builtins::prepare(&mut naive_evaluator)?;

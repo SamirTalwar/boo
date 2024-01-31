@@ -37,7 +37,7 @@ fn expect_error(name: &str, program: &str, expected_error: Error) -> Result<()> 
     let type_check_result = boo_types_hindley_milner::type_of(&ast);
     assert_eq!(type_check_result, Err(expected_error.clone()));
 
-    let mut optimized_evaluator = PoolingEvaluator::new();
+    let mut optimized_evaluator = PoolingEvaluator::new_recursive();
     builtins::prepare(&mut optimized_evaluator)?;
     let mut naive_evaluator = NaiveEvaluator::new();
     builtins::prepare(&mut naive_evaluator)?;

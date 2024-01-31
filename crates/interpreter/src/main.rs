@@ -25,7 +25,7 @@ fn main() {
         boo::builtins::prepare(&mut evaluator).unwrap();
         Box::new(evaluator)
     } else {
-        let mut evaluator = boo::PoolingEvaluator::new();
+        let mut evaluator = boo::PoolingEvaluator::new_recursive();
         boo::builtins::prepare(&mut evaluator).unwrap();
         Box::new(evaluator)
     };

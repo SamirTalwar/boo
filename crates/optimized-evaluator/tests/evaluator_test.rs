@@ -10,7 +10,7 @@ use boo_test_helpers::proptest::*;
 fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
     let mut naive_evaluator = NaiveEvaluator::new();
     builtins::prepare(&mut naive_evaluator).unwrap();
-    let mut optimized_evaluator = PoolingEvaluator::new();
+    let mut optimized_evaluator = PoolingEvaluator::new_recursive();
     builtins::prepare(&mut optimized_evaluator).unwrap();
 
     check(&boo_generator::arbitrary(), |expr| {
