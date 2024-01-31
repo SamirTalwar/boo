@@ -261,6 +261,12 @@ version = "0.1.0"
 dependencies = [
  "boo-core",
  "boo-evaluation-lazy",
+ "boo-evaluation-reduction",
+ "boo-generator",
+ "boo-language",
+ "boo-parser",
+ "boo-test-helpers",
+ "proptest",
 ]
 
 [[package]]

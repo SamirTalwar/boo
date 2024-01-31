@@ -9,3 +9,12 @@ bench = false
 [dependencies]
 boo-core = { path = "../core" }
 boo-evaluation-lazy = { path = "../evaluation-lazy" }
+
+proptest = "1.4.0"
+
+[dev-dependencies]
+boo-generator = { path = "../generator" }
+boo-language = { path = "../language" }
+boo-evaluation-reduction = { path = "../evaluation-reduction" }
+boo-parser = { path = "../parser" }
+boo-test-helpers = { path = "../test-helpers" }

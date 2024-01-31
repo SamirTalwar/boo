@@ -12,6 +12,10 @@ use boo_core::span::Span;
 use boo_core::span::Spanned;
 use boo_evaluation_lazy::{Binding, Bindings, CompletedEvaluation, EvaluatedBinding};
 
+pub fn new() -> impl Evaluator {
+    RecursiveEvaluator::new(boo_core::expr::ExprReader, Bindings::new())
+}
+
 pub struct RecursiveEvaluator<Expr: Clone, Reader: ExpressionReader<Expr = Expr>> {
     reader: Reader,
     bindings: Bindings<Expr>,

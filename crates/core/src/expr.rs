@@ -39,7 +39,7 @@ impl std::fmt::Display for Expr {
 }
 
 #[derive(Clone, Copy)]
-pub struct ExprReader {}
+pub struct ExprReader;
 
 impl ExpressionReader for ExprReader {
     type Expr = self::Expr;
