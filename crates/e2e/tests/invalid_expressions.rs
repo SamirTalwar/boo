@@ -1,8 +1,6 @@
 use boo::error::{Error, Result};
 use boo::evaluation::Evaluator;
 use boo::*;
-use boo_evaluation_reduction::ReducingEvaluator;
-use boo_optimized_evaluator::PoolingEvaluator;
 
 #[test]
 fn test_unknown_variable() -> Result<()> {
@@ -38,14 +36,14 @@ fn expect_error(name: &str, program: &str, expected_error: Error) -> Result<()> 
     assert_eq!(type_check_result, Err(expected_error.clone()));
 
     {
-        let mut reducing_evaluator = ReducingEvaluator::new();
+        let mut reducing_evaluator = boo_evaluation_reduction::new();
         builtins::prepare(&mut reducing_evaluator)?;
         let actual_result = reducing_evaluator.evaluate(ast.clone());
         assert_eq!(actual_result, Err(expected_error.clone()));
     }
 
     {
-        let mut optimized_evaluator = PoolingEvaluator::new_recursive();
+        let mut optimized_evaluator = boo_evaluation_optimized::new();
         builtins::prepare(&mut optimized_evaluator)?;
         let actual_result = optimized_evaluator.evaluate(ast);
         assert_eq!(actual_result, Err(expected_error));

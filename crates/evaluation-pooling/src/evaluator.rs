@@ -20,20 +20,19 @@ pub struct PoolingEvaluator<NewInner: for<'pool> NewInnerEvaluator<'pool>> {
     new_inner_marker: PhantomData<NewInner>,
 }
 
-impl PoolingEvaluator<NewRecursiveEvaluator> {
-    pub fn new_recursive() -> Self {
-        Self::new()
-    }
-}
-
 impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> PoolingEvaluator<NewInner> {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             pool: ast::ExprPool::new(),
             bindings: collections::HashMap::new(),
             new_inner_marker: PhantomData,
         }
+    }
+}
+
+impl<NewInner: for<'pool> NewInnerEvaluator<'pool>> Default for PoolingEvaluator<NewInner> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -62,14 +61,4 @@ pub trait NewInnerEvaluator<'pool> {
     type Inner: Evaluator<ast::Expr>;
 
     fn new(pool: &'pool ast::ExprPool, bindings: Bindings<ast::Expr>) -> Self::Inner;
-}
-
-pub struct NewRecursiveEvaluator {}
-
-impl<'pool> NewInnerEvaluator<'pool> for NewRecursiveEvaluator {
-    type Inner = boo_evaluation_recursive::RecursiveEvaluator<ast::Expr, &'pool ast::ExprPool>;
-
-    fn new(pool: &'pool ast::ExprPool, bindings: Bindings<ast::Expr>) -> Self::Inner {
-        boo_evaluation_recursive::RecursiveEvaluator::new(pool, bindings)
-    }
 }

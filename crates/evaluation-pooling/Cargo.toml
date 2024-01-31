@@ -1,0 +1,11 @@
+[package]
+name = "boo-evaluation-pooling"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+bench = false
+
+[dependencies]
+boo-core = { path = "../core" }
+boo-evaluation-lazy = { path = "../evaluation-lazy" }

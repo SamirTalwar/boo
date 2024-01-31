@@ -6,14 +6,12 @@ use proptest::test_runner::TestRunner;
 
 use boo_core::evaluation::Evaluator;
 use boo_core::expr::Expr;
-use boo_evaluation_reduction::ReducingEvaluator;
-use boo_optimized_evaluator::PoolingEvaluator;
 
 const BENCHMARK_COUNT: usize = 8;
 
 pub fn evaluate_benchmark(c: &mut Criterion) {
-    let reducing_evaluator = ReducingEvaluator::new();
-    let optimized_evaluator = PoolingEvaluator::new_recursive();
+    let reducing_evaluator = boo_evaluation_reduction::new();
+    let optimized_evaluator = boo_evaluation_optimized::new();
 
     let mut group = c.benchmark_group("evaluate");
     for (i, expr) in benchmarks().take(BENCHMARK_COUNT).enumerate() {

@@ -21,11 +21,11 @@ enum Command<'a> {
 fn main() {
     let args = Args::parse();
     let evaluator: Box<dyn Evaluator> = if args.reduction {
-        let mut evaluator = boo_evaluation_reduction::ReducingEvaluator::new();
+        let mut evaluator = boo_evaluation_reduction::new();
         boo::builtins::prepare(&mut evaluator).unwrap();
         Box::new(evaluator)
     } else {
-        let mut evaluator = boo::PoolingEvaluator::new_recursive();
+        let mut evaluator = boo::evaluator::new();
         boo::builtins::prepare(&mut evaluator).unwrap();
         Box::new(evaluator)
     };

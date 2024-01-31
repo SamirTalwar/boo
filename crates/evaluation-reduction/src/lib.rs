@@ -17,6 +17,10 @@ use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
 
+pub fn new() -> impl Evaluator {
+    ReducingEvaluator::new()
+}
+
 /// Evaluates an AST using beta reduction.
 pub struct ReducingEvaluator {
     bindings: Vec<(Identifier, Expr)>,

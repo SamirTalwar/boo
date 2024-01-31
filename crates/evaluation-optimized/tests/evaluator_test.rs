@@ -2,15 +2,13 @@ use proptest::prelude::*;
 
 use boo_core::builtins;
 use boo_core::evaluation::*;
-use boo_evaluation_reduction::ReducingEvaluator;
-use boo_optimized_evaluator::PoolingEvaluator;
 use boo_test_helpers::proptest::*;
 
 #[test]
-fn test_evaluation_gets_the_same_result_as_naive_evaluation() {
-    let mut reducing_evaluator = ReducingEvaluator::new();
+fn test_evaluation_gets_the_same_result_as_reducing_evaluation() {
+    let mut reducing_evaluator = boo_evaluation_reduction::new();
     builtins::prepare(&mut reducing_evaluator).unwrap();
-    let mut optimized_evaluator = PoolingEvaluator::new_recursive();
+    let mut optimized_evaluator = boo_evaluation_optimized::new();
     builtins::prepare(&mut optimized_evaluator).unwrap();
 
     check(&boo_generator::arbitrary(), |expr| {
