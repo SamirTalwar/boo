@@ -1,7 +1,7 @@
 use boo::error::{Error, Result};
 use boo::evaluation::Evaluator;
 use boo::*;
-use boo_naive_evaluator::NaiveEvaluator;
+use boo_evaluation_reduction::ReducingEvaluator;
 use boo_optimized_evaluator::PoolingEvaluator;
 
 #[test]
@@ -37,16 +37,19 @@ fn expect_error(name: &str, program: &str, expected_error: Error) -> Result<()> 
     let type_check_result = boo_types_hindley_milner::type_of(&ast);
     assert_eq!(type_check_result, Err(expected_error.clone()));
 
-    let mut optimized_evaluator = PoolingEvaluator::new_recursive();
-    builtins::prepare(&mut optimized_evaluator)?;
-    let mut naive_evaluator = NaiveEvaluator::new();
-    builtins::prepare(&mut naive_evaluator)?;
+    {
+        let mut reducing_evaluator = ReducingEvaluator::new();
+        builtins::prepare(&mut reducing_evaluator)?;
+        let actual_result = reducing_evaluator.evaluate(ast.clone());
+        assert_eq!(actual_result, Err(expected_error.clone()));
+    }
 
-    let efficient_result = optimized_evaluator.evaluate(ast.clone());
-    assert_eq!(efficient_result, Err(expected_error.clone()));
-
-    let naive_result = naive_evaluator.evaluate(ast);
-    assert_eq!(naive_result, Err(expected_error));
+    {
+        let mut optimized_evaluator = PoolingEvaluator::new_recursive();
+        builtins::prepare(&mut optimized_evaluator)?;
+        let actual_result = optimized_evaluator.evaluate(ast);
+        assert_eq!(actual_result, Err(expected_error));
+    }
 
     Ok(())
 }

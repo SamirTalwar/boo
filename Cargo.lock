@@ -191,8 +191,8 @@ name = "boo-benchmarks"
 version = "0.1.0"
 dependencies = [
  "boo-core",
+ "boo-evaluation-reduction",
  "boo-generator",
- "boo-naive-evaluator",
  "boo-optimized-evaluator",
  "criterion",
  "num-bigint",
@@ -217,7 +217,7 @@ name = "boo-e2e"
 version = "0.1.0"
 dependencies = [
  "boo",
- "boo-naive-evaluator",
+ "boo-evaluation-reduction",
  "boo-optimized-evaluator",
  "boo-types-hindley-milner",
  "insta",
@@ -240,6 +240,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "boo-evaluation-reduction"
+version = "0.1.0"
+dependencies = [
+ "boo-core",
+ "im",
+]
+
+[[package]]
 name = "boo-generator"
 version = "0.1.0"
 dependencies = [
@@ -254,7 +262,7 @@ name = "boo-interpreter"
 version = "0.1.0"
 dependencies = [
  "boo",
- "boo-naive-evaluator",
+ "boo-evaluation-reduction",
  "boo-types-hindley-milner",
  "clap",
  "miette",
@@ -272,23 +280,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "boo-naive-evaluator"
-version = "0.1.0"
-dependencies = [
- "boo-core",
- "im",
-]
-
-[[package]]
 name = "boo-optimized-evaluator"
 version = "0.1.0"
 dependencies = [
  "boo-core",
  "boo-evaluation-lazy",
  "boo-evaluation-recursive",
+ "boo-evaluation-reduction",
  "boo-generator",
  "boo-language",
- "boo-naive-evaluator",
  "boo-parser",
  "boo-test-helpers",
  "proptest",

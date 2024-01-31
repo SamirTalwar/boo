@@ -16,6 +16,6 @@ proptest = "1.4.0"
 [dev-dependencies]
 boo-generator = { path = "../generator" }
 boo-language = { path = "../language" }
-boo-naive-evaluator = { path = "../naive-evaluator" }
+boo-evaluation-reduction = { path = "../evaluation-reduction" }
 boo-parser = { path = "../parser" }
 boo-test-helpers = { path = "../test-helpers" }

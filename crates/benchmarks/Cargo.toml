@@ -17,7 +17,7 @@ harness = false
 [dependencies]
 boo-core = { path = "../core" }
 boo-generator = { path = "../generator" }
-boo-naive-evaluator = { path = "../naive-evaluator" }
+boo-evaluation-reduction = { path = "../evaluation-reduction" }
 boo-optimized-evaluator = { path = "../optimized-evaluator" }
 
 criterion = { version = "0.5.1", features = ["csv", "html_reports"] }

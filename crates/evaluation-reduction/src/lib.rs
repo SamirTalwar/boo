@@ -1,10 +1,9 @@
-//! Evaluates a core AST as simply as possible.
+//! Evaluates a core AST using beta reduction.
 //!
-//! This evaluator is not used by the interpreter. It is meant as an
-//! implementation that is "so simple that there are obviously no deficiencies"
-//! (to quote Tony Hoare). We then use it as a reference implementation to
-//! validate that the real evaluator does the right thing when presented with an
-//! arbitrary program.
+//! This evaluator is not intended to be used. It is meant as an implementation
+//! that is "so simple that there are obviously no deficiencies" (to quote Tony
+//! Hoare). We then use it as a reference implementation to validate that the
+//! real evaluator works correctly when presented with an arbitrary program.
 
 use std::rc::Rc;
 
@@ -18,24 +17,24 @@ use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
 
-/// Evaluates an AST as simply as possible.
-pub struct NaiveEvaluator {
+/// Evaluates an AST using beta reduction.
+pub struct ReducingEvaluator {
     bindings: Vec<(Identifier, Expr)>,
 }
 
-impl NaiveEvaluator {
+impl ReducingEvaluator {
     pub fn new() -> Self {
         Self { bindings: vec![] }
     }
 }
 
-impl Default for NaiveEvaluator {
+impl Default for ReducingEvaluator {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Evaluator for NaiveEvaluator {
+impl Evaluator for ReducingEvaluator {
     fn bind(&mut self, identifier: Identifier, expr: Expr) -> Result<()> {
         self.bindings.push((identifier, expr));
         Ok(())

@@ -1,5 +1,5 @@
 [package]
-name = "boo-naive-evaluator"
+name = "boo-evaluation-reduction"
 version.workspace = true
 edition.workspace = true
 

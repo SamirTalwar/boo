@@ -8,9 +8,9 @@ use boo::evaluation::Evaluator;
 
 #[derive(Debug, Parser)]
 struct Args {
-    /// Use the naive evaluator instead of the optimized one
+    /// Use evaluation by reduction instead of optimized evaluation.
     #[arg(long)]
-    naive: bool,
+    reduction: bool,
 }
 
 enum Command<'a> {
@@ -20,8 +20,8 @@ enum Command<'a> {
 
 fn main() {
     let args = Args::parse();
-    let evaluator: Box<dyn Evaluator> = if args.naive {
-        let mut evaluator = boo_naive_evaluator::NaiveEvaluator::new();
+    let evaluator: Box<dyn Evaluator> = if args.reduction {
+        let mut evaluator = boo_evaluation_reduction::ReducingEvaluator::new();
         boo::builtins::prepare(&mut evaluator).unwrap();
         Box::new(evaluator)
     } else {

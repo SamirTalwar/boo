@@ -2,7 +2,7 @@ use boo::error::Result;
 use boo::evaluation::Evaluator;
 use boo::types::{Monotype, Type};
 use boo::*;
-use boo_naive_evaluator::NaiveEvaluator;
+use boo_evaluation_reduction::ReducingEvaluator;
 use boo_optimized_evaluator::PoolingEvaluator;
 
 #[test]
@@ -179,16 +179,19 @@ fn check_program(
     let actual_type = boo_types_hindley_milner::type_of(&ast)?;
     assert_eq!(actual_type, expected_type);
 
-    let mut optimized_evaluator = PoolingEvaluator::new_recursive();
-    builtins::prepare(&mut optimized_evaluator)?;
-    let mut naive_evaluator = NaiveEvaluator::new();
-    builtins::prepare(&mut naive_evaluator)?;
+    {
+        let mut reducing_evaluator = ReducingEvaluator::new();
+        builtins::prepare(&mut reducing_evaluator)?;
+        let actual_result = reducing_evaluator.evaluate(ast.clone())?;
+        assert_eq!(actual_result, expected_result);
+    }
 
-    let efficient_result = optimized_evaluator.evaluate(ast.clone())?;
-    assert_eq!(efficient_result, expected_result);
-
-    let naive_result = naive_evaluator.evaluate(ast)?;
-    assert_eq!(naive_result, expected_result);
+    {
+        let mut optimized_evaluator = PoolingEvaluator::new_recursive();
+        builtins::prepare(&mut optimized_evaluator)?;
+        let actual_result = optimized_evaluator.evaluate(ast)?;
+        assert_eq!(actual_result, expected_result);
+    }
 
     Ok(())
 }

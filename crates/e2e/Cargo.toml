@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dev-dependencies]
 boo = { path = "../lib" }
-boo-naive-evaluator = { path = "../naive-evaluator" }
+boo-evaluation-reduction = { path = "../evaluation-reduction" }
 boo-optimized-evaluator = { path = "../optimized-evaluator" }
 boo-types-hindley-milner = { path = "../types-hindley-milner" }
 
