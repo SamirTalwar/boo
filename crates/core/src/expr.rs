@@ -5,36 +5,43 @@ use crate::evaluation::ExpressionReader;
 use crate::span::*;
 
 /// Wraps an expression with a span.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Expr {
-    pub span: Option<Span>,
-    pub expression: Box<Expression<Expr>>,
-}
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Expr(Spanned<Box<Expression<Expr>>>);
 
 impl Expr {
     pub fn new(span: Option<Span>, expression: Expression<Self>) -> Self {
-        Self {
+        Self(Spanned {
             span,
-            expression: expression.into(),
-        }
+            value: expression.into(),
+        })
     }
 
     pub fn expression(&self) -> &Expression<Expr> {
-        self.expression.as_ref()
+        self.0.value.as_ref()
     }
 
     pub fn take(self) -> Expression<Expr> {
-        *self.expression
+        *self.0.value
     }
 
     pub fn span(&self) -> Option<Span> {
-        self.span
+        self.0.span
+    }
+}
+
+// We use this for testing, and the default implementation is a bit ugly.
+impl std::fmt::Debug for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Expr")
+            .field("span", &self.0.span)
+            .field("expression", self.0.value.as_ref())
+            .finish()
     }
 }
 
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.expression().fmt(f)
+        self.0.value.fmt(f)
     }
 }
 
@@ -43,13 +50,10 @@ pub struct ExprReader;
 
 impl ExpressionReader for ExprReader {
     type Expr = self::Expr;
-    type Target = Expression<Self::Expr>;
+    type Target = Box<Expression<Self::Expr>>;
 
     fn read(&self, expr: Self::Expr) -> Spanned<Self::Target> {
-        Spanned {
-            span: expr.span,
-            value: *expr.expression,
-        }
+        expr.0
     }
 
     fn to_core(&self, expr: Self::Expr) -> Expr {
