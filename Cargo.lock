@@ -192,6 +192,7 @@ version = "0.1.0"
 dependencies = [
  "boo-core",
  "boo-evaluation-optimized",
+ "boo-evaluation-recursive",
  "boo-evaluation-reduction",
  "boo-generator",
  "criterion",

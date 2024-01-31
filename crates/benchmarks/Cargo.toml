@@ -18,6 +18,7 @@ harness = false
 boo-core = { path = "../core" }
 boo-generator = { path = "../generator" }
 boo-evaluation-optimized = { path = "../evaluation-optimized" }
+boo-evaluation-recursive = { path = "../evaluation-recursive" }
 boo-evaluation-reduction = { path = "../evaluation-reduction" }
 
 criterion = { version = "0.5.1", features = ["csv", "html_reports"] }
