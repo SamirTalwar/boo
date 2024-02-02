@@ -16,5 +16,5 @@ boo-generator = { path = "../generator" }
 boo-parser = { path = "../parser" }
 boo-test-helpers = { path = "../test-helpers" }
 
-anyhow = "1.0.75"
+anyhow = "1.0.79"
 proptest = "1.4.0"

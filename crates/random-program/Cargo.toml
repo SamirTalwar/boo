@@ -12,5 +12,5 @@ bench = false
 boo = { path = "../lib" }
 boo-generator = { path = "../generator" }
 
-anyhow = "1.0.75"
+anyhow = "1.0.79"
 proptest = "1.4.0"

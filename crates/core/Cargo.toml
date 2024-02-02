@@ -11,8 +11,8 @@ lazy_static = "1.4.0"
 miette = "5.10.0"
 num-bigint = "0.4.4"
 proptest = "1.4.0"
-regex = "1.10.2"
-thiserror = "1.0.50"
+regex = "1.10.3"
+thiserror = "1.0.56"
 
 [dev-dependencies]
 boo-test-helpers = { path = "../test-helpers" }
