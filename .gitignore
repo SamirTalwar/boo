@@ -7,3 +7,4 @@
 
 # direnv
 /.direnv
+/.envrc.local
