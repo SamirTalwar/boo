@@ -1,6 +1,10 @@
 # Rust
 /target
 
+# Idris
+/.pack
+build
+
 # Nix
 /result
 /result-*

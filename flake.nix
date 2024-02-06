@@ -85,6 +85,11 @@
 
           # benchmarking
           pkgs.gnuplot
+
+          # proofs in Idris (installed with `pack`; see install-idris.sh)
+          pkgs.chez-racket
+          pkgs.gmp.dev
+          pkgs.rlwrap
         ];
 
         buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin [
