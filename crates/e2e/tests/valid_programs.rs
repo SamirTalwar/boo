@@ -132,7 +132,7 @@ fn test_polymorphic_let() -> Result<()> {
 fn test_pattern_matching_on_integers() -> Result<()> {
     check_program(
         "pattern_matching_on_integers",
-        "match 2 { 1 -> 2; 2 -> 3; 3 -> 4; _ -> 0 }",
+        "match (1 + 1) { 1 -> 2; 2 -> 3; 3 -> 4; _ -> 0 }",
         Type::Integer.into(),
         "3",
     )

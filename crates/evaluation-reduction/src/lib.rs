@@ -180,13 +180,17 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
             match pattern {
                 Pattern::Anything => Ok(Progress::Next(result)),
                 _ => match step(value)? {
-                    Progress::Next(value_next) => Ok(Progress::Next(Expr::new(
-                        span,
-                        Expression::Match(Match {
-                            value: value_next,
-                            patterns,
-                        }),
-                    ))),
+                    Progress::Next(value_next) => {
+                        // re-insert the pattern and try again
+                        patterns.push_front(PatternMatch { pattern, result });
+                        Ok(Progress::Next(Expr::new(
+                            span,
+                            Expression::Match(Match {
+                                value: value_next,
+                                patterns,
+                            }),
+                        )))
+                    }
                     Progress::Complete(value_complete) => match pattern {
                         Pattern::Anything => unreachable!("Case should be handled already."),
                         Pattern::Primitive(expected) => match value_complete.expression() {
