@@ -1,19 +1,30 @@
 data Primitive = PrimitiveInteger Integer
 
+Eq Primitive where
+  PrimitiveInteger left == PrimitiveInteger right = left == right
+
 Show Primitive where
   show (PrimitiveInteger x) = show x
 
 data Identifier = Id String
 
+Eq Identifier where
+  Id left == Id right = left == right
+
 Show Identifier where
   show (Id x) = x
 
-data NativeContext = MkNativeContext (Identifier -> Primitive)
+data NativeError =
+    NativeErrorUnknownIdentifier Identifier
+  | NativeErrorInvalidPrimitive
+  | NativeErrorUnknown
 
-lookupContext : NativeContext -> Identifier -> Primitive
-lookupContext (MkNativeContext context) = context
+data NativeContext = MkNativeContext (Identifier -> Either NativeError Primitive)
 
-data Native = MkNative String (NativeContext -> Primitive)
+lookupContext : Identifier -> NativeContext -> Either NativeError Primitive
+lookupContext identifier (MkNativeContext context) = context identifier
+
+data Native = MkNative String (NativeContext -> Either NativeError Primitive)
 
 data Pattern = PatternAnything | PatternPrimitive Primitive
 
