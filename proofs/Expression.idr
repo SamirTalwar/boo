@@ -19,6 +19,11 @@ data NativeError =
   | NativeErrorInvalidPrimitive
   | NativeErrorUnknown
 
+Show NativeError where
+  show (NativeErrorUnknownIdentifier identifier) = "Native error: unknown identifier: " ++ show identifier
+  show NativeErrorInvalidPrimitive = "Native error: invalid primitive"
+  show NativeErrorUnknown = "Native error: unknown"
+
 data NativeContext = MkNativeContext (Identifier -> Either NativeError Primitive)
 
 lookupContext : Identifier -> NativeContext -> Either NativeError Primitive

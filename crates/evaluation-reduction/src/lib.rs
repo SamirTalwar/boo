@@ -16,6 +16,7 @@ use boo_core::expr::Expr;
 use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
+use boo_core::span::Spanned;
 
 pub fn new() -> impl EvaluationContext {
     ReducingEvaluator::new()
@@ -68,9 +69,9 @@ impl Evaluator for ReducingEvaluator {
     }
 }
 
-enum Progress<T> {
-    Next(T),
-    Complete(T),
+enum Progress {
+    Next(Expr),
+    Complete(Spanned<Evaluated>),
 }
 
 struct EmptyContext {}
@@ -111,28 +112,35 @@ fn evaluate(expr: Expr) -> Result<Evaluated> {
                 progress = next;
             }
             Progress::Complete(complete) => {
-                return match complete.take() {
-                    Expression::Primitive(primitive) => Ok(Evaluated::Primitive(primitive)),
-                    Expression::Function(function) => Ok(Evaluated::Function(function)),
-                    _ => unreachable!("Evaluated to a non-final expression."),
-                };
+                return Ok(complete.value);
             }
         }
     }
 }
 
-fn step(expr: Expr) -> Result<Progress<Expr>> {
+fn step(expr: Expr) -> Result<Progress> {
     let span = expr.span();
     match expr.take() {
-        expression @ Expression::Primitive(_) | expression @ Expression::Function(_) => {
-            Ok(Progress::Complete(Expr::new(span, expression)))
+        Expression::Primitive(primitive) => Ok(Progress::Complete(Spanned {
+            span,
+            value: Evaluated::Primitive(primitive),
+        })),
+        Expression::Native(Native { implementation, .. }) => {
+            implementation(&EmptyContext {}).map(|x| {
+                Progress::Complete(Spanned {
+                    span,
+                    value: Evaluated::Primitive(x),
+                })
+            })
         }
-        Expression::Native(Native { implementation, .. }) => implementation(&EmptyContext {})
-            .map(|x| Progress::Complete(Expr::new(span, Expression::Primitive(x)))),
         Expression::Identifier(name) => Err(Error::UnknownVariable {
             span,
             name: name.to_string(),
         }),
+        Expression::Function(function) => Ok(Progress::Complete(Spanned {
+            span,
+            value: Evaluated::Function(function),
+        })),
         Expression::Apply(Apply { function, argument }) => {
             let function_result = step(function)?;
             match function_result {
@@ -143,8 +151,11 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
                         argument,
                     }),
                 ))),
-                Progress::Complete(function_complete) => match function_complete.take() {
-                    Expression::Function(Function { parameter, body }) => {
+                Progress::Complete(Spanned {
+                    span: _,
+                    value: function_complete,
+                }) => match function_complete {
+                    Evaluated::Function(Function { parameter, body }) => {
                         let substituted_body = substitute(
                             Substitution {
                                 name: parameter.into(),
@@ -191,17 +202,27 @@ fn step(expr: Expr) -> Result<Progress<Expr>> {
                             }),
                         )))
                     }
-                    Progress::Complete(value_complete) => match pattern {
+                    Progress::Complete(Spanned {
+                        span: value_span,
+                        value: value_complete,
+                    }) => match pattern {
                         Pattern::Anything => unreachable!("Case should be handled already."),
-                        Pattern::Primitive(expected) => match value_complete.expression() {
-                            Expression::Primitive(actual) if actual == &expected => {
+                        Pattern::Primitive(expected) => match value_complete {
+                            Evaluated::Primitive(actual) if actual == expected => {
                                 Ok(Progress::Next(result))
                             }
                             // if not matched, try again, having discarded the first pattern
                             _ => Ok(Progress::Next(Expr::new(
                                 span,
                                 Expression::Match(Match {
-                                    value: value_complete,
+                                    value: match value_complete {
+                                        Evaluated::Primitive(primitive) => {
+                                            Expr::new(value_span, Expression::Primitive(primitive))
+                                        }
+                                        Evaluated::Function(function) => {
+                                            Expr::new(value_span, Expression::Function(function))
+                                        }
+                                    },
                                     patterns,
                                 }),
                             ))),

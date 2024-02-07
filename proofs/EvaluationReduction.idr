@@ -3,59 +3,69 @@ import Expression
 data EvaluationError =
     EvaluationErrorUnknownIdentifier Identifier
   | EvaluationErrorInvalidFunctionApplication Expression
+  | EvaluationErrorMatchWithoutBaseCase
   | EvaluationErrorNative NativeError
-  | EvaluationErrorMatchWithoutBaseCase -- replace with proofs
-  | EvaluationErrorNonTerminalExpression Expression -- replace with proofs
+
+Show EvaluationError where
+  show (EvaluationErrorUnknownIdentifier identifier) = "Evaluation error: unknown identifier: " ++ show identifier
+  show (EvaluationErrorInvalidFunctionApplication expression) = "Evaluation error: invalid function application: " ++ show expression
+  show EvaluationErrorMatchWithoutBaseCase = "Evaluation error: match without base case"
+  show (EvaluationErrorNative error) = "Evaluation error: " ++ show error
 
 data Evaluated : Type where
   EvPrimitive : Primitive -> Evaluated
   EvFunction : Identifier -> Expression -> Evaluated
   EvFailure : EvaluationError -> Evaluated
 
-data Progress : (a : Type) -> Type where
-  Next : a -> Progress a
-  Complete : a -> Progress a
-  Failure : EvaluationError -> Progress a
+Show Evaluated where
+  show (EvPrimitive x) = show x
+  show (EvFunction parameter body) = show parameter ++ " -> (" ++ show body ++ ")"
+  show (EvFailure error) = show error
+
+data Progress : Type where
+  Next : Expression -> Progress
+  Complete : Evaluated -> Progress
+
+Show Progress where
+  show (Next x) = show x
+  show (Complete x) = show x
 
 mutual
   evaluate : Expression -> Evaluated
   evaluate expr =
     case step expr of
       Next next => evaluate next
-      Complete (EPrimitive primitive) => EvPrimitive primitive
-      Complete (EFunction parameter body) => EvFunction parameter body
-      Complete expr => EvFailure $ EvaluationErrorNonTerminalExpression expr
-      Failure message => EvFailure message
+      Complete evaluated => evaluated
 
-  step : Expression -> Progress Expression
-  step expr@(EPrimitive {}) = Complete expr
-  step (EIdentifier identifier) = Failure $ EvaluationErrorUnknownIdentifier identifier
+  step : Expression -> Progress
+  step (EPrimitive primitive) = Complete $ EvPrimitive primitive
+  step (EIdentifier identifier) = Complete $ EvFailure $ EvaluationErrorUnknownIdentifier identifier
   step (ENative (MkNative _ impl)) =
     case impl (MkNativeContext $ Left . NativeErrorUnknownIdentifier) of
-      Right primitive => Complete $ EPrimitive primitive
-      Left (NativeErrorUnknownIdentifier identifier) => Failure $ EvaluationErrorUnknownIdentifier identifier
-      Left error => Failure $ EvaluationErrorNative error
-  step expr@(EFunction {}) = Complete expr
+      Right primitive => Complete $ EvPrimitive primitive
+      Left (NativeErrorUnknownIdentifier identifier) => Complete $ EvFailure $ EvaluationErrorUnknownIdentifier identifier
+      Left error => Complete $ EvFailure $ EvaluationErrorNative error
+  step (EFunction parameter body) = Complete $ EvFunction parameter body
   step (EApply function argument) =
    case step function of
       Next functionNext => Next (EApply functionNext argument)
-      Complete (EFunction parameter body) => Next $ substitute parameter argument body
-      Complete expr => Failure $ EvaluationErrorInvalidFunctionApplication expr
-      Failure message => Failure message
+      Complete (EvPrimitive primitive) => Complete $ EvFailure $ EvaluationErrorInvalidFunctionApplication (EPrimitive primitive)
+      Complete (EvFunction parameter body) => Next $ substitute parameter argument body
+      Complete (EvFailure error) => Complete $ EvFailure error
   step (EAssign name value inner) = Next $ substitute name value inner
-  step (EMatch value patterns@[]) = Failure EvaluationErrorMatchWithoutBaseCase
+  step (EMatch value patterns@[]) = Complete $ EvFailure EvaluationErrorMatchWithoutBaseCase
   step (EMatch value patterns@((pattern, result) :: restOfPatterns)) =
     case pattern of
       PatternAnything => Next result
       PatternPrimitive expected =>
         case step value of
           Next valueNext => Next $ EMatch valueNext patterns
-          Complete valueComplete@(EPrimitive actual) =>
+          Complete (EvPrimitive actual) =>
             if actual == expected 
               then Next result
-              else Next $ EMatch valueComplete restOfPatterns
-          Complete valueComplete => Next $ EMatch valueComplete restOfPatterns
-          Failure message => Failure message
+              else Next $ EMatch (EPrimitive actual) restOfPatterns
+          Complete (EvFunction parameter body) => Next $ EMatch (EFunction parameter body) restOfPatterns
+          Complete (EvFailure error) => Complete $ EvFailure error
 
   substitute : Identifier -> Expression -> Expression -> Expression
   substitute identifier replacement expr = substitute' identifier replacement expr []
@@ -99,9 +109,8 @@ mutual
   avoidAlphaCapture : Expression -> List Identifier -> Expression
   avoidAlphaCapture expr _ = expr
 
-steps : Expression -> List Expression
+steps : Expression -> List Progress
 steps expr =
-  expr :: case step expr of
+  Next expr :: case step expr of
     Next next => steps next
-    Complete complete => [complete]
-    Failure _ => []
+    result => [result]
