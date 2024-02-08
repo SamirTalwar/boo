@@ -1,4 +1,7 @@
 import Expression
+import Identifier
+import Native
+import Primitive
 
 operator : String -> (Integer -> Integer -> Integer) -> Expression
 operator name op =

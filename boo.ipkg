@@ -3,9 +3,10 @@ package boo
 sourcedir = "proofs"
 
 modules =
-  Builtins
-  EvaluationReduction
-  Expression
-  Test
-
-main = Main
+    Builtins
+  , EvaluationReduction
+  , Expression
+  , Identifier
+  , Native
+  , Primitive
+  , Test

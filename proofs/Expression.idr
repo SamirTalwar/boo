@@ -1,35 +1,6 @@
-data Primitive = PrimitiveInteger Integer
-
-Eq Primitive where
-  PrimitiveInteger left == PrimitiveInteger right = left == right
-
-Show Primitive where
-  show (PrimitiveInteger x) = show x
-
-data Identifier = Id String
-
-Eq Identifier where
-  Id left == Id right = left == right
-
-Show Identifier where
-  show (Id x) = x
-
-data NativeError =
-    NativeErrorUnknownIdentifier Identifier
-  | NativeErrorInvalidPrimitive
-  | NativeErrorUnknown
-
-Show NativeError where
-  show (NativeErrorUnknownIdentifier identifier) = "Native error: unknown identifier: " ++ show identifier
-  show NativeErrorInvalidPrimitive = "Native error: invalid primitive"
-  show NativeErrorUnknown = "Native error: unknown"
-
-data NativeContext = MkNativeContext (Identifier -> Either NativeError Primitive)
-
-lookupContext : Identifier -> NativeContext -> Either NativeError Primitive
-lookupContext identifier (MkNativeContext context) = context identifier
-
-data Native = MkNative String (NativeContext -> Either NativeError Primitive)
+import Identifier
+import Native
+import Primitive
 
 data Pattern = PatternAnything | PatternPrimitive Primitive
 
@@ -77,9 +48,6 @@ infixl 7 $$
 
 blet : String -> Expression -> Expression -> Expression
 blet name value inner = EAssign (Id name) value inner
-
-FromString Identifier where
-  fromString = Id
 
 FromString Expression where
   fromString = EIdentifier . Id

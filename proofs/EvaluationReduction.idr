@@ -1,4 +1,7 @@
 import Expression
+import Identifier
+import Native
+import Primitive
 
 data EvaluationError =
     EvaluationErrorUnknownIdentifier Identifier
