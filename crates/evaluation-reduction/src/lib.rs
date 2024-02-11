@@ -16,7 +16,6 @@ use boo_core::expr::Expr;
 use boo_core::identifier::*;
 use boo_core::native::*;
 use boo_core::primitive::*;
-use boo_core::span::Spanned;
 
 pub fn new() -> impl EvaluationContext {
     ReducingEvaluator::new()
@@ -69,11 +68,6 @@ impl Evaluator for ReducingEvaluator {
     }
 }
 
-enum Progress {
-    Next(Expr),
-    Complete(Spanned<Evaluated>),
-}
-
 struct EmptyContext {}
 
 impl NativeContext for EmptyContext {
@@ -105,57 +99,58 @@ impl<'a> NativeContext for AdditionalContext<'a> {
 }
 
 fn evaluate(expr: Expr) -> Result<Evaluated> {
-    let mut progress = expr;
+    let mut current = expr;
     loop {
-        match step(progress)? {
-            Progress::Next(next) => {
-                progress = next;
-            }
-            Progress::Complete(complete) => {
-                return Ok(complete.value);
-            }
+        if can_progress(&current) {
+            current = step(current)?;
+        } else {
+            return Ok(match current.take() {
+                Expression::Primitive(primitive) => Evaluated::Primitive(primitive),
+                Expression::Function(function) => Evaluated::Function(function),
+                expression => unreachable!("Completed with an incomplete expression: {expression}"),
+            });
         }
     }
 }
 
-fn step(expr: Expr) -> Result<Progress> {
+fn can_progress(expr: &Expr) -> bool {
+    match expr.expression() {
+        Expression::Primitive(_) => false,
+        Expression::Native(_) => true,
+        Expression::Identifier(_) => true,
+        Expression::Function(_) => false,
+        Expression::Apply(_) => true,
+        Expression::Assign(_) => true,
+        Expression::Match(_) => true,
+        Expression::Typed(_) => true,
+    }
+}
+
+fn step(expr: Expr) -> Result<Expr> {
     let span = expr.span();
     match expr.take() {
-        Expression::Primitive(primitive) => Ok(Progress::Complete(Spanned {
-            span,
-            value: Evaluated::Primitive(primitive),
-        })),
+        Expression::Primitive(_) => unreachable!("tried to step a complete expression"),
         Expression::Native(Native { implementation, .. }) => {
-            implementation(&EmptyContext {}).map(|x| {
-                Progress::Complete(Spanned {
-                    span,
-                    value: Evaluated::Primitive(x),
-                })
-            })
+            implementation(&EmptyContext {}).map(|x| Expr::new(span, Expression::Primitive(x)))
         }
         Expression::Identifier(name) => Err(Error::UnknownVariable {
             span,
             name: name.to_string(),
         }),
-        Expression::Function(function) => Ok(Progress::Complete(Spanned {
-            span,
-            value: Evaluated::Function(function),
-        })),
+        Expression::Function(_) => unreachable!("tried to step a complete expression"),
         Expression::Apply(Apply { function, argument }) => {
-            let function_result = step(function)?;
-            match function_result {
-                Progress::Next(function_next) => Ok(Progress::Next(Expr::new(
+            if can_progress(&function) {
+                let function_progress = step(function)?;
+                Ok(Expr::new(
                     span,
                     Expression::Apply(Apply {
-                        function: function_next,
+                        function: function_progress,
                         argument,
                     }),
-                ))),
-                Progress::Complete(Spanned {
-                    span: _,
-                    value: function_complete,
-                }) => match function_complete {
-                    Evaluated::Function(Function { parameter, body }) => {
+                ))
+            } else {
+                match function.take() {
+                    Expression::Function(Function { parameter, body }) => {
                         let substituted_body = substitute(
                             Substitution {
                                 name: parameter.into(),
@@ -164,10 +159,10 @@ fn step(expr: Expr) -> Result<Progress> {
                             body,
                             HashSet::new(),
                         );
-                        Ok(Progress::Next(substituted_body))
+                        Ok(substituted_body)
                     }
                     _ => Err(Error::InvalidFunctionApplication { span }),
-                },
+                }
             }
         }
         Expression::Assign(Assign { name, value, inner }) => {
@@ -179,7 +174,7 @@ fn step(expr: Expr) -> Result<Progress> {
                 inner,
                 HashSet::new(),
             );
-            Ok(Progress::Next(substituted_inner))
+            Ok(substituted_inner)
         }
         Expression::Match(Match {
             value,
@@ -189,49 +184,36 @@ fn step(expr: Expr) -> Result<Progress> {
                 .pop_front()
                 .ok_or(Error::MatchWithoutBaseCase { span })?;
             match pattern {
-                Pattern::Anything => Ok(Progress::Next(result)),
-                _ => match step(value)? {
-                    Progress::Next(value_next) => {
+                Pattern::Anything => Ok(result),
+                _ => {
+                    if can_progress(&value) {
+                        let value_progress = step(value)?;
                         // re-insert the pattern and try again
                         patterns.push_front(PatternMatch { pattern, result });
-                        Ok(Progress::Next(Expr::new(
+                        Ok(Expr::new(
                             span,
                             Expression::Match(Match {
-                                value: value_next,
+                                value: value_progress,
                                 patterns,
                             }),
-                        )))
+                        ))
+                    } else {
+                        match pattern {
+                            Pattern::Anything => unreachable!("Case should be handled already."),
+                            Pattern::Primitive(expected) => match value.expression() {
+                                Expression::Primitive(actual) if actual == &expected => Ok(result),
+                                // if not matched, try again, having discarded the first pattern
+                                _ => Ok(Expr::new(
+                                    span,
+                                    Expression::Match(Match { value, patterns }),
+                                )),
+                            },
+                        }
                     }
-                    Progress::Complete(Spanned {
-                        span: value_span,
-                        value: value_complete,
-                    }) => match pattern {
-                        Pattern::Anything => unreachable!("Case should be handled already."),
-                        Pattern::Primitive(expected) => match value_complete {
-                            Evaluated::Primitive(actual) if actual == expected => {
-                                Ok(Progress::Next(result))
-                            }
-                            // if not matched, try again, having discarded the first pattern
-                            _ => Ok(Progress::Next(Expr::new(
-                                span,
-                                Expression::Match(Match {
-                                    value: match value_complete {
-                                        Evaluated::Primitive(primitive) => {
-                                            Expr::new(value_span, Expression::Primitive(primitive))
-                                        }
-                                        Evaluated::Function(function) => {
-                                            Expr::new(value_span, Expression::Function(function))
-                                        }
-                                    },
-                                    patterns,
-                                }),
-                            ))),
-                        },
-                    },
-                },
+                }
             }
         }
-        Expression::Typed(Typed { expression, typ: _ }) => Ok(Progress::Next(expression)),
+        Expression::Typed(Typed { expression, typ: _ }) => Ok(expression),
     }
 }
 
